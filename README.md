@@ -26,7 +26,7 @@ Braude Course - שיטות הנדסיות
 
 **GoNature** is a distributed park visit management system developed for the *Parks and Recreation Department* as part of course **61756 – Engineering Methods for Software Development** at our college.
 
-The system helps the department manage visitor activity across multiple nature parks — handling reservations, group visits, visitor quotas, entry control, and monthly reports — all through a centralized yet distributed client-server architecture.
+The system helps the department manage visitor activity across multiple nature parks - handling reservations, group visits, visitor quotas, entry control, and monthly reports - all through a centralized yet distributed client-server architecture.
 
 ---
 
@@ -96,7 +96,6 @@ GoNature is built on a **Full-Stack Client-Server** architecture:
 ### Tech Stack
 - **Language:** Java
 - **UI:** JavaFX
-- **IDE:** Eclipse
 - **Database:** MySQL (relational)
 - **Networking:** TCP/IP over LAN (client-server)
 - **Communication:** Simulated SMS/Email notifications (Phase 1)
@@ -106,25 +105,31 @@ GoNature is built on a **Full-Stack Client-Server** architecture:
 ## 📁 Project Structure
 
 ```
-GoNature/
-│
-├── 📂 GoNatureServer/         # Server-side application
+GoNature_Prototype/
+├── GoNature_Server/           <- import into IDE as Java project
 │   ├── src/
-│   │   ├── server/            # Server logic & DB connection
-│   │   └── entities/          # Shared data models
+│   │   ├── common/
+│   │   │   ├── Message.java
+│   │   │   └── Order.java
+│   │   └── server/
+│   │       ├── DBController.java    (all JDBC / SQL lives here)
+│   │       ├── GoNatureServer.java  (extends OCSF AbstractServer)
+│   │       └── ServerUI.java        (JavaFX - main class of the JAR)
+│   └── lib/                         <- put ocsf.jar + mysql-connector-j.jar here
 │
-├── 📂 GoNatureClient/         # Client-side application
+├── GoNature_Client/           <- import into IDE as a SEPARATE project
 │   ├── src/
-│   │   ├── gui/               # JavaFX screens & controllers
-│   │   ├── client/            # Client networking
-│   │   └── logic/             # Client-side business rules
+│   │   ├── common/
+│   │   │   ├── Message.java         (identical copy of server's)
+│   │   │   └── Order.java           (identical copy of server's)
+│   │   └── client/
+│   │       ├── ClientController.java
+│   │       ├── GoNatureClient.java  (extends OCSF AbstractClient)
+│   │       └── ClientUI.java        (JavaFX - main class of the JAR)
+│   └── lib/                         <- put ocsf.jar here
 │
-├── 📂 GoNatureCommon/         # Shared classes (entities, messages)
-│
-├── 📂 db/                     # SQL scripts
-│   └── schema.sql
-│
-└── 📂 docs/                   # UML diagrams, reports
+├── database/
+│   └── setup.sql              <- run this once in MySQL before starting
 ```
 
 ---
