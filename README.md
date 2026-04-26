@@ -35,28 +35,28 @@ The system helps the department manage visitor activity across multiple nature p
 ### 🧭 For Visitors (Travelers)
 | Feature | Description |
 |--------|-------------|
-| 📅 **Advance Booking** | Reserve a visit by date, time, park, and number of visitors |
-| 👥 **Group Reservations** | Guides can book for organized groups (up to 15 participants) |
-| ⏳ **Waiting List** | Join a queue if the park is full — get notified when a spot opens |
-| 🔔 **Reminders** | Automatic email & SMS reminder sent 24 hours before the visit |
-| 🏷️ **Subscriber Club** | Family subscriptions with exclusive discounted rates |
-| ❌ **Cancellations** | Cancel or modify bookings to free up spots for others |
+|  **Advance Booking** | Reserve a visit by date, time, park, and number of visitors |
+|  **Group Reservations** | Guides can book for organized groups (up to 15 participants) |
+|  **Waiting List** | Join a queue if the park is full — get notified when a spot opens |
+|  **Reminders** | Automatic email & SMS reminder sent 24 hours before the visit |
+|  **Subscriber Club** | Family subscriptions with exclusive discounted rates |
+|  **Cancellations** | Cancel or modify bookings to free up spots for others |
 
 ### 🏕️ For Park Staff
 | Feature | Description |
 |--------|-------------|
-| 🚪 **Entry Control** | Validate visitors by ID or QR code at the gate |
-| 🔢 **Live Visitor Count** | Real-time count of visitors currently inside the park |
-| 💳 **Billing** | Automatic invoice generation based on visitor type and pricing model |
-| 📊 **Monthly Reports** | Visitor counts by type, usage patterns, cancellation statistics |
+|  **Entry Control** | Validate visitors by ID or QR code at the gate |
+|  **Live Visitor Count** | Real-time count of visitors currently inside the park |
+|  **Billing** | Automatic invoice generation based on visitor type and pricing model |
+|  **Monthly Reports** | Visitor counts by type, usage patterns, cancellation statistics |
 
 ### 🛠️ For Management
 | Feature | Description |
 |--------|-------------|
-| 📈 **Visual Reports** | Graphical visit and cancellation reports across all parks |
-| ⚙️ **Quota Control** | Set and update max visitor caps per park (with department approval) |
-| 🎟️ **Promotions** | Define time-limited discounts (with department head approval) |
-| 👤 **User Management** | Manage staff accounts, roles, and permissions |
+|  **Visual Reports** | Graphical visit and cancellation reports across all parks |
+|  **Quota Control** | Set and update max visitor caps per park (with department approval) |
+|  **Promotions** | Define time-limited discounts (with department head approval) |
+|  **User Management** | Manage staff accounts, roles, and permissions |
 
 ---
 
