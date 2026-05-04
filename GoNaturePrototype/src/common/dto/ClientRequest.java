@@ -8,10 +8,11 @@ public class ClientRequest implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private RequestType type;
-    private Map<String, Object> data = new HashMap<>();
+    private Map<String, Object> data;
 
     public ClientRequest(RequestType type) {
         this.type = type;
+        this.data = new HashMap<>();
     }
 
     public RequestType getType() {
