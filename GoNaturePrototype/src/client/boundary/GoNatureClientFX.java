@@ -452,8 +452,7 @@ public class GoNatureClientFX extends Application {
 
         Label dateLabel = new Label("Visit Date");
         dateLabel.setStyle(fieldLabelStyle());
-        DatePicker datePicker = new DatePicker();
-        datePicker.setMaxWidth(Double.MAX_VALUE);
+        DatePicker datePicker = buildStyledDatePicker();
 
         Label visitorsLabel = new Label("Number of Visitors");
         visitorsLabel.setStyle(fieldLabelStyle());
@@ -604,37 +603,40 @@ public class GoNatureClientFX extends Application {
 
     private HBox buildStepIndicator(int active) {
         String[] labels = {"Find Order", "Edit Details", "Confirm"};
-        HBox hbox = new HBox();
+        HBox hbox = new HBox(10);
         hbox.setAlignment(Pos.CENTER_LEFT);
 
         for (int i = 0; i < 3; i++) {
             StackPane circle = new StackPane();
-            circle.setPrefSize(26, 26);
-            circle.setMinSize(26, 26);
+            circle.setPrefSize(28, 28);
+            circle.setMinSize(28, 28);
+            circle.setMaxSize(28, 28);
 
-            String circBg, numColor, circleStyle;
-            if      (i < active)  { circBg = G500;  numColor = "white"; }
-            else if (i == active) { circBg = G600;  numColor = "white"; }
-            else                  { circBg = G200;  numColor = G500; }
+            String circBg, numColor;
+            if      (i < active)  { circBg = G500; numColor = "white"; }
+            else if (i == active) { circBg = G600; numColor = "white"; }
+            else                  { circBg = G200; numColor = G500; }
             circle.setStyle("-fx-background-color:" + circBg + "; -fx-background-radius:50;");
 
             Label num = new Label(i < active ? "✓" : String.valueOf(i + 1));
             num.setStyle("-fx-font-size:11; -fx-font-weight:bold; -fx-text-fill:" + numColor + ";");
             circle.getChildren().add(num);
 
-            VBox stepBox = new VBox(4, circle, new Label(labels[i]));
-            stepBox.setAlignment(Pos.CENTER);
-            ((Label) stepBox.getChildren().get(1)).setStyle(
-                "-fx-font-size:12; -fx-text-fill:" + (i == active ? G700 : G400) + ";");
+            Label lbl = new Label(labels[i]);
+            lbl.setStyle("-fx-font-size:13; -fx-text-fill:" + (i == active ? G700 : G400) +
+                         (i == active ? "; -fx-font-weight:500;" : ";"));
 
-            hbox.getChildren().add(stepBox);
+            HBox step = new HBox(8, circle, lbl);
+            step.setAlignment(Pos.CENTER_LEFT);
+            hbox.getChildren().add(step);
 
             if (i < 2) {
                 Region line = new Region();
-                line.setPrefSize(28, 1.5);
+                line.setPrefWidth(36);
+                line.setPrefHeight(1.5);
+                line.setMinHeight(1.5);
+                line.setMaxHeight(1.5);
                 line.setStyle("-fx-background-color:" + (i < active ? G500 : G200) + ";");
-                line.setTranslateY(-10);
-                HBox.setMargin(line, new Insets(0, 4, 0, 4));
                 hbox.getChildren().add(line);
             }
         }
@@ -657,8 +659,7 @@ public class GoNatureClientFX extends Application {
 
         Label dateLabel = new Label("Visit Date");
         dateLabel.setStyle(fieldLabelStyle());
-        DatePicker datePicker = new DatePicker();
-        datePicker.setMaxWidth(Double.MAX_VALUE);
+        DatePicker datePicker = buildStyledDatePicker();
 
         Label visitLabel = new Label("Number of Visitors");
         visitLabel.setStyle(fieldLabelStyle());
@@ -1092,5 +1093,27 @@ public class GoNatureClientFX extends Application {
         return "-fx-font-size:20; -fx-font-weight:bold; -fx-background-color:" + G50 +
                "; -fx-border-color:" + G200 + "; -fx-border-width:1.5;" +
                " -fx-border-radius:12; -fx-background-radius:12; -fx-padding:13 16 13 16;";
+    }
+
+    private DatePicker buildStyledDatePicker() {
+        DatePicker dp = new DatePicker();
+        dp.setMaxWidth(Double.MAX_VALUE);
+        dp.setPromptText("dd / mm / yyyy");
+        dp.setStyle("-fx-font-size:14; -fx-background-color:" + G50 +
+                    "; -fx-border-color:" + G200 + "; -fx-border-width:1.5;" +
+                    " -fx-border-radius:10; -fx-background-radius:10;");
+        dp.getEditor().setStyle("-fx-background-color:" + G50 +
+                                "; -fx-font-size:14; -fx-padding:11 14 11 14;" +
+                                " -fx-background-radius:10;");
+        dp.skinProperty().addListener((obs, old, skin) -> {
+            if (skin == null) return;
+            javafx.scene.Node btn = dp.lookup(".arrow-button");
+            if (btn != null)
+                btn.setStyle("-fx-background-color:" + G100 + "; -fx-background-radius:0 9 9 0;");
+            javafx.scene.Node arrow = dp.lookup(".arrow");
+            if (arrow != null)
+                arrow.setStyle("-fx-background-color:" + G500 + ";");
+        });
+        return dp;
     }
 }
