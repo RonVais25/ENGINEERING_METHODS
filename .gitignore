@@ -1,7 +1,33 @@
-GoNaturePrototype/bin/.DS_Store
-GoNaturePrototype/bin/client/.DS_Store
-GoNaturePrototype/run_client_swing.sh
-GoNaturePrototype/src/.DS_Store
-GoNaturePrototype/src/client/.DS_Store
-GoNaturePrototype/.DS_Store
+# macOS
 .DS_Store
+._*
+
+# build output
+*.class
+bin/
+build/
+dist/
+out/
+target/
+
+# eclipse
+.metadata/
+.recommenders/
+
+# intellij
+.idea/
+*.iml
+
+# vscode
+.vscode/
+
+# logs
+*.log
+*.tmp
+*.swp
+
+# windows
+Thumbs.db
+
+# local
+.claude/
