@@ -1,10 +1,11 @@
 package server.app;
 
-import server.net.OrderServer;
+import javafx.application.Application;
+import server.boundary.ServerGUI;
 
 public class StartServer {
 
     public static void main(String[] args) {
-        new OrderServer().start();
+        Application.launch(ServerGUI.class, args);
     }
 }

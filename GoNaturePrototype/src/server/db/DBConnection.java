@@ -10,9 +10,15 @@ public class DBConnection {
             "jdbc:mysql://127.0.0.1:3306/gonature?serverTimezone=Asia/Jerusalem&useSSL=false";
 
     private static final String USER = "root";
-    private static final String PASSWORD = System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD") : "";
+
+    private static String password =
+            System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD") : "";
+
+    public static void setPassword(String pw) {
+        password = pw != null ? pw : "";
+    }
 
     public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        return DriverManager.getConnection(URL, USER, password);
     }
 }
