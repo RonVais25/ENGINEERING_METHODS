@@ -19,10 +19,16 @@ import server.db.DBConnection;
 import server.net.OrderServer;
 import server.net.ServerListener;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.sql.Connection;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ServerGUI extends Application implements ServerListener {
@@ -51,6 +57,10 @@ public class ServerGUI extends Application implements ServerListener {
     private PasswordField passwordField;
     private Button        startBtn;
     private Button        stopBtn;
+
+    // Reachable-at info (populated on start)
+    private VBox  reachableBox;
+    private Label reachableTitle;
 
     // Clients table
     private final ObservableList<ClientRow> clients = FXCollections.observableArrayList();
@@ -174,8 +184,55 @@ public class ServerGUI extends Application implements ServerListener {
         startBtn.setOnAction(e -> startServer());
         stopBtn.setOnAction(e -> stopServer());
 
-        card.getChildren().addAll(title, portLbl, portField, pwLbl, passwordField, btnRow);
+        reachableTitle = new Label("REACHABLE AT");
+        reachableTitle.setStyle("-fx-font-size:11; -fx-font-weight:bold; -fx-text-fill:" + G500 +
+                                "; -fx-padding:10 0 0 0;");
+
+        reachableBox = new VBox(3);
+        populateReachable();
+
+        portField.textProperty().addListener((obs, oldV, newV) -> populateReachable());
+
+        card.getChildren().addAll(title, portLbl, portField, pwLbl, passwordField,
+                                  btnRow, reachableTitle, reachableBox);
         return card;
+    }
+
+    private void populateReachable() {
+        String port = portField.getText().trim();
+        if (port.isEmpty()) port = "5555";
+
+        List<String> ips = getLanIPv4();
+        reachableBox.getChildren().clear();
+
+        if (ips.isEmpty()) {
+            Label none = new Label("localhost:" + port + "  (no LAN interface found)");
+            none.setStyle("-fx-font-size:12; -fx-font-family:monospace; -fx-text-fill:" + G700 + ";");
+            reachableBox.getChildren().add(none);
+            return;
+        }
+
+        for (String ip : ips) {
+            Label row = new Label(ip + ":" + port);
+            row.setStyle("-fx-font-size:13; -fx-font-weight:bold; -fx-font-family:monospace;" +
+                         " -fx-text-fill:" + G700 + ";");
+            reachableBox.getChildren().add(row);
+        }
+    }
+
+    private static List<String> getLanIPv4() {
+        List<String> result = new ArrayList<>();
+        try {
+            for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                if (!ni.isUp() || ni.isLoopback() || ni.isVirtual()) continue;
+                for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
+                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                        result.add(addr.getHostAddress());
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return result;
     }
 
     private VBox buildClientsCard() {
@@ -281,6 +338,9 @@ public class ServerGUI extends Application implements ServerListener {
             statusDot.setFill(Color.web("#64c864"));
             statusLabel.setText("Running on port " + port);
             appendLog(true, "Server started on port " + port);
+            for (String ip : getLanIPv4()) {
+                appendLog(true, "Reachable at " + ip + ":" + port);
+            }
         });
     }
 
