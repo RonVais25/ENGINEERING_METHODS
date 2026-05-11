@@ -540,6 +540,14 @@ public class GoNatureClientFX extends Application {
         // Wire — Apply
         applyBtn.setOnAction(e -> {
             if (datePicker.getValue() == null) { showToast(s1toast, false, "Please select a date"); return; }
+
+            // Commit whatever is currently typed in the spinner — getValue()
+            // otherwise returns the last committed value, not the edited text.
+            try {
+                int typed = Integer.parseInt(spinner.getEditor().getText().trim());
+                if (typed >= 1 && typed <= 50) spinner.getValueFactory().setValue(typed);
+            } catch (NumberFormatException ignored) { /* keep last valid */ }
+
             String newDate    = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);
             int    newVisit   = spinner.getValue();
             int    n          = orderNum[0];
@@ -680,37 +688,72 @@ public class GoNatureClientFX extends Application {
                 showToast(toast, false, "Please fill in all fields");
                 return;
             }
+            final int visitorsCount;
             try {
                 int v = Integer.parseInt(visitField.getText().trim());
                 if (v < 1 || v > 50) { showToast(toast, false, "Visitors must be between 1 and 50"); return; }
+                visitorsCount = v;
             } catch (NumberFormatException ex) {
                 showToast(toast, false, "Enter a valid number of visitors");
                 return;
             }
 
-            String dateStr = datePicker.getValue().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
-            outer.getChildren().clear();
+            String visitDate = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);
+            confirmBtn.setText("Submitting…");
+            confirmBtn.setDisable(true);
 
-            StackPane checkCircle = new StackPane();
-            checkCircle.setPrefSize(64, 64);
-            checkCircle.setStyle("-fx-background-color:" + G100 + "; -fx-background-radius:50;");
-            Label check = new Label("✓");
-            check.setStyle("-fx-font-size:28; -fx-font-weight:bold; -fx-text-fill:" + G500 + ";");
-            checkCircle.getChildren().add(check);
+            Task<ServerResponse> task = new Task<>() {
+                @Override protected ServerResponse call() {
+                    ClientRequest req = new ClientRequest(RequestType.INSERT_ORDER);
+                    req.put("orderDate",        visitDate);
+                    req.put("numberOfVisitors", visitorsCount);
+                    req.put("subscriberId",     4821);
+                    return client.sendRequest(req);
+                }
+            };
+            task.setOnSucceeded(ev -> {
+                ServerResponse res = task.getValue();
+                if (!res.isSuccess()) {
+                    confirmBtn.setText("Confirm Booking");
+                    confirmBtn.setDisable(false);
+                    showToast(toast, false, res.getMessage());
+                    return;
+                }
 
-            Label sTitle = new Label("Booking Submitted!");
-            sTitle.setStyle("-fx-font-size:20; -fx-font-weight:bold; -fx-text-fill:" + G800 + ";");
+                OrderDTO created = (OrderDTO) res.getData();
+                String dateStr = datePicker.getValue().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"));
+                outer.getChildren().clear();
 
-            Label sMsg = new Label("Your visit for " + dateStr + " has been received.\nA confirmation will be sent to your account.");
-            sMsg.setStyle("-fx-font-size:14; -fx-text-fill:" + G500 + ";");
-            sMsg.setWrapText(true);
-            sMsg.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+                StackPane checkCircle = new StackPane();
+                checkCircle.setPrefSize(64, 64);
+                checkCircle.setStyle("-fx-background-color:" + G100 + "; -fx-background-radius:50;");
+                Label check = new Label("✓");
+                check.setStyle("-fx-font-size:28; -fx-font-weight:bold; -fx-text-fill:" + G500 + ";");
+                checkCircle.getChildren().add(check);
 
-            VBox success = new VBox(16, checkCircle, sTitle, sMsg);
-            success.setAlignment(Pos.CENTER);
-            success.setMaxWidth(400);
+                Label sTitle = new Label("Booking Confirmed!");
+                sTitle.setStyle("-fx-font-size:20; -fx-font-weight:bold; -fx-text-fill:" + G800 + ";");
 
-            outer.getChildren().add(success);
+                Label sMsg = new Label(
+                        "Order #" + created.getOrderNumber() + " saved.\n" +
+                        "Visit date: " + dateStr + " · " + visitorsCount + " visitors\n" +
+                        "Confirmation code: " + created.getConfirmationCode());
+                sMsg.setStyle("-fx-font-size:14; -fx-text-fill:" + G500 + ";");
+                sMsg.setWrapText(true);
+                sMsg.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+
+                VBox success = new VBox(16, checkCircle, sTitle, sMsg);
+                success.setAlignment(Pos.CENTER);
+                success.setMaxWidth(420);
+
+                outer.getChildren().add(success);
+            });
+            task.setOnFailed(ev -> {
+                confirmBtn.setText("Confirm Booking");
+                confirmBtn.setDisable(false);
+                showToast(toast, false, "Connection error");
+            });
+            new Thread(task).start();
         });
 
         outer.getChildren().add(card);

@@ -14,4 +14,8 @@ public class OrderController {
     public boolean updateOrder(int orderNumber, String newDate, int newVisitors) {
         return dao.updateOrder(orderNumber, newDate, newVisitors);
     }
+
+    public OrderDTO insertOrder(String orderDate, int numberOfVisitors, int subscriberId) {
+        return dao.insertOrder(orderDate, numberOfVisitors, subscriberId);
+    }
 }

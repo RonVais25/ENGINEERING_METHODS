@@ -37,6 +37,20 @@ public class RequestRouter {
 
                 return new ServerResponse(false, "Update failed.");
 
+            case INSERT_ORDER:
+                String  insertDate     = (String) request.get("orderDate");
+                int     insertVisitors = (int)    request.get("numberOfVisitors");
+                int     subscriberId   = (int)    request.get("subscriberId");
+
+                OrderDTO created = controller.insertOrder(insertDate, insertVisitors, subscriberId);
+
+                if (created != null) {
+                    return new ServerResponse(true,
+                            "Booking created (#" + created.getOrderNumber() + ").", created);
+                }
+
+                return new ServerResponse(false, "Insert failed.");
+
             default:
                 return new ServerResponse(false, "Unknown request.");
         }
