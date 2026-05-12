@@ -12,12 +12,29 @@
 set -e
 cd "$(dirname "$0")"
 
+# Auto-find Liberica JDK 21 Full if JAVA_HOME isn't already set.
+if [ -z "$JAVA_HOME" ]; then
+    LIBERICA_MAC=/Library/Java/JavaVirtualMachines/liberica-jdk-21-full.jdk/Contents/Home
+    LIBERICA_LINUX=/usr/lib/jvm/bellsoft-liberica21-full
+    if   [ -d "$LIBERICA_MAC" ];   then JAVA_HOME="$LIBERICA_MAC"
+    elif [ -d "$LIBERICA_LINUX" ]; then JAVA_HOME="$LIBERICA_LINUX"
+    fi
+fi
+
 JAVA_BIN="${JAVA_BIN:-${JAVA_HOME:+$JAVA_HOME/bin/}java}"
 JAVAC_BIN="${JAVAC_BIN:-${JAVA_HOME:+$JAVA_HOME/bin/}javac}"
 JAR_BIN="${JAR_BIN:-${JAVA_HOME:+$JAVA_HOME/bin/}jar}"
 JAVA_BIN="${JAVA_BIN:-java}"
 JAVAC_BIN="${JAVAC_BIN:-javac}"
 JAR_BIN="${JAR_BIN:-jar}"
+
+# Sanity check: confirm this JDK has JavaFX before we try to compile.
+if ! "$JAVA_BIN" --list-modules 2>/dev/null | grep -q "^javafx.controls"; then
+    echo "ERROR: $JAVA_BIN does not bundle JavaFX."
+    echo "Install Liberica JDK 21 Full (https://bell-sw.com/pages/downloads/) or set"
+    echo "JAVA_HOME to a JDK that includes JavaFX."
+    exit 1
+fi
 
 MYSQL_JAR="lib/mysql-connector-j-9.6.0.jar"
 
