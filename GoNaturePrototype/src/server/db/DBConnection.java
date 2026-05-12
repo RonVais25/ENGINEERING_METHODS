@@ -7,7 +7,10 @@ import java.sql.SQLException;
 public class DBConnection {
 
     private static final String URL =
-            "jdbc:mysql://127.0.0.1:3306/gonature?serverTimezone=Asia/Jerusalem&useSSL=false";
+            "jdbc:mysql://127.0.0.1:3306/gonature" +
+            "?serverTimezone=Asia/Jerusalem" +
+            "&useSSL=false" +
+            "&allowPublicKeyRetrieval=true";
 
     private static final String USER = "root";
 
