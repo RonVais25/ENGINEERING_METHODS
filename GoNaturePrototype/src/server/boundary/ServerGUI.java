@@ -224,7 +224,8 @@ public class ServerGUI extends Application implements ServerListener {
         List<String> result = new ArrayList<>();
         try {
             for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                if (!ni.isUp() || ni.isLoopback() || ni.isVirtual()) continue;
+                // Skip down / loopback / virtual / VPN tunnel interfaces.
+                if (!ni.isUp() || ni.isLoopback() || ni.isVirtual() || ni.isPointToPoint()) continue;
                 for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
                     if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
                         result.add(addr.getHostAddress());
