@@ -30,18 +30,121 @@ public class GoNatureClientFX extends Application {
     private static final String G50   = "#f2f9f3";
     private static final String RED   = "#c94040";
 
-    private final ClientConnection client = new ClientConnection("localhost", 5555);
     private final Map<String, Button> navButtons = new LinkedHashMap<>();
+
+    private ClientConnection client;
+    private String serverHost;
+    private int    serverPort;
 
     private String currentScreen = "dashboard";
     private VBox mainArea;
     private Label topbarTitle;
     private Label topbarSubtitle;
 
+    // Sidebar live-status pill — populated in buildSidebar(), updated by updateConnStatus()
+    private Label  connHostLbl;
+    private Label  connStatusLbl;
+    private Circle connDot;
+
     // ─── Application entry ────────────────────────────────────────────────────
 
     @Override
     public void start(Stage stage) {
+        showLogin(stage);
+    }
+
+    public static void main(String[] args) { launch(args); }
+
+    // ─── Login window ─────────────────────────────────────────────────────────
+
+    private void showLogin(Stage mainStage) {
+        Stage loginStage = new Stage();
+        loginStage.setTitle("Connect to GoNature Server");
+        loginStage.initStyle(StageStyle.UTILITY);
+
+        Label title = new Label("Connect to Server");
+        title.setStyle("-fx-font-size:16; -fx-font-weight:bold; -fx-text-fill:" + G800 + ";");
+
+        Label hostLbl = new Label("Server Host");
+        hostLbl.setStyle(fieldLabelStyle());
+        TextField hostField = new TextField("localhost");
+        hostField.setStyle(inputStyle());
+
+        Label portLbl = new Label("Port");
+        portLbl.setStyle(fieldLabelStyle());
+        TextField portField = new TextField("5555");
+        portField.setStyle(inputStyle());
+
+        Button connectBtn = buildPrimaryButton("Connect", "→");
+        connectBtn.setMaxWidth(Double.MAX_VALUE);
+
+        Label statusMsg = new Label();
+        statusMsg.setStyle("-fx-font-size:12; -fx-text-fill:" + RED + ";");
+        statusMsg.setVisible(false);
+        statusMsg.setManaged(false);
+        statusMsg.setWrapText(true);
+
+        VBox form = new VBox(10, title, hostLbl, hostField, portLbl, portField, connectBtn, statusMsg);
+        form.setPadding(new Insets(24));
+        form.setStyle("-fx-background-color:white;");
+
+        Runnable attempt = () -> {
+            String host = hostField.getText().trim();
+            int    port;
+            try { port = Integer.parseInt(portField.getText().trim()); }
+            catch (NumberFormatException ex) { showLoginErr(statusMsg, "Port must be a number"); return; }
+
+            connectBtn.setText("Connecting…");
+            connectBtn.setDisable(true);
+            statusMsg.setVisible(false);
+            statusMsg.setManaged(false);
+
+            Task<ServerResponse> probe = new Task<>() {
+                @Override protected ServerResponse call() {
+                    ClientConnection tmp = new ClientConnection(host, port);
+                    return tmp.sendRequest(new ClientRequest(RequestType.PING));
+                }
+            };
+            probe.setOnSucceeded(ev -> {
+                ServerResponse res = probe.getValue();
+                if (res != null && res.isSuccess()) {
+                    this.serverHost = host;
+                    this.serverPort = port;
+                    this.client     = new ClientConnection(host, port);
+                    loginStage.close();
+                    buildMainUI(mainStage);
+                } else {
+                    connectBtn.setText("Connect");
+                    connectBtn.setDisable(false);
+                    showLoginErr(statusMsg, "Could not reach " + host + ":" + port);
+                }
+            });
+            probe.setOnFailed(ev -> {
+                connectBtn.setText("Connect");
+                connectBtn.setDisable(false);
+                showLoginErr(statusMsg, "Could not reach " + host + ":" + port);
+            });
+            new Thread(probe).start();
+        };
+        connectBtn.setOnAction(e -> attempt.run());
+        hostField.setOnAction(e -> attempt.run());
+        portField.setOnAction(e -> attempt.run());
+
+        Scene scene = new Scene(form, 320, 320);
+        loginStage.setScene(scene);
+        loginStage.setResizable(false);
+        loginStage.show();
+    }
+
+    private void showLoginErr(Label statusMsg, String msg) {
+        statusMsg.setText(msg);
+        statusMsg.setVisible(true);
+        statusMsg.setManaged(true);
+    }
+
+    // ─── Main UI (shown after login succeeds) ─────────────────────────────────
+
+    private void buildMainUI(Stage stage) {
         HBox root = new HBox();
 
         VBox sidebar = buildSidebar();
@@ -61,7 +164,19 @@ public class GoNatureClientFX extends Application {
         switchScreen("dashboard");
     }
 
-    public static void main(String[] args) { launch(args); }
+    // ─── Server request wrapper — updates connection pill on every call ───────
+
+    private ServerResponse send(ClientRequest req) {
+        ServerResponse res = client.sendRequest(req);
+        boolean reachable = res != null && !"Client error".equals(res.getMessage());
+        Platform.runLater(() -> updateConnStatus(reachable));
+        return res;
+    }
+
+    private void updateConnStatus(boolean ok) {
+        if (connDot != null)       connDot.setFill(Color.web(ok ? "#64c864" : RED));
+        if (connStatusLbl != null) connStatusLbl.setText(ok ? "Connected" : "Disconnected");
+    }
 
     // ─── Sidebar ──────────────────────────────────────────────────────────────
 
@@ -122,19 +237,19 @@ public class GoNatureClientFX extends Application {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        // Connection status
+        // Connection status — live, reflects the actual server we connected to
         HBox connPill = new HBox(8);
         connPill.setAlignment(Pos.CENTER_LEFT);
         connPill.setPadding(new Insets(8, 12, 8, 12));
         connPill.setStyle("-fx-background-color:rgba(255,255,255,0.05); -fx-background-radius:10;");
-        Circle dot = new Circle(3.5, Color.web("#64c864"));
+        connDot = new Circle(3.5, Color.web("#64c864"));
         VBox connText = new VBox(1);
-        Label host = new Label("localhost:5555");
-        host.setStyle("-fx-font-size:12; -fx-font-weight:bold; -fx-text-fill:" + G200 + ";");
-        Label connStatus = new Label("Connected");
-        connStatus.setStyle("-fx-font-size:11; -fx-text-fill:" + G300 + ";");
-        connText.getChildren().addAll(host, connStatus);
-        connPill.getChildren().addAll(dot, connText);
+        connHostLbl = new Label(serverHost + ":" + serverPort);
+        connHostLbl.setStyle("-fx-font-size:12; -fx-font-weight:bold; -fx-text-fill:" + G200 + ";");
+        connStatusLbl = new Label("Connected");
+        connStatusLbl.setStyle("-fx-font-size:11; -fx-text-fill:" + G300 + ";");
+        connText.getChildren().addAll(connHostLbl, connStatusLbl);
+        connPill.getChildren().addAll(connDot, connText);
 
         HBox connWrapper = new HBox(connPill);
         connWrapper.setPadding(new Insets(8, 10, 8, 10));
@@ -484,11 +599,10 @@ public class GoNatureClientFX extends Application {
                 findBtn.setText("Searching…");
                 findBtn.setDisable(true);
                 Task<ServerResponse> t = new Task<>() {
-                    @Override protected ServerResponse call() throws Exception {
-                        Thread.sleep(500);
+                    @Override protected ServerResponse call() {
                         ClientRequest req = new ClientRequest(RequestType.GET_ORDER);
                         req.put("orderNumber", n);
-                        return client.sendRequest(req);
+                        return send(req);
                     }
                 };
                 t.setOnSucceeded(ev -> {
@@ -556,13 +670,12 @@ public class GoNatureClientFX extends Application {
             applyBtn.setDisable(true);
 
             Task<ServerResponse> t = new Task<>() {
-                @Override protected ServerResponse call() throws Exception {
-                    Thread.sleep(500);
+                @Override protected ServerResponse call() {
                     ClientRequest req = new ClientRequest(RequestType.UPDATE_ORDER);
                     req.put("orderNumber", n);
                     req.put("newDate",     newDate);
                     req.put("newVisitors", newVisit);
-                    return client.sendRequest(req);
+                    return send(req);
                 }
             };
             t.setOnSucceeded(ev -> {
@@ -581,7 +694,7 @@ public class GoNatureClientFX extends Application {
                         @Override protected ServerResponse call() {
                             ClientRequest req = new ClientRequest(RequestType.GET_ORDER);
                             req.put("orderNumber", n);
-                            return client.sendRequest(req);
+                            return send(req);
                         }
                     };
                     refetch.setOnSucceeded(ev2 -> {
@@ -708,7 +821,7 @@ public class GoNatureClientFX extends Application {
                     req.put("orderDate",        visitDate);
                     req.put("numberOfVisitors", visitorsCount);
                     req.put("subscriberId",     4821);
-                    return client.sendRequest(req);
+                    return send(req);
                 }
             };
             task.setOnSucceeded(ev -> {
@@ -1030,11 +1143,10 @@ public class GoNatureClientFX extends Application {
             btn.setDisable(true);
 
             Task<ServerResponse> task = new Task<>() {
-                @Override protected ServerResponse call() throws Exception {
-                    Thread.sleep(500);
+                @Override protected ServerResponse call() {
                     ClientRequest req = new ClientRequest(RequestType.GET_ORDER);
                     req.put("orderNumber", n);
-                    return client.sendRequest(req);
+                    return send(req);
                 }
             };
             task.setOnSucceeded(ev -> {

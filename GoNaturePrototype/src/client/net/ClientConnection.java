@@ -5,12 +5,16 @@ import common.dto.ServerResponse;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 
 public class ClientConnection {
 
-    private String host;
-    private int port;
+    private static final int CONNECT_TIMEOUT_MS = 3000;
+    private static final int READ_TIMEOUT_MS    = 5000;
+
+    private final String host;
+    private final int    port;
 
     public ClientConnection(String host, int port) {
         this.host = host;
@@ -19,17 +23,20 @@ public class ClientConnection {
 
     public ServerResponse sendRequest(ClientRequest request) {
 
-        try (Socket socket = new Socket(host, port);
-             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-             ObjectInputStream in = new ObjectInputStream(socket.getInputStream())) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), CONNECT_TIMEOUT_MS);
+            socket.setSoTimeout(READ_TIMEOUT_MS);
 
-            out.writeObject(request);
-            out.flush();
+            try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                 ObjectInputStream  in  = new ObjectInputStream(socket.getInputStream())) {
 
-            return (ServerResponse) in.readObject();
+                out.writeObject(request);
+                out.flush();
+
+                return (ServerResponse) in.readObject();
+            }
 
         } catch (Exception e) {
-            e.printStackTrace();
             return new ServerResponse(false, "Client error");
         }
     }

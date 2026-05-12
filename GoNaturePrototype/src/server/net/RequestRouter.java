@@ -13,6 +13,9 @@ public class RequestRouter {
 
         switch (request.getType()) {
 
+            case PING:
+                return new ServerResponse(true, "pong");
+
             case GET_ORDER:
                 int orderNumber = (int) request.get("orderNumber");
 
