@@ -461,14 +461,6 @@ public class ServerGUI extends Application implements ServerListener {
         public String getConnectedAt() { return connectedAt.get(); }
         public String getStatus()      { return status.get(); }
 
-        // Property getters — required so PropertyValueFactory subscribes to
-        // changes. Without these, the table reads the value once and never
-        // refreshes when setStatus()/setConnectedAt() fire.
-        public javafx.beans.property.StringProperty ipProperty()          { return ip; }
-        public javafx.beans.property.StringProperty hostProperty()        { return host; }
-        public javafx.beans.property.StringProperty connectedAtProperty() { return connectedAt; }
-        public javafx.beans.property.StringProperty statusProperty()      { return status; }
-
         public void setStatus(String s)      { status.set(s); }
         public void setConnectedAt(String t) { connectedAt.set(t); }
     }

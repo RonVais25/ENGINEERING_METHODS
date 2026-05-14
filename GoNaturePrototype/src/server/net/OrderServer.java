@@ -3,15 +3,10 @@ package server.net;
 import common.dto.ClientRequest;
 import common.dto.ServerResponse;
 
-import java.io.EOFException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class OrderServer {
 
@@ -22,20 +17,13 @@ public class OrderServer {
     private ServerSocket serverSocket;
     private volatile boolean running;
 
-    // Every accepted client socket is tracked so stop() can force-close them.
-    // Without this, server.stop() only stops accept() — existing handleClient
-    // threads keep running and the clients can still send requests.
-    private final List<Socket> activeClients = Collections.synchronizedList(new ArrayList<>());
-
     public OrderServer(int port, ServerListener listener) {
         this.port = port;
         this.listener = listener;
     }
 
     public void start() {
-        Thread t = new Thread(this::runAcceptLoop, "OrderServer-accept");
-        t.setDaemon(true);
-        t.start();
+        new Thread(this::runAcceptLoop, "OrderServer-accept").start();
     }
 
     public void stop() {
@@ -46,15 +34,6 @@ public class OrderServer {
             }
         } catch (Exception e) {
             listener.onError("Error closing server: " + e.getMessage());
-        }
-
-        // Force-close every still-open client socket so the handleClient
-        // threads unwind and the clients see the connection drop immediately.
-        synchronized (activeClients) {
-            for (Socket s : new ArrayList<>(activeClients)) {
-                try { s.close(); } catch (Exception ignored) {}
-            }
-            activeClients.clear();
         }
     }
 
@@ -69,14 +48,10 @@ public class OrderServer {
 
                 String ip   = clientSocket.getInetAddress().getHostAddress();
                 String host = clientSocket.getInetAddress().getHostName();
-
-                activeClients.add(clientSocket);
                 listener.onClientConnected(ip, host);
 
-                Thread t = new Thread(() -> handleClient(clientSocket, ip, host),
-                                      "OrderServer-client-" + ip);
-                t.setDaemon(true);
-                t.start();
+                new Thread(() -> handleClient(clientSocket, ip, host),
+                           "OrderServer-client-" + ip).start();
             }
 
         } catch (Exception e) {
@@ -90,40 +65,22 @@ public class OrderServer {
     }
 
     private void handleClient(Socket socket, String ip, String host) {
-        // Persistent connection: read requests in a loop until the client
-        // closes its socket (EOF) or the connection drops. The session ends
-        // only on disconnect, not after each request.
         try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
              ObjectInputStream  in  = new ObjectInputStream(socket.getInputStream())) {
 
+            ClientRequest request = (ClientRequest) in.readObject();
+            listener.onLog(ip + " → " + request.getType());
+
+            ServerResponse response = router.handle(request);
+            out.writeObject(response);
             out.flush();
 
-            while (!socket.isClosed()) {
-                ClientRequest request;
-                try {
-                    request = (ClientRequest) in.readObject();
-                } catch (EOFException | SocketException eof) {
-                    // Client closed the socket — normal disconnect, not an error.
-                    break;
-                }
-
-                listener.onLog(ip + " → " + request.getType());
-
-                ServerResponse response = router.handle(request);
-                out.writeObject(response);
-                out.flush();
-                // Reset the stream's identity cache so subsequent writes of
-                // the same DTO type don't get serialized as back-references.
-                out.reset();
-
-                listener.onLog(ip + " ← " + (response.isSuccess() ? "OK" : "FAIL") +
-                               " (" + response.getMessage() + ")");
-            }
+            listener.onLog(ip + " ← " + (response.isSuccess() ? "OK" : "FAIL") +
+                           " (" + response.getMessage() + ")");
 
         } catch (Exception e) {
             listener.onError("Client " + ip + " error: " + e.getMessage());
         } finally {
-            activeClients.remove(socket);
             listener.onClientDisconnected(ip, host);
         }
     }
