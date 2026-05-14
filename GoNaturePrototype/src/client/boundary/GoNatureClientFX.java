@@ -33,6 +33,7 @@ public class GoNatureClientFX extends Application {
     private final Map<String, Button> navButtons = new LinkedHashMap<>();
 
     private ClientConnection client;
+    private ClientConnection pendingConnection;   // live during login probe
     private String serverHost;
     private int    serverPort;
 
@@ -54,6 +55,14 @@ public class GoNatureClientFX extends Application {
     }
 
     public static void main(String[] args) { launch(args); }
+
+    @Override
+    public void stop() {
+        // Called by JavaFX when the application is shutting down (last window closed).
+        // Close the persistent socket so the server sees a clean disconnect.
+        if (client != null)            client.close();
+        if (pendingConnection != null) pendingConnection.close();
+    }
 
     // ─── Login window ─────────────────────────────────────────────────────────
 
@@ -99,27 +108,47 @@ public class GoNatureClientFX extends Application {
             statusMsg.setVisible(false);
             statusMsg.setManaged(false);
 
+            // Open the persistent connection on the login attempt and verify
+            // with a PING. If both succeed, hand the same ClientConnection off
+            // to the main UI so every subsequent request reuses this socket.
             Task<ServerResponse> probe = new Task<>() {
-                @Override protected ServerResponse call() {
-                    ClientConnection tmp = new ClientConnection(host, port);
-                    return tmp.sendRequest(new ClientRequest(RequestType.PING));
+                @Override protected ServerResponse call() throws Exception {
+                    ClientConnection conn = new ClientConnection(host, port);
+                    conn.connect();
+                    ServerResponse res = conn.sendRequest(new ClientRequest(RequestType.PING));
+                    if (res == null || !res.isSuccess()) {
+                        conn.close();
+                        return new ServerResponse(false, "Server did not respond to PING");
+                    }
+                    // Stash the live connection so onSucceeded can promote it.
+                    pendingConnection = conn;
+                    return res;
                 }
             };
             probe.setOnSucceeded(ev -> {
                 ServerResponse res = probe.getValue();
-                if (res != null && res.isSuccess()) {
+                if (res != null && res.isSuccess() && pendingConnection != null) {
                     this.serverHost = host;
                     this.serverPort = port;
-                    this.client     = new ClientConnection(host, port);
+                    this.client     = pendingConnection;
+                    pendingConnection = null;
                     loginStage.close();
                     buildMainUI(mainStage);
                 } else {
+                    if (pendingConnection != null) {
+                        pendingConnection.close();
+                        pendingConnection = null;
+                    }
                     connectBtn.setText("Connect");
                     connectBtn.setDisable(false);
                     showLoginErr(statusMsg, "Could not reach " + host + ":" + port);
                 }
             });
             probe.setOnFailed(ev -> {
+                if (pendingConnection != null) {
+                    pendingConnection.close();
+                    pendingConnection = null;
+                }
                 connectBtn.setText("Connect");
                 connectBtn.setDisable(false);
                 showLoginErr(statusMsg, "Could not reach " + host + ":" + port);
@@ -168,7 +197,9 @@ public class GoNatureClientFX extends Application {
 
     private ServerResponse send(ClientRequest req) {
         ServerResponse res = client.sendRequest(req);
-        boolean reachable = res != null && !"Client error".equals(res.getMessage());
+        // The ClientConnection closes itself on a network failure, so its
+        // own isConnected() flag is the single source of truth for the pill.
+        boolean reachable = client.isConnected();
         Platform.runLater(() -> updateConnStatus(reachable));
         return res;
     }
