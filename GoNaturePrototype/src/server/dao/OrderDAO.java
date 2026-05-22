@@ -10,8 +10,23 @@ import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * Data access object for the {@code Order} table.
+ *
+ * <p>Each method opens a short-lived {@link java.sql.Connection} from
+ * {@link server.db.DBConnection}, runs a single parameterized statement, and maps the
+ * result to an {@link OrderDTO}. SQL exceptions are logged and surfaced as a
+ * {@code null}/{@code false} return rather than being propagated, so callers signal
+ * failure through the return value.
+ */
 public class OrderDAO {
 
+    /**
+     * Looks up a single order by its number.
+     *
+     * @param orderNumber the order identifier to fetch
+     * @return the matching {@link OrderDTO}, or {@code null} if no row matches or the query fails
+     */
     public OrderDTO getOrderByNumber(int orderNumber) {
         String sql = "SELECT * FROM `Order` WHERE order_number = ?";
 
