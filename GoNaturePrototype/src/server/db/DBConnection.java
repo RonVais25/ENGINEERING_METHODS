@@ -14,8 +14,15 @@ public class DBConnection {
 
     private static final String USER = "root";
 
-    private static String password =
-            System.getenv("DB_PASSWORD") != null ? System.getenv("DB_PASSWORD") : "";
+    private static String password = resolveInitialPassword();
+
+    private static String resolveInitialPassword() {
+        String env = System.getenv("DB_PASSWORD");
+        if (env != null) return env;
+        String prop = System.getProperty("DB_PASSWORD");
+        if (prop != null) return prop;
+        return "";
+    }
 
     public static void setPassword(String pw) {
         password = pw != null ? pw : "";

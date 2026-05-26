@@ -171,6 +171,7 @@ public class ServerGUI extends Application implements ServerListener {
         passwordField.setPromptText("MySQL root password");
         passwordField.setStyle(inputStyle());
         String envPw = System.getenv("DB_PASSWORD");
+        if (envPw == null) envPw = System.getProperty("DB_PASSWORD");
         if (envPw != null) passwordField.setText(envPw);
 
         startBtn = buildPrimaryButton("Start Server", "▶");
