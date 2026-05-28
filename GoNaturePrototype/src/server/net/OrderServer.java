@@ -2,6 +2,7 @@ package server.net;
 
 import common.dto.ClientRequest;
 import common.dto.ServerResponse;
+import server.subscription.SubscriptionRegistry;
 
 import java.io.EOFException;
 import java.io.ObjectInputStream;
@@ -93,10 +94,18 @@ public class OrderServer {
         // Persistent connection: read requests in a loop until the client
         // closes its socket (EOF) or the connection drops. The session ends
         // only on disconnect, not after each request.
-        try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-             ObjectInputStream  in  = new ObjectInputStream(socket.getInputStream())) {
-
+        //
+        // Outbound writes (responses + future pushed events) go through the
+        // ClientSession so they share one writeLock; interleaved writes on the
+        // same ObjectOutputStream would produce garbled bytes on the wire.
+        ClientSession session = null;
+        ObjectOutputStream out = null;
+        ObjectInputStream  in  = null;
+        try {
+            out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
+            in  = new ObjectInputStream(socket.getInputStream());
+            session = new ClientSession(socket, in, out);
 
             while (!socket.isClosed()) {
                 ClientRequest request;
@@ -110,16 +119,12 @@ public class OrderServer {
                 listener.onLog(ip + " → " + request.getType());
                 listener.onLog("[req id=" + request.getCorrelationId() + "] type=" + request.getType());
 
-                ServerResponse response = router.handle(request);
+                ServerResponse response = router.handle(request, session);
                 // Echo the request's correlation id onto the response so the client
                 // can match it back to the originating request once the reader-thread
                 // routing lands in step 3 of the realtime push channel.
                 response.setCorrelationId(request.getCorrelationId());
-                out.writeObject(response);
-                out.flush();
-                // Reset the stream's identity cache so subsequent writes of
-                // the same DTO type don't get serialized as back-references.
-                out.reset();
+                session.sendResponse(response);
 
                 listener.onLog(ip + " ← " + (response.isSuccess() ? "OK" : "FAIL") +
                                " (" + response.getMessage() + ")");
@@ -128,6 +133,18 @@ public class OrderServer {
         } catch (Exception e) {
             listener.onError("Client " + ip + " error: " + e.getMessage());
         } finally {
+            if (session != null) {
+                // Detach from every subscription bucket so the registry never
+                // tries to push to this dead socket, then close streams+socket.
+                SubscriptionRegistry.getInstance().unregisterAll(session);
+                session.close();
+            } else {
+                // Session was never constructed (stream open failed). Close
+                // whatever did get opened so we don't leak file descriptors.
+                try { if (in  != null) in.close();  } catch (Exception ignored) {}
+                try { if (out != null) out.close(); } catch (Exception ignored) {}
+                try { socket.close(); } catch (Exception ignored) {}
+            }
             activeClients.remove(socket);
             listener.onClientDisconnected(ip, host);
         }

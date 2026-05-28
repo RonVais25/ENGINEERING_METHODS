@@ -3,13 +3,15 @@ package server.net;
 import common.dto.ClientRequest;
 import common.dto.OrderDTO;
 import common.dto.ServerResponse;
+import common.dto.SubscriptionKey;
 import server.control.OrderController;
+import server.subscription.SubscriptionRegistry;
 
 public class RequestRouter {
 
     private OrderController controller = new OrderController();
 
-    public ServerResponse handle(ClientRequest request) {
+    public ServerResponse handle(ClientRequest request, ClientSession session) {
 
         switch (request.getType()) {
 
@@ -53,6 +55,32 @@ public class RequestRouter {
                 }
 
                 return new ServerResponse(false, "Insert failed.");
+
+            case SUBSCRIBE: {
+                String entity   = (String) request.get("entity");
+                // Accept Integer or Long off the wire — the client may send
+                // either depending on whether it boxed an int or a long.
+                long   entityId = ((Number) request.get("entityId")).longValue();
+
+                SubscriptionKey key = new SubscriptionKey(entity, entityId);
+                SubscriptionRegistry.getInstance().register(session, key);
+
+                ServerResponse resp = new ServerResponse(true, "subscribed");
+                resp.setCorrelationId(request.getCorrelationId());
+                return resp;
+            }
+
+            case UNSUBSCRIBE: {
+                String entity   = (String) request.get("entity");
+                long   entityId = ((Number) request.get("entityId")).longValue();
+
+                SubscriptionKey key = new SubscriptionKey(entity, entityId);
+                SubscriptionRegistry.getInstance().unregister(session, key);
+
+                ServerResponse resp = new ServerResponse(true, "unsubscribed");
+                resp.setCorrelationId(request.getCorrelationId());
+                return resp;
+            }
 
             default:
                 return new ServerResponse(false, "Unknown request.");
