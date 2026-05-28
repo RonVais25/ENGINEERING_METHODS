@@ -108,8 +108,13 @@ public class OrderServer {
                 }
 
                 listener.onLog(ip + " → " + request.getType());
+                listener.onLog("[req id=" + request.getCorrelationId() + "] type=" + request.getType());
 
                 ServerResponse response = router.handle(request);
+                // Echo the request's correlation id onto the response so the client
+                // can match it back to the originating request once the reader-thread
+                // routing lands in step 3 of the realtime push channel.
+                response.setCorrelationId(request.getCorrelationId());
                 out.writeObject(response);
                 out.flush();
                 // Reset the stream's identity cache so subsequent writes of

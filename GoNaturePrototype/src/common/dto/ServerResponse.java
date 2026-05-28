@@ -8,6 +8,7 @@ public class ServerResponse implements Serializable {
     private boolean success;
     private String message;
     private Object data;
+    private long correlationId = 0L;
 
     public ServerResponse(boolean success, String message) {
         this.success = success;
@@ -30,5 +31,13 @@ public class ServerResponse implements Serializable {
 
     public Object getData() {
         return data;
+    }
+
+    public long getCorrelationId() {
+        return correlationId;
+    }
+
+    public void setCorrelationId(long correlationId) {
+        this.correlationId = correlationId;
     }
 }

@@ -9,6 +9,7 @@ public class ClientRequest implements Serializable {
 
     private RequestType type;
     private Map<String, Object> data;
+    private long correlationId = 0L;
 
     public ClientRequest(RequestType type) {
         this.type = type;
@@ -25,5 +26,13 @@ public class ClientRequest implements Serializable {
 
     public Object get(String key) {
         return data.get(key);
+    }
+
+    public long getCorrelationId() {
+        return correlationId;
+    }
+
+    public void setCorrelationId(long correlationId) {
+        this.correlationId = correlationId;
     }
 }
