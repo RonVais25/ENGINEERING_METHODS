@@ -2,7 +2,7 @@
 
 # 🌿 GoNature — Nature Park Visit Management System
 
-> Course 61756 – Engineering Methods for Software Development · Spring 2026 · Group 10
+> Course work – Engineering Methods for Software Development · Braude 2026 · Group 10
 
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://www.java.com/)
 [![JavaFX](https://img.shields.io/badge/JavaFX-UI-007396?style=flat-square&logo=java&logoColor=white)](https://openjfx.io/)
@@ -24,11 +24,11 @@ JavaFX Client  →  (TCP :5555)  →  Java Server  →  (JDBC :3306)  →  MySQL
 
 Single codebase, three layers:
 
-| Layer | Package | Responsibility |
-|---|---|---|
-| Client | `client.boundary`, `client.net` | JavaFX UI + server communication |
-| Common | `common.dto` | Shared data objects (Client ↔ Server) |
-| Server | `server.net`, `server.control`, `server.dao`, `server.db` | Request handling, business logic, DB |
+| Layer    | Package                                                                                            | Responsibility                                          |
+|----------|----------------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| Client   | `client.boundary`, `client.app`, `client.view`, `client.service`, `client.net`, `client.resources` | JavaFX UI (FXML + CSS), session state, async networking |
+| Common   | `common.dto`                                                                                       | Shared data objects (Client ↔ Server)                   |
+| Server   | `server.net`, `server.control`, `server.dao`, `server.db`                                          | Request handling, business logic, DB                    |
 
 ---
 
@@ -38,63 +38,51 @@ Single codebase, three layers:
 GoNaturePrototype/
 ├── src/
 │   ├── client/
-│   │   ├── boundary/
-│   │   │   └── GoNatureClientFX.java   ← JavaFX client 
-│   │   └── net/
-│   │       └── ClientConnection.java
-│   ├── common/dto/
-│   │   ├── ClientRequest.java
-│   │   ├── ServerResponse.java
-│   │   ├── OrderDTO.java
-│   │   └── RequestType.java
-│   └── server/
-│       ├── app/StartServer.java
-│       ├── net/
-│       │   ├── OrderServer.java
-│       │   └── RequestRouter.java
-│       ├── control/OrderController.java
-│       ├── dao/OrderDAO.java
-│       └── db/DBConnection.java
-├── setup.sql          ← creates DB and seeds dummy data
-├── run_server.sh
-└── run_client_fx.sh
+│   │   ├── boundary/    ← entry points (GoNatureClientApp, GoNatureClientFX)
+│   │   ├── app/         ← Session, Navigator
+│   │   ├── service/     ← NetworkService (async wrapper around the socket)
+│   │   ├── net/         ← ClientConnection (TCP socket)
+│   │   ├── view/        ← one FXML + Controller per screen, plus Widgets
+│   │   └── resources/   ← client.css (single stylesheet, all styling)
+│   ├── common/dto/      ← ClientRequest, ServerResponse, OrderDTO, RequestType
+│   └── server/          ← app, net, control, dao, db
+├── build_jars.sh        ← compiles + bundles JARs into dist/
+├── launchers/           ← double-click scripts (.command / .bat)
+├── dist/                ← built JARs
+└── setup.sql            ← creates DB, seeds dummy data
 ```
 
 ---
 
-## Running Locally
+## Running it
 
-**Requirements:** Liberica JDK 21 Full, MySQL 9.x
+You'll need Java 21 with JavaFX bundled (Liberica JDK 21 Full) and MySQL 9.x. Build once with `./build_jars.sh` inside `GoNaturePrototype/` — that produces the server and client JARs in `dist/`.
 
-**1. Start MySQL** (MySQL Server locally)
+Before the first run, create `GoNaturePrototype/.env` with your DB password:
 
-**2. Set up the database** (once per machine)
-```bash
-mysql -u root -p --host=127.0.0.1 < setup.sql
+```
+DB_PASSWORD=yourpassword
 ```
 
-**3. Open two terminals**
-```bash
-# Terminal 1 — server
-./run_server.sh yourpassword
+Then seed the database (one-time):
 
-# Terminal 2 — client
-./run_client_fx.sh
+```bash
+mysql -u root -p < GoNaturePrototype/setup.sql
 ```
 
-The DB password is passed at runtime and never stored in code.
+**Same machine.** Double-click `launchers/Run Server.command`, then `launchers/Run Client (new).command`. The client defaults to `localhost:5555`, so just hit Connect.
 
 ---
 
 ## Client Screens
 
-| Screen | Description |
-|---|---|
-| Dashboard | Recent orders and subscriber stats |
-| Get Order | Look up any order by number |
-| Update Order | Step-by-step edit flow with live result panel |
-| New Booking | Submit a new park visit reservation |
-| History | Full order table for the subscriber |
+| Screen      | Description                                   | 
+|-------------|-----------------------------------------------|
+| Dashboard   | Recent orders and subscriber stats            |
+| Get Order   | Look up any order by number                   |
+| Update Order| Step-by-step edit flow with live result panel |
+| New Booking | Submit a new park visit reservation           |
+| History     | Full order table for the subscriber           |
 
 ---
 
@@ -123,13 +111,13 @@ The DB password is passed at runtime and never stored in code.
 
 ## Pricing
 
-| Visit Type | Discount |
-|---|---|
-| Individual / Family – Pre-booked | 15% off |
-| Individual / Family – Walk-in | Full price |
-| Organized Group – Pre-booked | 25% off (+12% if prepaid, guide free) |
-| Organized Group – Walk-in | 10% off |
-| Subscriber Club Member | Extra 10% on top |
+| Visit Type                       | Discount                              |
+|----------------------------------|---------------------------------------|
+| Individual / Family – Pre-booked | 15% off                               |
+| Individual / Family – Walk-in    | Full price                            |
+| Organized Group – Pre-booked     | 25% off (+12% if prepaid, guide free) |
+| Organized Group – Walk-in        | 10% off                               |
+| Subscriber Club Member           | Extra 10% on top                      |
 
 ---
 
