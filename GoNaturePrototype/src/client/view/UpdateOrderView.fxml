@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<HBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="client.view.UpdateOrderController"
+      styleClass="split-row">
+
+    <!-- Left column: step indicator + two stacked cards -->
+    <VBox fx:id="leftPanel" styleClass="left-panel" HBox.hgrow="ALWAYS">
+
+        <!-- Step indicator slot (controller injects buildStepIndicator output) -->
+        <HBox fx:id="stepIndicatorSlot" styleClass="step-row"/>
+
+        <!-- Step 0: find an order -->
+        <VBox fx:id="step0" styleClass="card">
+            <Label text="Order Number" styleClass="field-label"/>
+            <TextField fx:id="s0input" promptText="Enter order number…" styleClass="input-field-large"/>
+            <Button fx:id="findBtn" text="⊕  Find Order" onAction="#onFind"
+                    styleClass="btn-primary" maxWidth="Infinity"/>
+            <Label fx:id="s0toast" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <!-- Step 1: edit details (hidden until Find succeeds) -->
+        <VBox fx:id="step1" styleClass="card" visible="false" managed="false">
+            <Label fx:id="s1title" text="Edit Order" styleClass="section-heading"/>
+
+            <HBox spacing="14">
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="Visit Date" styleClass="field-label"/>
+                    <DatePicker fx:id="datePicker" maxWidth="Infinity"
+                                promptText="dd / mm / yyyy" styleClass="date-picker"/>
+                </VBox>
+                <VBox spacing="6" HBox.hgrow="ALWAYS">
+                    <Label text="Number of Visitors" styleClass="field-label"/>
+                    <Spinner fx:id="visitorsSpinner" editable="true" maxWidth="Infinity"/>
+                </VBox>
+            </HBox>
+
+            <HBox spacing="10">
+                <Button fx:id="backBtn"  text="← Back"         onAction="#onBack"
+                        styleClass="btn-secondary"/>
+                <Button fx:id="applyBtn" text="✎  Apply Changes" onAction="#onApply"
+                        styleClass="btn-primary" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            </HBox>
+
+            <Label fx:id="s1toast" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+    </VBox>
+
+    <!-- Right column: result panel + activity log -->
+    <VBox fx:id="rightPanel" styleClass="right-panel"/>
+</HBox>

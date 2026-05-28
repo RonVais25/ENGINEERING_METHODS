@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.HistoryController"
+            fitToWidth="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" spacing="12">
+
+        <VBox styleClass="history-card" VBox.vgrow="ALWAYS">
+
+            <HBox styleClass="history-card-header">
+                <Label fx:id="cardHeaderLabel" text="ALL ORDERS" styleClass="section-label"/>
+            </HBox>
+
+            <VBox fx:id="tableBox" spacing="0"/>
+        </VBox>
+
+        <Label fx:id="footerLabel" styleClass="history-footer"/>
+    </VBox>
+</ScrollPane>

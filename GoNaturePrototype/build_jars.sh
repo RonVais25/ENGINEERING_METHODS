@@ -44,10 +44,19 @@ mkdir -p build dist
 
 echo "▸ Compiling sources"
 find src -name "*.java" > build/sources.txt
-"$JAVAC_BIN" --add-modules javafx.controls,javafx.graphics \
+"$JAVAC_BIN" --add-modules javafx.controls,javafx.graphics,javafx.fxml \
              -cp "$MYSQL_JAR" \
              -d build \
              @build/sources.txt
+
+echo "▸ Copying client resources (fxml/css/svg)"
+# FXMLLoader resolves FXML/CSS via the classpath, so the files must live next
+# to the compiled classes inside the JAR. Walk src/client and mirror every
+# .fxml / .css / .svg into the matching build/client path.
+(cd src && find client -type f \( -name '*.fxml' -o -name '*.css' -o -name '*.svg' \)) | while read -r f; do
+    mkdir -p "build/$(dirname "$f")"
+    cp "src/$f" "build/$f"
+done
 
 echo "▸ Building GoNatureServer.jar"
 cat > build/server-manifest.mf <<EOF
@@ -66,10 +75,19 @@ EOF
 "$JAR_BIN" cfm dist/GoNatureClient.jar build/client-manifest.mf \
     -C build client -C build common
 
+echo "▸ Building GoNatureClientNew.jar"
+cat > build/client-new-manifest.mf <<EOF
+Manifest-Version: 1.0
+Main-Class: client.boundary.GoNatureClientApp
+EOF
+"$JAR_BIN" cfm dist/GoNatureClientNew.jar build/client-new-manifest.mf \
+    -C build client -C build common
+
 echo ""
 echo "✓ Done. Built JARs:"
 ls -lh dist/
 echo ""
 echo "Run with:"
 echo "  java -jar dist/GoNatureServer.jar    (needs MySQL connector at lib/ or ../lib/)"
-echo "  java --add-modules javafx.controls,javafx.graphics -jar dist/GoNatureClient.jar"
+echo "  java --add-modules javafx.controls,javafx.graphics            -jar dist/GoNatureClient.jar    (old monolith)"
+echo "  java --add-modules javafx.controls,javafx.graphics,javafx.fxml -jar dist/GoNatureClientNew.jar (FXML rewrite)"

@@ -1,0 +1,347 @@
+/* ============================================================================
+ * GoNature client stylesheet — single source of truth for all visual styling.
+ * No -fx-* values should appear in Java code. If you need to change a colour,
+ * radius, padding, or font size, change it here.
+ * ============================================================================ */
+
+/* ---------- Design tokens --------------------------------------------------
+ * Defined on .root so every node inherits them. Reference them in rules
+ * below as -fx-g500, -fx-red, etc.
+ * --------------------------------------------------------------------------- */
+.root {
+    -g800: #1a3320;
+    -g700: #254d2e;
+    -g600: #2e6638;
+    -g500: #3d8c4a;
+    -g400: #55b363;
+    -g300: #80cb8b;
+    -g200: #c2e5c8;
+    -g100: #e5f3e8;
+    -g50:  #f2f9f3;
+    -red:  #c94040;
+    -dot-ok:   #64c864;
+    -gold-fg:  #8a6a1a;
+    -gold-bg:  #f5e8c0;
+
+    -fx-font-family: "System";
+}
+
+/* ---------- Layout shells -------------------------------------------------- */
+.app-root            { -fx-background-color: -g50; }
+.login-form          { -fx-background-color: white; -fx-padding: 24; }
+.login-title         { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.login-error         { -fx-font-size: 12; -fx-text-fill: -red; }
+
+.sidebar             { -fx-background-color: -g800; -fx-pref-width: 230; -fx-min-width: 230; }
+.sidebar-logo        { -fx-padding: 16; -fx-border-color: rgba(255,255,255,0.07); -fx-border-width: 0 0 1 0; }
+.sidebar-logo-tile   { -fx-background-color: -g500; -fx-background-radius: 11; -fx-pref-width: 38; -fx-pref-height: 38; -fx-min-width: 38; -fx-min-height: 38; }
+.sidebar-app-name    { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: white; }
+.sidebar-app-sub     { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: -g300; }
+.sidebar-menu-label  { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: -g400; -fx-padding: 20 0 8 12; }
+.sidebar-nav         { -fx-padding: 0 10 0 10; -fx-spacing: 2; }
+
+.conn-wrapper        { -fx-padding: 8 10 8 10; }
+.conn-pill           { -fx-padding: 8 12 8 12; -fx-background-color: rgba(255,255,255,0.05); -fx-background-radius: 10; }
+.conn-host           { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: -g200; }
+.conn-status         { -fx-font-size: 11; -fx-text-fill: -g300; }
+
+.user-row            { -fx-padding: 14 12 14 12; -fx-border-color: rgba(255,255,255,0.06); -fx-border-width: 1 0 0 0; }
+.user-avatar         { -fx-background-color: -g500; -fx-background-radius: 50; -fx-pref-width: 34; -fx-pref-height: 34; -fx-min-width: 34; -fx-min-height: 34; }
+.user-initials       { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: white; }
+.user-name           { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: white; }
+.user-id             { -fx-font-size: 11; -fx-text-fill: -g400; }
+
+.topbar              { -fx-background-color: white; -fx-border-color: -g200; -fx-border-width: 0 0 1 0; -fx-padding: 0 24 0 28; -fx-pref-height: 64; -fx-min-height: 64; -fx-alignment: center-left; }
+.topbar-title        { -fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.topbar-subtitle     { -fx-font-size: 12; -fx-text-fill: -g400; }
+.topbar-version      { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: -g600; -fx-background-color: -g100; -fx-background-radius: 100; -fx-border-color: -g200; -fx-border-radius: 100; -fx-border-width: 1; -fx-padding: 4 10 4 10; }
+
+.content-area        { -fx-background-color: -g50; }
+.screen-padded       { -fx-padding: 26 28 26 28; -fx-background-color: -g50; -fx-spacing: 20; }
+
+/* ---------- Sidebar nav buttons -------------------------------------------
+ * Active state is toggled via the JavaFX pseudo-class :active, which is
+ * triggered from MainShellController with pseudoClassStateChanged().
+ * --------------------------------------------------------------------------- */
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10;
+    -fx-padding: 10 12 10 12;
+    -fx-cursor: hand;
+    -fx-max-width: infinity;
+    -fx-border-color: transparent;
+}
+.nav-button:hover               { -fx-background-color: rgba(255,255,255,0.06); }
+.nav-button:active              { -fx-background-color: -g600; }
+.nav-button .nav-icon           { -fx-font-size: 16; -fx-text-fill: -g300; -fx-opacity: 0.7; -fx-pref-width: 20; -fx-alignment: center; }
+.nav-button:hover  .nav-icon    { -fx-text-fill: white; -fx-opacity: 1.0; }
+.nav-button:active .nav-icon    { -fx-text-fill: white; -fx-opacity: 1.0; }
+.nav-button .nav-label          { -fx-font-size: 14; -fx-text-fill: -g300; }
+.nav-button:hover  .nav-label   { -fx-text-fill: white; }
+.nav-button:active .nav-label   { -fx-text-fill: white; }
+
+/* ---------- Cards & panels ------------------------------------------------- */
+.card {
+    -fx-background-color: white;
+    -fx-background-radius: 14;
+    -fx-border-color: -g200;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 22 24 22 24;
+    -fx-spacing: 12;
+}
+.card-soft {
+    -fx-background-color: -g50;
+    -fx-background-radius: 14;
+    -fx-border-color: -g100;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 22 24 22 24;
+    -fx-spacing: 8;
+}
+.section-label   { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: -g500; }
+.section-label-muted { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: -g400; }
+.section-heading { -fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.hint-text       { -fx-font-size: 11; -fx-text-fill: -g400; }
+
+/* ---------- Inputs --------------------------------------------------------- */
+.field-label {
+    -fx-font-size: 12;
+    -fx-font-weight: bold;
+    -fx-text-fill: -g600;
+}
+.input-field {
+    -fx-font-size: 14;
+    -fx-background-color: -g50;
+    -fx-border-color: -g200;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 11 14 11 14;
+}
+.input-field-large {
+    -fx-font-size: 20;
+    -fx-font-weight: bold;
+    -fx-background-color: -g50;
+    -fx-border-color: -g200;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 13 16 13 16;
+}
+
+/* DatePicker — restyle the popup arrow button + arrow + text field */
+.date-picker {
+    -fx-font-size: 14;
+    -fx-background-color: -g50;
+    -fx-border-color: -g200;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-max-width: infinity;
+}
+.date-picker .text-field {
+    -fx-background-color: -g50;
+    -fx-font-size: 14;
+    -fx-padding: 11 14 11 14;
+    -fx-background-radius: 10;
+}
+.date-picker .arrow-button {
+    -fx-background-color: -g100;
+    -fx-background-radius: 0 9 9 0;
+}
+.date-picker .arrow-button .arrow {
+    -fx-background-color: -g500;
+}
+
+/* Spinner — match the .input-field / .date-picker look */
+.spinner {
+    -fx-max-width: infinity;
+    -fx-background-color: -g50;
+    -fx-border-color: -g200;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+.spinner .text-field {
+    -fx-background-color: -g50;
+    -fx-font-size: 14;
+    -fx-padding: 11 14 11 14;
+    -fx-background-radius: 10 0 0 10;
+}
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-background-color: -g100;
+    -fx-background-radius: 0;
+}
+.spinner .increment-arrow-button { -fx-background-radius: 0 9 0 0; }
+.spinner .decrement-arrow-button { -fx-background-radius: 0 0 9 0; }
+.spinner .increment-arrow-button:hover,
+.spinner .decrement-arrow-button:hover { -fx-background-color: -g200; }
+.spinner .increment-arrow,
+.spinner .decrement-arrow { -fx-background-color: -g500; }
+
+/* ---------- Buttons -------------------------------------------------------- */
+.btn-primary {
+    -fx-font-size: 14;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-background-color: -g500;
+    -fx-background-radius: 10;
+    -fx-padding: 12 18 12 18;
+    -fx-cursor: hand;
+    -fx-max-width: infinity;
+}
+.btn-primary:hover {
+    -fx-background-color: -g600;
+    -fx-translate-y: -1;
+}
+
+.btn-secondary {
+    -fx-font-size: 14;
+    -fx-font-weight: bold;
+    -fx-text-fill: -g700;
+    -fx-background-color: -g100;
+    -fx-background-radius: 10;
+    -fx-border-color: -g200;
+    -fx-border-radius: 10;
+    -fx-border-width: 1.5;
+    -fx-padding: 12 18 12 18;
+    -fx-cursor: hand;
+}
+.btn-secondary:hover {
+    -fx-background-color: -g200;
+}
+
+/* ---------- Status tag ----------------------------------------------------- */
+.status-tag {
+    -fx-font-size: 11;
+    -fx-font-weight: bold;
+    -fx-background-radius: 100;
+    -fx-padding: 3 10 3 10;
+}
+.status-tag.confirmed { -fx-text-fill: -g600; -fx-background-color: -g100; }
+.status-tag.pending   { -fx-text-fill: -gold-fg; -fx-background-color: -gold-bg; }
+.status-tag.on-dark   { -fx-text-fill: white;  -fx-background-color: rgba(255,255,255,0.15); }
+
+/* ---------- Toast --------------------------------------------------------- */
+.toast {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 10 16 10 16;
+}
+.toast.success { -fx-text-fill: -g600; -fx-background-color: -g100;  -fx-border-color: -g200; }
+.toast.error   { -fx-text-fill: -red;  -fx-background-color: #fef2f2; -fx-border-color: #fca5a5; }
+
+/* ---------- Stat cards (dashboard) ---------------------------------------- */
+.stat-card {
+    -fx-background-color: white;
+    -fx-background-radius: 14;
+    -fx-border-color: -g200;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-padding: 20 22 20 22;
+    -fx-spacing: 6;
+}
+.stat-card-label { -fx-font-size: 11; -fx-text-fill: -g400; }
+.stat-card-value { -fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: -g500; }
+.stat-card-sub   { -fx-font-size: 12; -fx-text-fill: -g400; }
+
+/* Dashboard recent order row */
+.recent-row         { -fx-padding: 10 4 10 4; -fx-cursor: hand; -fx-alignment: center-left; }
+.recent-row:hover   { -fx-background-color: -g50; -fx-background-radius: 8; }
+.recent-row-name    { -fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.recent-row-details { -fx-font-size: 12; -fx-text-fill: -g400; }
+.dot                { -fx-background-radius: 50; -fx-min-width: 8; -fx-min-height: 8; -fx-pref-width: 8; -fx-pref-height: 8; }
+.dot.ok             { -fx-background-color: -g400; }
+.dot.pending        { -fx-background-color: #d4a847; }
+
+.conn-dot           { -fx-background-radius: 50; -fx-min-width: 8; -fx-min-height: 8; -fx-pref-width: 8; -fx-pref-height: 8; -fx-background-color: -dot-ok; }
+.conn-dot.err       { -fx-background-color: -red; }
+
+/* ---------- Result panel -------------------------------------------------- */
+.result-empty {
+    -fx-alignment: center;
+    -fx-pref-height: 160;
+    -fx-padding: 20;
+    -fx-border-color: -g200;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 14;
+    -fx-border-style: dashed;
+    -fx-background-radius: 14;
+    -fx-spacing: 10;
+}
+.result-empty-icon  { -fx-font-size: 28; -fx-opacity: 0.3; }
+.result-empty-msg   { -fx-font-size: 13; -fx-text-fill: -g400; }
+.result-empty-hint  { -fx-font-size: 11; -fx-text-fill: -g300; }
+.result-title       { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g700; }
+.result-card        { -fx-background-radius: 14; -fx-border-color: -g200; -fx-border-radius: 14; -fx-border-width: 1; }
+.result-card-header { -fx-padding: 16 18 16 18; -fx-background-color: -g600; -fx-background-radius: 14 14 0 0; -fx-alignment: center-left; }
+.result-card-header .order-label { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: rgba(255,255,255,0.65); }
+.result-card-header .order-num   { -fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: white; }
+.result-card-body   { -fx-background-color: white; -fx-background-radius: 0 0 14 14; -fx-padding: 0 18 0 18; }
+.result-row         { -fx-alignment: center-left; -fx-padding: 10 0 10 0; }
+.result-row.with-divider { -fx-border-color: -g100; -fx-border-width: 1 0 0 0; }
+.result-row .key    { -fx-font-size: 12; -fx-text-fill: -g500; -fx-pref-width: 110; }
+.result-row .val    { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.result-row .val.date { -fx-text-fill: -g600; }
+
+/* ---------- Activity log -------------------------------------------------- */
+.log-scroll {
+    -fx-background: -g50;
+    -fx-background-color: -g50;
+    -fx-border-color: -g200;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-min-height: 72;
+    -fx-max-height: 120;
+}
+.log-empty   { -fx-font-size: 11; -fx-font-style: italic; -fx-text-fill: -g300; }
+.log-entry   { -fx-font-size: 11; -fx-font-family: monospace; }
+.log-entry.ok    { -fx-text-fill: -g600; }
+.log-entry.err   { -fx-text-fill: -red; }
+
+/* Right-hand column on Get / Update screens */
+.right-panel { -fx-background-color: -g50; -fx-padding: 26 24 26 14; -fx-spacing: 20; -fx-pref-width: 310; -fx-min-width: 310; -fx-max-width: 310; }
+.left-panel  { -fx-padding: 26 14 26 28; -fx-spacing: 20; }
+.split-row   { -fx-background-color: -g50; }
+
+/* ---------- Step indicator (update flow) ---------------------------------- */
+.step-row    { -fx-alignment: center-left; -fx-spacing: 10; }
+.step-piece  { -fx-alignment: center-left; -fx-spacing: 8; }
+.step-circle { -fx-pref-width: 28; -fx-pref-height: 28; -fx-min-width: 28; -fx-min-height: 28; -fx-max-width: 28; -fx-max-height: 28; -fx-background-color: -g200; -fx-background-radius: 50; -fx-alignment: center; }
+.step-circle.active { -fx-background-color: -g600; }
+.step-circle.done   { -fx-background-color: -g500; }
+.step-num    { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: -g500; }
+.step-circle.active .step-num { -fx-text-fill: white; }
+.step-circle.done   .step-num { -fx-text-fill: white; }
+.step-label  { -fx-font-size: 13; -fx-text-fill: -g400; }
+.step-piece.active .step-label { -fx-text-fill: -g700; -fx-font-weight: bold; }
+.step-line   { -fx-pref-width: 36; -fx-pref-height: 1.5; -fx-min-height: 1.5; -fx-max-height: 1.5; -fx-background-color: -g200; }
+.step-line.done { -fx-background-color: -g500; }
+
+/* ---------- History table ------------------------------------------------- */
+.history-card        { -fx-background-color: white; -fx-background-radius: 14; -fx-border-color: -g200; -fx-border-radius: 14; -fx-border-width: 1; }
+.history-card-header { -fx-padding: 18 24 18 24; -fx-border-color: -g100; -fx-border-width: 0 0 1 0; }
+.history-row         { -fx-padding: 12 24 12 24; -fx-cursor: hand; -fx-alignment: center-left; }
+.history-row:hover   { -fx-background-color: -g50; }
+.history-row.with-divider { -fx-border-color: -g100; -fx-border-width: 0 0 1 0; }
+.history-header-row  { -fx-padding: 10 24 10 24; -fx-border-color: -g200; -fx-border-width: 0 0 1 0; -fx-alignment: center-left; }
+.history-header-cell { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: -g400; }
+.history-cell        { -fx-font-size: 13; -fx-text-fill: -g700; }
+.history-cell.num    { -fx-font-weight: bold; }
+.history-cell.muted  { -fx-text-fill: -g400; }
+.history-cell.mono   { -fx-font-family: monospace; -fx-font-size: 12; }
+.history-footer      { -fx-font-size: 12; -fx-text-fill: -g400; }
+
+/* ---------- Success screen (new booking) ---------------------------------- */
+.success-check-circle { -fx-pref-width: 64; -fx-pref-height: 64; -fx-min-width: 64; -fx-min-height: 64; -fx-background-color: -g100; -fx-background-radius: 50; -fx-alignment: center; }
+.success-check        { -fx-font-size: 28; -fx-font-weight: bold; -fx-text-fill: -g500; }
+.success-title        { -fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.success-msg          { -fx-font-size: 14; -fx-text-fill: -g500; }
+
+/* ---------- ScrollPane defaults ------------------------------------------- */
+.scroll-pane, .scroll-pane > .viewport { -fx-background: transparent; -fx-background-color: transparent; }

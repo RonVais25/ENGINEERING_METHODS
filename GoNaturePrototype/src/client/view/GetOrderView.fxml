@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.VBox?>
+
+<HBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="client.view.GetOrderController"
+      styleClass="split-row">
+
+    <!-- Left column: lookup card + quick access -->
+    <VBox styleClass="left-panel" HBox.hgrow="ALWAYS">
+
+        <VBox styleClass="card">
+            <Label text="Order Number" styleClass="field-label"/>
+            <Label text="Try 1023, 1055, or 1087" styleClass="hint-text"/>
+            <TextField fx:id="orderInput" promptText="Order number…" styleClass="input-field-large"/>
+            <Button fx:id="getBtn" text="⊕  Get Order" onAction="#onGetOrder"
+                    styleClass="btn-primary" maxWidth="Infinity"/>
+            <Label fx:id="toast" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <VBox styleClass="card-soft">
+            <Label text="QUICK ACCESS" styleClass="section-label"/>
+            <HBox fx:id="quickBtns" spacing="8"/>
+        </VBox>
+    </VBox>
+
+    <!-- Right column: result panel + activity log -->
+    <VBox fx:id="rightPanel" styleClass="right-panel"/>
+</HBox>
