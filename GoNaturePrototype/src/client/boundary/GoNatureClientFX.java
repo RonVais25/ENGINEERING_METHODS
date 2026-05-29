@@ -196,7 +196,16 @@ public class GoNatureClientFX extends Application {
     // ─── Server request wrapper — updates connection pill on every call ───────
 
     private ServerResponse send(ClientRequest req) {
-        ServerResponse res = client.sendRequest(req);
+        // sendRequest now throws IOException on timeout / interrupt / drop
+        // (correlation-future model from step 3 of the realtime push channel).
+        // The legacy monolith preserved its old behaviour of returning an
+        // error ServerResponse instead, so convert at the call site.
+        ServerResponse res;
+        try {
+            res = client.sendRequest(req);
+        } catch (java.io.IOException e) {
+            res = new ServerResponse(false, e.getMessage());
+        }
         // The ClientConnection closes itself on a network failure, so its
         // own isConnected() flag is the single source of truth for the pill.
         boolean reachable = client.isConnected();
