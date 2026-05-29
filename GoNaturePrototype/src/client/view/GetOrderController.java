@@ -98,6 +98,7 @@ public class GetOrderController extends BaseController {
                     if (ev.getOp() == EventOp.UPDATED && ev.getPayload() instanceof OrderDTO updated) {
                         Widgets.populateResultPanel(resultPanel, updated);
                         Widgets.addLog(logBox, true, "Order updated remotely");
+                        System.out.println("[ui] applied remote update for order #" + updated.getOrderNumber());
                     }
                 });
             } else {

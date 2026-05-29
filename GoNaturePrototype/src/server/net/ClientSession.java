@@ -126,17 +126,14 @@ public class ClientSession {
 
     /**
      * Closes the streams and the socket. {@link IOException} is swallowed so a
-     * partially-broken connection still tears down quietly. Logs one line so
-     * the operator can see who disconnected.
+     * partially-broken connection still tears down quietly. The actual
+     * "client disconnected" log line is emitted by {@code OrderServer} as
+     * {@code [conn -]} so it can carry the unsubscribe count alongside.
      */
     public void close() {
-        // Capture the peer address before close() clears it, so the log line
-        // identifies which session shut down.
-        String addr = remoteAddressString();
         try { in.close(); }     catch (IOException ignored) {}
         try { out.close(); }    catch (IOException ignored) {}
         try { socket.close(); } catch (IOException ignored) {}
-        System.out.println("[session] closed cleanly for " + addr);
     }
 
     /**

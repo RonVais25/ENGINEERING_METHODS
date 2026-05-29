@@ -96,6 +96,7 @@ public class ClientConnection {
         readerThread = new Thread(this::readLoop, "ClientConnection-reader");
         readerThread.setDaemon(true);
         readerThread.start();
+        System.out.println("[client] reader started");
     }
 
     /** @return {@code true} if the underlying socket is connected and not closed */
@@ -206,7 +207,7 @@ public class ClientConnection {
                 e.getValue().completeExceptionally(reason);
             }
             pending.clear();
-            System.out.println("[reader] thread exiting (" +
+            System.out.println("[client] reader stopped (" +
                                (shuttingDown ? "shutdown" : "connection lost") + ")");
         }
     }

@@ -68,7 +68,7 @@ public final class EventBus {
      */
     public void dispatch(ServerEvent ev) {
         SubscriptionKey key = new SubscriptionKey(ev.getEntity(), ev.getEntityId());
-        System.out.println("[event] entity=" + ev.getEntity() +
+        System.out.println("[recv] entity=" + ev.getEntity() +
                            " id=" + ev.getEntityId() +
                            " op=" + ev.getOp());
         List<Consumer<ServerEvent>> list = subscribers.get(key);
@@ -78,7 +78,7 @@ public final class EventBus {
                 try {
                     cb.accept(ev);
                 } catch (RuntimeException ex) {
-                    System.out.println("[event] subscriber threw " +
+                    System.out.println("[recv] subscriber threw " +
                                        ex.getClass().getSimpleName() +
                                        ": " + ex.getMessage());
                 }

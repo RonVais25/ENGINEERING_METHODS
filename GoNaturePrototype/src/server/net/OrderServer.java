@@ -73,6 +73,7 @@ public class OrderServer {
 
                 activeClients.add(clientSocket);
                 listener.onClientConnected(ip, host);
+                listener.onLog("[conn +] session=" + clientSocket.getRemoteSocketAddress());
 
                 Thread t = new Thread(() -> handleClient(clientSocket, ip, host),
                                       "OrderServer-client-" + ip);
@@ -116,28 +117,37 @@ public class OrderServer {
                     break;
                 }
 
-                listener.onLog(ip + " → " + request.getType());
-                listener.onLog("[req id=" + request.getCorrelationId() + "] type=" + request.getType());
+                listener.onLog("[req] session=" + session.remoteAddressString() +
+                               " id=" + request.getCorrelationId() +
+                               " type=" + request.getType());
 
                 ServerResponse response = router.handle(request, session);
-                // Echo the request's correlation id onto the response so the client
-                // can match it back to the originating request once the reader-thread
-                // routing lands in step 3 of the realtime push channel.
+                // Echo the request's correlation id onto the response so the
+                // client can match it back to the originating request via the
+                // reader-thread routing introduced in step 3.
                 response.setCorrelationId(request.getCorrelationId());
                 session.sendResponse(response);
 
-                listener.onLog(ip + " ← " + (response.isSuccess() ? "OK" : "FAIL") +
-                               " (" + response.getMessage() + ")");
+                listener.onLog("[resp] session=" + session.remoteAddressString() +
+                               " id=" + request.getCorrelationId() +
+                               " ok=" + response.isSuccess());
             }
 
         } catch (Exception e) {
             listener.onError("Client " + ip + " error: " + e.getMessage());
         } finally {
             if (session != null) {
-                // Detach from every subscription bucket so the registry never
-                // tries to push to this dead socket, then close streams+socket.
+                // Capture the peer address and subscription count BEFORE
+                // unregisterAll drains the set, so the [conn -] log line
+                // shows what we cleaned up. Detach from every subscription
+                // bucket so the registry never tries to push to this dead
+                // socket, then close streams+socket.
+                String addr = session.remoteAddressString();
+                int unsubCount = session.subscriptions().size();
                 SubscriptionRegistry.getInstance().unregisterAll(session);
                 session.close();
+                listener.onLog("[conn -] session=" + addr +
+                               " (unsubscribed " + unsubCount + " keys)");
             } else {
                 // Session was never constructed (stream open failed). Close
                 // whatever did get opened so we don't leak file descriptors.

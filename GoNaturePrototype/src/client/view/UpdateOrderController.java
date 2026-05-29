@@ -186,6 +186,7 @@ public class UpdateOrderController extends BaseController {
         visitorsSpinner.getValueFactory().setValue(updated.getNumberOfVisitors());
         Widgets.populateResultPanel(resultPanel, updated);
         Widgets.addLog(logBox, true, "Order updated remotely");
+        System.out.println("[ui] applied remote update for order #" + updated.getOrderNumber());
     }
 
     private void setStepIndicator(int active) {
