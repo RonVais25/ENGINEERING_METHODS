@@ -2,6 +2,7 @@ package server.net;
 
 import common.dto.ClientRequest;
 import common.dto.OrderDTO;
+import common.dto.ServerEvent;
 import common.dto.ServerResponse;
 import common.dto.SubscriptionKey;
 import server.control.OrderController;
@@ -37,6 +38,19 @@ public class RequestRouter {
                 boolean updated = controller.updateOrder(updateOrderNumber, newDate, newVisitors);
 
                 if (updated) {
+                    // Re-fetch the canonical row so subscribers receive
+                    // exactly what was persisted, not the request's input —
+                    // protects against any DB-level normalization or
+                    // partial-update behaviour drifting from what the client
+                    // asked for. Publish runs AFTER the DAO commit (JDBC
+                    // auto-commit), so a rollback couldn't leave subscribers
+                    // with a phantom update.
+                    OrderDTO fresh = controller.getOrder(updateOrderNumber);
+                    if (fresh != null) {
+                        ServerEvent ev = ServerEvent.updated("order", updateOrderNumber, fresh);
+                        SubscriptionRegistry.getInstance().publish(
+                                new SubscriptionKey("order", updateOrderNumber), ev);
+                    }
                     return new ServerResponse(true, "Order updated successfully.");
                 }
 

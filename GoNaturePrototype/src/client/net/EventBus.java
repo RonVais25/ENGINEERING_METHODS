@@ -119,6 +119,15 @@ public final class EventBus {
             this.cb = cb;
         }
 
+        /**
+         * @return the resource this subscription is registered against; used
+         *         by controllers to issue a matching UNSUBSCRIBE request on
+         *         the wire when they detach locally
+         */
+        public SubscriptionKey getKey() {
+            return key;
+        }
+
         /** Detaches the callback this subscription represents. Idempotent. */
         public void unsubscribe() {
             EventBus.getInstance().removeSubscriber(key, cb);
