@@ -2,6 +2,7 @@ package client.view;
 
 import client.app.Session;
 import client.service.NetworkService;
+import common.dto.EventOp;
 import common.dto.OrderDTO;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -14,8 +15,14 @@ import javafx.scene.layout.VBox;
 /**
  * Get-Order screen: enter an order number, see its details and an activity
  * log on the right. Quick-access buttons hard-code three example IDs.
+ *
+ * <p>This screen participates in the realtime push channel: as soon as a
+ * successful Get returns, it subscribes to {@code ("order", orderNumber)} so
+ * an edit committed by another client refreshes the visible card without the
+ * user having to re-search. Looking up a different order swaps the
+ * subscription; the previous one is dropped via {@link #unsubscribeAll()}.
  */
-public class GetOrderController {
+public class GetOrderController extends BaseController {
 
     @FXML private TextField orderInput;
     @FXML private Button    getBtn;
@@ -23,13 +30,11 @@ public class GetOrderController {
     @FXML private HBox      quickBtns;
     @FXML private VBox      rightPanel;
 
-    private final NetworkService network;
-
     private VBox resultPanel;
     private VBox logBox;
 
     public GetOrderController(NetworkService network, Session session) {
-        this.network = network;
+        super(network);
     }
 
     @FXML
@@ -80,9 +85,22 @@ public class GetOrderController {
         network.getOrder(n).thenAccept(res -> {
             getBtn.setText("⊕  Get Order");
             getBtn.setDisable(false);
+            // Drop any previous order's subscription regardless of outcome —
+            // we're no longer showing it, either because the new fetch
+            // succeeded (and we'll subscribe to the new id below) or because
+            // it failed (and the result panel is cleared).
+            unsubscribeAll();
             if (res.isSuccess()) {
                 Widgets.populateResultPanel(resultPanel, (OrderDTO) res.getData());
                 Widgets.addLog(logBox, true, "Fetched order #" + n);
+                // Watch this order for live updates from other clients.
+                subscribe("order", n, ev -> {
+                    if (ev.getOp() == EventOp.UPDATED && ev.getPayload() instanceof OrderDTO updated) {
+                        Widgets.populateResultPanel(resultPanel, updated);
+                        Widgets.addLog(logBox, true, "Order updated remotely");
+                        System.out.println("[ui] applied remote update for order #" + updated.getOrderNumber());
+                    }
+                });
             } else {
                 Widgets.showToast(toast, false, res.getMessage());
                 Widgets.clearResultPanel(resultPanel);

@@ -1,6 +1,7 @@
 package server.control;
 
 import common.dto.OrderDTO;
+import server.dao.OrderDAO;
 
 /**
  * Handles order-related operations and communication

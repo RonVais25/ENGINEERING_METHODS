@@ -6,7 +6,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -38,7 +37,6 @@ public class ServerGUI extends Application implements ServerListener {
     private static final String G700 = "#254d2e";
     private static final String G600 = "#2e6638";
     private static final String G500 = "#3d8c4a";
-    private static final String G400 = "#55b363";
     private static final String G300 = "#80cb8b";
     private static final String G200 = "#c2e5c8";
     private static final String G100 = "#e5f3e8";

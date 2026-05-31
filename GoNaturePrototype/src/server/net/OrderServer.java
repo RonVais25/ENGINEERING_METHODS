@@ -2,6 +2,7 @@ package server.net;
 
 import common.dto.ClientRequest;
 import common.dto.ServerResponse;
+import server.subscription.SubscriptionRegistry;
 
 import java.io.EOFException;
 import java.io.ObjectInputStream;
@@ -72,6 +73,7 @@ public class OrderServer {
 
                 activeClients.add(clientSocket);
                 listener.onClientConnected(ip, host);
+                listener.onLog("[conn +] session=" + clientSocket.getRemoteSocketAddress());
 
                 Thread t = new Thread(() -> handleClient(clientSocket, ip, host),
                                       "OrderServer-client-" + ip);
@@ -93,10 +95,18 @@ public class OrderServer {
         // Persistent connection: read requests in a loop until the client
         // closes its socket (EOF) or the connection drops. The session ends
         // only on disconnect, not after each request.
-        try (ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-             ObjectInputStream  in  = new ObjectInputStream(socket.getInputStream())) {
-
+        //
+        // Outbound writes (responses + future pushed events) go through the
+        // ClientSession so they share one writeLock; interleaved writes on the
+        // same ObjectOutputStream would produce garbled bytes on the wire.
+        ClientSession session = null;
+        ObjectOutputStream out = null;
+        ObjectInputStream  in  = null;
+        try {
+            out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
+            in  = new ObjectInputStream(socket.getInputStream());
+            session = new ClientSession(socket, in, out);
 
             while (!socket.isClosed()) {
                 ClientRequest request;
@@ -107,22 +117,44 @@ public class OrderServer {
                     break;
                 }
 
-                listener.onLog(ip + " → " + request.getType());
+                listener.onLog("[req] session=" + session.remoteAddressString() +
+                               " id=" + request.getCorrelationId() +
+                               " type=" + request.getType());
 
-                ServerResponse response = router.handle(request);
-                out.writeObject(response);
-                out.flush();
-                // Reset the stream's identity cache so subsequent writes of
-                // the same DTO type don't get serialized as back-references.
-                out.reset();
+                ServerResponse response = router.handle(request, session);
+                // Echo the request's correlation id onto the response so the
+                // client can match it back to the originating request via the
+                // reader-thread routing introduced in step 3.
+                response.setCorrelationId(request.getCorrelationId());
+                session.sendResponse(response);
 
-                listener.onLog(ip + " ← " + (response.isSuccess() ? "OK" : "FAIL") +
-                               " (" + response.getMessage() + ")");
+                listener.onLog("[resp] session=" + session.remoteAddressString() +
+                               " id=" + request.getCorrelationId() +
+                               " ok=" + response.isSuccess());
             }
 
         } catch (Exception e) {
             listener.onError("Client " + ip + " error: " + e.getMessage());
         } finally {
+            if (session != null) {
+                // Capture the peer address and subscription count BEFORE
+                // unregisterAll drains the set, so the [conn -] log line
+                // shows what we cleaned up. Detach from every subscription
+                // bucket so the registry never tries to push to this dead
+                // socket, then close streams+socket.
+                String addr = session.remoteAddressString();
+                int unsubCount = session.subscriptions().size();
+                SubscriptionRegistry.getInstance().unregisterAll(session);
+                session.close();
+                listener.onLog("[conn -] session=" + addr +
+                               " (unsubscribed " + unsubCount + " keys)");
+            } else {
+                // Session was never constructed (stream open failed). Close
+                // whatever did get opened so we don't leak file descriptors.
+                try { if (in  != null) in.close();  } catch (Exception ignored) {}
+                try { if (out != null) out.close(); } catch (Exception ignored) {}
+                try { socket.close(); } catch (Exception ignored) {}
+            }
             activeClients.remove(socket);
             listener.onClientDisconnected(ip, host);
         }

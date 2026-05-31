@@ -1,5 +1,5 @@
 #!/bin/bash
-# Double-click to start the GoNature client.
+# Double-click to start the GoNature client (FXML + CSS).
 
 cd "$(dirname "$0")/.."
 
@@ -10,4 +10,4 @@ else
     JAVA="java"
 fi
 
-"$JAVA" --add-modules javafx.controls,javafx.graphics -jar dist/GoNatureClient.jar
+"$JAVA" --add-modules javafx.controls,javafx.graphics,javafx.fxml -jar dist/GoNatureClient.jar

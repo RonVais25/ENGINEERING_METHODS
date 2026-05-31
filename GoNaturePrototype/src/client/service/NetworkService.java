@@ -7,6 +7,7 @@ import common.dto.RequestType;
 import common.dto.ServerResponse;
 import javafx.application.Platform;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -71,13 +72,27 @@ public class NetworkService {
         CompletableFuture<ServerResponse> future = new CompletableFuture<>();
         Thread t = new Thread(() -> {
             ClientConnection conn = session.getConnection();
-            ServerResponse res = (conn == null)
-                ? new ServerResponse(false, "Not connected")
-                : conn.sendRequest(req);
+            ServerResponse res;
+            if (conn == null) {
+                res = new ServerResponse(false, "Not connected");
+            } else {
+                // sendRequest now throws IOException on timeout/interrupt/drop
+                // (correlation-future model). Convert to an error ServerResponse
+                // so callers keep the existing "future completes with a result"
+                // contract instead of propagating a checked exception.
+                try {
+                    res = conn.sendRequest(req);
+                } catch (IOException ex) {
+                    res = new ServerResponse(false, ex.getMessage());
+                }
+            }
             boolean reachable = conn != null && conn.isConnected();
+            // res is reassigned in the if/else above, so the lambda needs its
+            // own effectively-final reference to satisfy the capture rule.
+            final ServerResponse finalRes = res;
             Platform.runLater(() -> {
                 for (ConnectionListener l : listeners) l.onConnectionChanged(reachable);
-                future.complete(res);
+                future.complete(finalRes);
             });
         });
         t.setDaemon(true);
