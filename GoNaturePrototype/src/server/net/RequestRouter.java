@@ -1,74 +1,70 @@
 package server.net;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import common.dto.ClientRequest;
-import common.dto.OrderDTO;
-import common.dto.ServerEvent;
+import common.dto.RequestType;
 import common.dto.ServerResponse;
 import common.dto.SubscriptionKey;
+import server.control.AuthController;
+import server.control.DomainController;
+import server.control.NotificationController;
 import server.control.OrderController;
+import server.control.ParkController;
+import server.control.ReportController;
+import server.control.ReservationController;
+import server.control.VisitController;
 import server.subscription.SubscriptionRegistry;
 
+/**
+ * Central request dispatcher. One instance is shared across all client threads
+ * (constructed once by {@code OrderServer}).
+ *
+ * <p>Domain operations are delegated to per-domain {@link DomainController}s via
+ * a {@link RequestType}-keyed map built at construction time. The infrastructure
+ * ops PING / SUBSCRIBE / UNSUBSCRIBE are not a domain and stay handled inline.
+ */
 public class RequestRouter {
 
-    private OrderController controller = new OrderController();
+    private final Map<RequestType, DomainController> controllers = new HashMap<>();
+
+    public RequestRouter() {
+        // Every domain controller registered here. Each declares the ops it
+        // owns via handledTypes(); we fan those out into the dispatch map.
+        List<DomainController> registered = List.of(
+                new OrderController(),
+                new AuthController(),
+                new ReservationController(),
+                new ParkController(),
+                new VisitController(),
+                new ReportController(),
+                new NotificationController());
+
+        for (DomainController c : registered) {
+            for (RequestType type : c.handledTypes()) {
+                DomainController previous = controllers.put(type, c);
+                // Fail fast: two controllers claiming the same op is a
+                // copy-paste mistake we want to catch at startup, not in prod.
+                if (previous != null) {
+                    throw new IllegalStateException(
+                            "Duplicate handler for " + type + ": "
+                            + previous.getClass().getSimpleName() + " and "
+                            + c.getClass().getSimpleName());
+                }
+            }
+        }
+    }
 
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 
-        switch (request.getType()) {
+        RequestType type = request.getType();
+
+        switch (type) {
 
             case PING:
                 return new ServerResponse(true, "pong");
-
-            case GET_ORDER:
-                int orderNumber = (int) request.get("orderNumber");
-
-                OrderDTO order = controller.getOrder(orderNumber);
-
-                if (order != null) {
-                    return new ServerResponse(true, "Order found.", order);
-                }
-
-                return new ServerResponse(false, "Order not found.");
-
-            case UPDATE_ORDER:
-                int updateOrderNumber = (int) request.get("orderNumber");
-                String newDate = (String) request.get("newDate");
-                int newVisitors = (int) request.get("newVisitors");
-
-                boolean updated = controller.updateOrder(updateOrderNumber, newDate, newVisitors);
-
-                if (updated) {
-                    // Re-fetch the canonical row so subscribers receive
-                    // exactly what was persisted, not the request's input —
-                    // protects against any DB-level normalization or
-                    // partial-update behaviour drifting from what the client
-                    // asked for. Publish runs AFTER the DAO commit (JDBC
-                    // auto-commit), so a rollback couldn't leave subscribers
-                    // with a phantom update.
-                    OrderDTO fresh = controller.getOrder(updateOrderNumber);
-                    if (fresh != null) {
-                        ServerEvent ev = ServerEvent.updated("order", updateOrderNumber, fresh);
-                        SubscriptionRegistry.getInstance().publish(
-                                new SubscriptionKey("order", updateOrderNumber), ev);
-                    }
-                    return new ServerResponse(true, "Order updated successfully.");
-                }
-
-                return new ServerResponse(false, "Update failed.");
-
-            case INSERT_ORDER:
-                String  insertDate     = (String) request.get("orderDate");
-                int     insertVisitors = (int)    request.get("numberOfVisitors");
-                int     subscriberId   = (int)    request.get("subscriberId");
-
-                OrderDTO created = controller.insertOrder(insertDate, insertVisitors, subscriberId);
-
-                if (created != null) {
-                    return new ServerResponse(true,
-                            "Booking created (#" + created.getOrderNumber() + ").", created);
-                }
-
-                return new ServerResponse(false, "Insert failed.");
 
             case SUBSCRIBE: {
                 String entity   = (String) request.get("entity");
@@ -96,8 +92,13 @@ public class RequestRouter {
                 return resp;
             }
 
-            default:
+            default: {
+                DomainController c = controllers.get(type);
+                if (c != null) {
+                    return c.handle(request, session);
+                }
                 return new ServerResponse(false, "Unknown request.");
+            }
         }
     }
 }
