@@ -173,6 +173,34 @@ public class NetworkService {
         return send(req);
     }
 
+    /**
+     * Authenticates a staff user. On success the response carries a
+     * {@link common.dto.UserDTO} in {@code getData()}; on failure the message
+     * explains why ("Invalid username or password." / "already logged in
+     * elsewhere.").
+     */
+    public CompletableFuture<ServerResponse> loginStaff(String username, String password) {
+        ClientRequest req = new ClientRequest(RequestType.LOGIN_STAFF);
+        req.put("username", username);
+        req.put("password", password);
+        return send(req);
+    }
+
+    /**
+     * Authenticates a visitor by national ID. On success the response carries a
+     * {@link common.dto.VisitorDTO} in {@code getData()}.
+     */
+    public CompletableFuture<ServerResponse> loginVisitor(long visitorId) {
+        ClientRequest req = new ClientRequest(RequestType.LOGIN_VISITOR);
+        req.put("visitorId", visitorId);
+        return send(req);
+    }
+
+    /** Logs the current actor out, releasing the server-side single-login lock. */
+    public CompletableFuture<ServerResponse> logout() {
+        return send(new ClientRequest(RequestType.LOGOUT));
+    }
+
     /** Result bundle for {@link #probe(String, int)}. */
     public static final class ProbeResult {
         public final ClientConnection connection;

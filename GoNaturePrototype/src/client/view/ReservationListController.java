@@ -42,18 +42,30 @@ public class ReservationListController extends BaseController {
     // the same list after a successful confirm/cancel. -1 means "nothing loaded".
     private long currentVisitorId = -1;
 
+    private final Session session;
+
     public ReservationListController(NetworkService network, Session session) {
         super(network);
+        this.session = session;
     }
 
     @FXML
     private void initialize() {
         visitorField.setOnAction(e -> onLoad());
+
+        // A logged-in visitor only sees their own reservations: prefill + lock
+        // the id field and load it straight away. Staff leave it editable so they
+        // can look up any visitor's list.
+        if (session.isVisitor()) {
+            visitorField.setText(String.valueOf(session.getActorId()));
+            visitorField.setEditable(false);
+            loadFor(session.getActorId());
+        }
     }
 
     @FXML
     private void onLoad() {
-        // TODO: use the logged-in visitor when Auth lands instead of a typed id.
+        // Visitor's id is prefilled (and locked) above; staff type a visitor id here.
         String raw = visitorField.getText() == null ? "" : visitorField.getText().trim();
         long visitorId;
         try {
@@ -164,9 +176,16 @@ public class ReservationListController extends BaseController {
         cancelBtn.setDisable(!canCancel(r.getStatus()));
         cancelBtn.setOnAction(e -> cancel(r.getId()));
 
+        // TODO: let the visitor edit their own booking — add an "Edit" action that
+        // sends UPDATE_RESERVATION (date / party size; server DAO already supports
+        // it via updateDateAndParty) so they can change a reservation, not just
+        // confirm/cancel it.
         HBox actions = new HBox(8, confirmBtn, cancelBtn);
         actions.setAlignment(Pos.CENTER_LEFT);
 
+        // TODO: make the row clickable to open a read-only detail view (GET_RESERVATION
+        // by id) showing the full reservation — time, price, confirmation code, guide,
+        // waitlist position. Right now a visitor can list rows but can't drill into one.
         HBox row = new HBox(idLbl, dateLbl, partyLbl, typeLbl, statusTag, actions);
         row.getStyleClass().add("history-row");
         if (withDivider) row.getStyleClass().add("with-divider");
