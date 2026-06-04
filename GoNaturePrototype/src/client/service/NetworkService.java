@@ -5,6 +5,7 @@ import client.net.ClientConnection;
 import common.dto.ClientRequest;
 import common.dto.RequestType;
 import common.dto.ServerResponse;
+import common.dto.VisitType;
 import javafx.application.Platform;
 
 import java.io.IOException;
@@ -119,6 +120,32 @@ public class NetworkService {
         req.put("orderDate",        orderDate);
         req.put("numberOfVisitors", numberOfVisitors);
         req.put("subscriberId",     subscriberId);
+        return send(req);
+    }
+
+    /**
+     * Creates a reservation. {@code visitTime} may be {@code null} (no preferred
+     * time). The {@link VisitType} is sent as the enum itself — it lives in
+     * {@code common.dto} and is Serializable, so the server reads it back
+     * directly without string parsing.
+     *
+     * @param parkId    target park id
+     * @param visitorId national-ID-style visitor id
+     * @param visitDate visit date, ISO {@code yyyy-MM-dd}
+     * @param visitTime visit time {@code HH:mm:ss}, or {@code null}
+     * @param partySize number of people in the party
+     * @param visitType INDIVIDUAL or FAMILY (GROUP is rejected server-side this session)
+     * @return future resolving (on the FX thread) with the server's response
+     */
+    public CompletableFuture<ServerResponse> createReservation(int parkId, long visitorId, String visitDate,
+                                                               String visitTime, int partySize, VisitType visitType) {
+        ClientRequest req = new ClientRequest(RequestType.CREATE_RESERVATION);
+        req.put("parkId",    parkId);
+        req.put("visitorId", visitorId);
+        req.put("visitDate", visitDate);
+        req.put("visitTime", visitTime);   // nullable
+        req.put("partySize", partySize);
+        req.put("visitType", visitType);
         return send(req);
     }
 
