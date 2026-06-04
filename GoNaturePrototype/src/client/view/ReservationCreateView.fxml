@@ -41,6 +41,12 @@
             <Label text="Visit Type" styleClass="field-label"/>
             <ComboBox fx:id="typeCombo" maxWidth="Infinity" styleClass="input-field"/>
 
+            <!-- Guide ID: only shown (and required) for GROUP visits. -->
+            <Label fx:id="guideLabel" text="Guide ID (groups, max 15)" styleClass="field-label"
+                   visible="false" managed="false"/>
+            <TextField fx:id="guideField" promptText="Registered guide's national ID (e.g. 200000003)"
+                       styleClass="input-field" visible="false" managed="false"/>
+
             <Button fx:id="bookBtn" text="+  Book Visit" onAction="#onBook"
                     styleClass="btn-primary" maxWidth="Infinity"/>
 

@@ -54,6 +54,8 @@ public class MainShellController {
                        "New Booking",  "Reserve your next park visit"),
             new Screen("reserve",   "✦", "Book Visit",   "/client/view/ReservationCreateView.fxml",
                        "Book Visit",   "Reserve a park visit (reservations)"),
+            new Screen("myres",     "☑", "My Reservations", "/client/view/ReservationListView.fxml",
+                       "My Reservations", "View, confirm or cancel your reservations"),
             new Screen("history",   "☰", "History",      "/client/view/HistoryView.fxml",
                        "History",      "All your past orders")
         );

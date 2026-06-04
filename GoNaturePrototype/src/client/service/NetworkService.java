@@ -134,11 +134,13 @@ public class NetworkService {
      * @param visitDate visit date, ISO {@code yyyy-MM-dd}
      * @param visitTime visit time {@code HH:mm:ss}, or {@code null}
      * @param partySize number of people in the party
-     * @param visitType INDIVIDUAL or FAMILY (GROUP is rejected server-side this session)
+     * @param visitType INDIVIDUAL, FAMILY, or GROUP
+     * @param guideId   registered guide's id for GROUP visits, or {@code null} otherwise
      * @return future resolving (on the FX thread) with the server's response
      */
     public CompletableFuture<ServerResponse> createReservation(int parkId, long visitorId, String visitDate,
-                                                               String visitTime, int partySize, VisitType visitType) {
+                                                               String visitTime, int partySize, VisitType visitType,
+                                                               Long guideId) {
         ClientRequest req = new ClientRequest(RequestType.CREATE_RESERVATION);
         req.put("parkId",    parkId);
         req.put("visitorId", visitorId);
@@ -146,6 +148,28 @@ public class NetworkService {
         req.put("visitTime", visitTime);   // nullable
         req.put("partySize", partySize);
         req.put("visitType", visitType);
+        req.put("guideId",   guideId);     // null for non-group bookings
+        return send(req);
+    }
+
+    /** Lists every reservation owned by a visitor. */
+    public CompletableFuture<ServerResponse> listReservations(long visitorId) {
+        ClientRequest req = new ClientRequest(RequestType.LIST_RESERVATIONS);
+        req.put("visitorId", visitorId);
+        return send(req);
+    }
+
+    /** Confirms a PENDING reservation (server enforces the legal transition). */
+    public CompletableFuture<ServerResponse> confirmReservation(int reservationId) {
+        ClientRequest req = new ClientRequest(RequestType.CONFIRM_RESERVATION);
+        req.put("reservationId", reservationId);
+        return send(req);
+    }
+
+    /** Cancels a PENDING/CONFIRMED/WAITING reservation (server enforces the legal transition). */
+    public CompletableFuture<ServerResponse> cancelReservation(int reservationId) {
+        ClientRequest req = new ClientRequest(RequestType.CANCEL_RESERVATION);
+        req.put("reservationId", reservationId);
         return send(req);
     }
 

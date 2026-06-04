@@ -29,10 +29,13 @@ import static common.dto.RequestType.UPDATE_RESERVATION;
  * client threads — only the final {@link ReservationDAO} collaborator is held as
  * state.
  *
- * <p>The two read ops ({@link RequestType#GET_RESERVATION} and
- * {@link RequestType#LIST_RESERVATIONS}) plus {@link RequestType#CREATE_RESERVATION}
- * for INDIVIDUAL/FAMILY visits are implemented; the remaining ops (GROUP creation,
- * cancel, confirm, waitlist) are stubs pending later reservation-feature sessions.
+ * <p>Implemented: the read ops ({@link RequestType#GET_RESERVATION},
+ * {@link RequestType#LIST_RESERVATIONS}), {@link RequestType#CREATE_RESERVATION}
+ * (INDIVIDUAL/FAMILY and guide-led GROUP), and the
+ * {@link RequestType#CANCEL_RESERVATION}/{@link RequestType#CONFIRM_RESERVATION}
+ * lifecycle ops. The waitlist ops (join/leave/accept-grab) remain stubs pending a
+ * later session. Status transitions are gated by {@link #isLegalTransition} so the
+ * rules live in one place and are enforced server-side regardless of the client UI.
  */
 public class ReservationController implements DomainController {
 
@@ -77,10 +80,23 @@ public class ReservationController implements DomainController {
                 int       partySize = (int) request.get("partySize");
                 VisitType visitType = (VisitType) request.get("visitType");
 
-                // This session handles INDIVIDUAL and FAMILY only — GROUP booking
-                // (guide assignment, group pricing) arrives in a later session.
-                if (visitType == VisitType.GROUP) {
-                    return new ServerResponse(false, "Group booking not available yet.");
+                boolean isGroup = (visitType == VisitType.GROUP);
+                Long    guideId = null;
+
+                // Group visits are guide-led and capped at 15 people. The guide
+                // must be a registered guide (row in the guide table).
+                if (isGroup) {
+                    if (partySize > 15) {
+                        return new ServerResponse(false, "Group size cannot exceed 15.");
+                    }
+                    Object rawGuide = request.get("guideId");
+                    if (rawGuide == null) {
+                        return new ServerResponse(false, "A guide is required for group bookings.");
+                    }
+                    guideId = ((Number) rawGuide).longValue();
+                    if (!dao.guideExists(guideId)) {
+                        return new ServerResponse(false, "No registered guide with id " + guideId + ".");
+                    }
                 }
 
                 // Capacity gate. The waiting-list offer on overflow is a Phase 4
@@ -102,8 +118,8 @@ public class ReservationController implements DomainController {
                         partySize,
                         visitType,
                         ReservationStatus.PENDING,
-                        false,                    // isGroup — INDIVIDUAL/FAMILY only here
-                        null,                     // guideId — none for non-group visits
+                        isGroup,
+                        guideId,                  // the validated guide, or null for non-group
                         partySize * 5000,         // TODO: use PricingService when Payment lands
                         false,                    // paidInAdvance
                         confirmationCode,
@@ -120,8 +136,72 @@ public class ReservationController implements DomainController {
                         created);
             }
 
+            case CONFIRM_RESERVATION: {
+                int id = (int) request.get("reservationId");
+
+                ReservationDTO existing = dao.getById(id);
+                if (existing == null) {
+                    return new ServerResponse(false, "Reservation not found.");
+                }
+                if (!isLegalTransition(existing.getStatus(), ReservationStatus.CONFIRMED)) {
+                    return new ServerResponse(false,
+                            "Cannot confirm a reservation that is " + existing.getStatus()
+                            + " (only PENDING reservations can be confirmed).");
+                }
+                if (!dao.updateStatus(id, ReservationStatus.CONFIRMED)) {
+                    return new ServerResponse(false, "Confirm failed.");
+                }
+                return new ServerResponse(true, "Reservation confirmed.", dao.getById(id));
+            }
+
+            case CANCEL_RESERVATION: {
+                int id = (int) request.get("reservationId");
+
+                ReservationDTO existing = dao.getById(id);
+                if (existing == null) {
+                    return new ServerResponse(false, "Reservation not found.");
+                }
+                if (!isLegalTransition(existing.getStatus(), ReservationStatus.CANCELLED)) {
+                    return new ServerResponse(false,
+                            "Cannot cancel a reservation that is " + existing.getStatus() + ".");
+                }
+                if (!dao.updateStatus(id, ReservationStatus.CANCELLED)) {
+                    return new ServerResponse(false, "Cancel failed.");
+                }
+                return new ServerResponse(true, "Reservation cancelled.", dao.getById(id));
+            }
+
             default:
                 return new ServerResponse(false, "NOT_IMPLEMENTED: " + request.getType());
+        }
+    }
+
+    /**
+     * The reservation state machine: whether a reservation may move from its
+     * {@code current} status to {@code target}. Single source of truth for the
+     * lifecycle ops (CONFIRM/CANCEL today, more later), enforced here on the
+     * server so a misbehaving or out-of-date client cannot drive an illegal
+     * transition by skipping its own disabled-button checks.
+     *
+     * <p>Legal transitions:
+     * <ul>
+     *   <li>{@code PENDING}   → CONFIRMED or CANCELLED</li>
+     *   <li>{@code CONFIRMED} → CANCELLED</li>
+     *   <li>{@code WAITING}   → CANCELLED</li>
+     *   <li>{@code CANCELLED}, {@code COMPLETED}, {@code NO_SHOW} → none (terminal)</li>
+     * </ul>
+     *
+     * @param current the reservation's present status
+     * @param target  the status the caller wants to apply
+     * @return {@code true} if the transition is permitted
+     */
+    private boolean isLegalTransition(ReservationStatus current, ReservationStatus target) {
+        switch (current) {
+            case PENDING:   return target == ReservationStatus.CONFIRMED
+                                || target == ReservationStatus.CANCELLED;
+            case CONFIRMED: return target == ReservationStatus.CANCELLED;
+            case WAITING:   return target == ReservationStatus.CANCELLED;
+            default:        return false; // CANCELLED / COMPLETED / NO_SHOW are terminal
         }
     }
 }

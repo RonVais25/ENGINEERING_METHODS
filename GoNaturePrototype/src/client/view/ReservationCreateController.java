@@ -17,18 +17,25 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Booking form for a new park reservation (INDIVIDUAL / FAMILY visits).
+ * Booking form for a new park reservation (INDIVIDUAL / FAMILY / GROUP visits).
  *
  * <p>Collects park, visitor id, date, optional time, party size and visit type,
  * then sends {@code CREATE_RESERVATION} via {@link NetworkService}. On success it
  * shows the server-issued confirmation code; on failure (e.g. no capacity for the
  * chosen date) it surfaces the server's message.
  *
+ * <p>Choosing GROUP reveals a Guide ID field and enforces the group cap of 15
+ * client-side; the server re-checks both the guide and the cap, so these UI
+ * checks are convenience only.
+ *
  * <p>Extends {@link BaseController} for navigation lifecycle parity with the other
  * screens; it does not subscribe to push events (realtime push for reservations
  * is a later session).
  */
 public class ReservationCreateController extends BaseController {
+
+    /** Maximum party size for a guide-led group visit (mirrored on the server). */
+    private static final int MAX_GROUP_SIZE = 15;
 
     /** Park dropdown entry: carries the id but renders the name. */
     private record ParkOption(int id, String name) {
@@ -41,6 +48,8 @@ public class ReservationCreateController extends BaseController {
     @FXML private TextField            timeField;
     @FXML private Spinner<Integer>     partySpinner;
     @FXML private ComboBox<VisitType>  typeCombo;
+    @FXML private Label                guideLabel;
+    @FXML private TextField            guideField;
     @FXML private Button               bookBtn;
     @FXML private Label                resultLabel;
 
@@ -60,9 +69,20 @@ public class ReservationCreateController extends BaseController {
         partySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 2));
 
-        // Only INDIVIDUAL and FAMILY are bookable this session; GROUP arrives later.
-        typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY);
+        typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
         typeCombo.getSelectionModel().selectFirst();
+
+        // The Guide ID field is only relevant to GROUP visits — reveal it when
+        // GROUP is selected, hide it otherwise.
+        typeCombo.valueProperty().addListener((obs, oldV, newV) -> showGuideField(newV == VisitType.GROUP));
+        showGuideField(typeCombo.getValue() == VisitType.GROUP);
+    }
+
+    private void showGuideField(boolean show) {
+        guideLabel.setVisible(show);
+        guideLabel.setManaged(show);
+        guideField.setVisible(show);
+        guideField.setManaged(show);
     }
 
     @FXML
@@ -121,12 +141,29 @@ public class ReservationCreateController extends BaseController {
             return;
         }
 
+        // Group visits are guide-led and capped at 15. These checks mirror the
+        // server's — the server re-validates, so the UI guard is convenience only.
+        Long guideId = null;
+        if (visitType == VisitType.GROUP) {
+            if (partySize > MAX_GROUP_SIZE) {
+                Widgets.showToast(resultLabel, false, "Group size cannot exceed " + MAX_GROUP_SIZE);
+                return;
+            }
+            String guideRaw = guideField.getText() == null ? "" : guideField.getText().trim();
+            try {
+                guideId = Long.parseLong(guideRaw);
+            } catch (NumberFormatException ex) {
+                Widgets.showToast(resultLabel, false, "Enter a valid numeric Guide ID for group bookings");
+                return;
+            }
+        }
+
         String visitDate = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);
 
         bookBtn.setText("Booking…");
         bookBtn.setDisable(true);
 
-        network.createReservation(park.id(), visitorId, visitDate, visitTime, partySize, visitType)
+        network.createReservation(park.id(), visitorId, visitDate, visitTime, partySize, visitType, guideId)
                .thenAccept(res -> {
                     bookBtn.setText("+  Book Visit");
                     bookBtn.setDisable(false);

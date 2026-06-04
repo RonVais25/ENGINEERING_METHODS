@@ -230,6 +230,31 @@ public class ReservationDAO {
     }
 
     /**
+     * Checks whether a registered guide exists with the given visitor id.
+     *
+     * @param visitorId the candidate guide's visitor (national) id
+     * @return {@code true} if a matching row exists in the {@code guide} table,
+     *         {@code false} if none matches or the query fails
+     */
+    public boolean guideExists(long visitorId) {
+        String sql = "SELECT 1 FROM guide WHERE visitor_id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, visitorId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
      * Maps the current row of a {@link ResultSet} to a {@link ReservationDTO}.
      *
      * <p>Date/time columns are read with {@code getString} (matching the DTO's
