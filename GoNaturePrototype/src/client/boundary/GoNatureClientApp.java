@@ -10,14 +10,12 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-
 import java.net.URL;
 
 /**
  * Application entry point for the refactored client. Owns the Session and the
  * NetworkService and is responsible for swapping between the login window and
- * the main shell scene. All visual styling lives in {@code client.css}; no
- * inline {@code setStyle()} calls appear in this codebase.
+ * the main shell scene. All visual styling lives in client.css
  */
 public class GoNatureClientApp extends Application {
 
@@ -39,7 +37,7 @@ public class GoNatureClientApp extends Application {
 
     public static void main(String[] args) { launch(args); }
 
-    /** Open the small login window. On success it calls {@link #showMain}. */
+    /** Open the small login window. */
     private void showLogin(Stage mainStage) throws Exception {
         Stage loginStage = new Stage();
         loginStage.setTitle("Connect to GoNature Server");
