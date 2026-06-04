@@ -8,10 +8,13 @@ import common.dto.ClientRequest;
 import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
 import common.dto.RequestType;
+import common.dto.ServerEvent;
 import common.dto.ServerResponse;
+import common.dto.SubscriptionKey;
 import common.dto.VisitType;
 import server.dao.ReservationDAO;
 import server.net.ClientSession;
+import server.subscription.SubscriptionRegistry;
 
 import static common.dto.RequestType.ACCEPT_GRAB;
 import static common.dto.RequestType.CANCEL_RESERVATION;
@@ -31,11 +34,18 @@ import static common.dto.RequestType.UPDATE_RESERVATION;
  *
  * <p>Implemented: the read ops ({@link RequestType#GET_RESERVATION},
  * {@link RequestType#LIST_RESERVATIONS}), {@link RequestType#CREATE_RESERVATION}
- * (INDIVIDUAL/FAMILY and guide-led GROUP), and the
+ * (INDIVIDUAL/FAMILY and guide-led GROUP), the
  * {@link RequestType#CANCEL_RESERVATION}/{@link RequestType#CONFIRM_RESERVATION}
- * lifecycle ops. The waitlist ops (join/leave/accept-grab) remain stubs pending a
- * later session. Status transitions are gated by {@link #isLegalTransition} so the
- * rules live in one place and are enforced server-side regardless of the client UI.
+ * lifecycle ops, and {@link RequestType#UPDATE_RESERVATION} (reschedule). The
+ * waitlist ops (join/leave/accept-grab) remain stubs pending a later session.
+ * Status transitions are gated by {@link #isLegalTransition} so the rules live in
+ * one place and are enforced server-side regardless of the client UI.
+ *
+ * <p><strong>Realtime push.</strong> After each successful mutation the controller
+ * re-fetches the persisted row and broadcasts a {@link ServerEvent} for entity
+ * {@code "reservation"} (id = reservation id) through
+ * {@link SubscriptionRegistry}, reusing the exact mechanism the order domain uses
+ * — see {@link #publishReservation}. Subscribers get the committed row.
  */
 public class ReservationController implements DomainController {
 
@@ -131,6 +141,8 @@ public class ReservationController implements DomainController {
                 }
 
                 ReservationDTO created = dao.getById(newId);
+                // Broadcast the new row to any client subscribed to this id.
+                publishReservation(ServerEvent.created("reservation", newId, created));
                 return new ServerResponse(true,
                         "Reservation created (confirmation code: " + confirmationCode + ").",
                         created);
@@ -151,7 +163,11 @@ public class ReservationController implements DomainController {
                 if (!dao.updateStatus(id, ReservationStatus.CONFIRMED)) {
                     return new ServerResponse(false, "Confirm failed.");
                 }
-                return new ServerResponse(true, "Reservation confirmed.", dao.getById(id));
+                // Re-fetch the persisted row (mirrors OrderController) so subscribers
+                // get exactly what was committed, then broadcast.
+                ReservationDTO confirmed = dao.getById(id);
+                publishReservation(ServerEvent.updated("reservation", id, confirmed));
+                return new ServerResponse(true, "Reservation confirmed.", confirmed);
             }
 
             case CANCEL_RESERVATION: {
@@ -168,7 +184,49 @@ public class ReservationController implements DomainController {
                 if (!dao.updateStatus(id, ReservationStatus.CANCELLED)) {
                     return new ServerResponse(false, "Cancel failed.");
                 }
-                return new ServerResponse(true, "Reservation cancelled.", dao.getById(id));
+                ReservationDTO cancelled = dao.getById(id);
+                publishReservation(ServerEvent.updated("reservation", id, cancelled));
+                return new ServerResponse(true, "Reservation cancelled.", cancelled);
+            }
+
+            case UPDATE_RESERVATION: {
+                int    id        = (int) request.get("reservationId");
+                String visitDate = (String) request.get("visitDate");
+                String visitTime = (String) request.get("visitTime"); // nullable
+                int    partySize = (int) request.get("partySize");
+
+                ReservationDTO existing = dao.getById(id);
+                if (existing == null) {
+                    return new ServerResponse(false, "Reservation not found.");
+                }
+                // Only an active (PENDING/CONFIRMED) reservation can be rescheduled.
+                ReservationStatus st = existing.getStatus();
+                if (st != ReservationStatus.PENDING && st != ReservationStatus.CONFIRMED) {
+                    return new ServerResponse(false, "Cannot modify a reservation that is " + st + ".");
+                }
+                if (existing.isGroup() && partySize > 15) {
+                    return new ServerResponse(false, "Group size cannot exceed 15.");
+                }
+
+                // Capacity re-check for the (possibly new) date. availableCapacity
+                // already counts this reservation's current party when it is
+                // PENDING/CONFIRMED on that same date, so add it back to compare
+                // the NEW size against capacity excluding this reservation.
+                int free = dao.availableCapacity(existing.getParkId(), visitDate);
+                int effectiveFree = existing.getVisitDate().equals(visitDate)
+                        ? free + existing.getPartySize()
+                        : free;
+                if (partySize > effectiveFree) {
+                    return new ServerResponse(false,
+                            "No capacity for that date (free: " + Math.max(effectiveFree, 0) + ").");
+                }
+
+                if (!dao.updateDateAndParty(id, visitDate, visitTime, partySize)) {
+                    return new ServerResponse(false, "Update failed.");
+                }
+                ReservationDTO updated = dao.getById(id);
+                publishReservation(ServerEvent.updated("reservation", id, updated));
+                return new ServerResponse(true, "Reservation updated.", updated);
             }
 
             default:
@@ -203,5 +261,19 @@ public class ReservationController implements DomainController {
             case WAITING:   return target == ReservationStatus.CANCELLED;
             default:        return false; // CANCELLED / COMPLETED / NO_SHOW are terminal
         }
+    }
+
+    /**
+     * Fans a reservation change out to every client subscribed to that
+     * reservation id, via the shared {@link SubscriptionRegistry} (the same
+     * realtime-push path the order domain uses). The subscription key's entity
+     * string is always {@code "reservation"} so it matches what the client
+     * screens subscribe to.
+     *
+     * @param event the change to broadcast; its {@code entityId} is the reservation id
+     */
+    private void publishReservation(ServerEvent event) {
+        SubscriptionRegistry.getInstance().publish(
+                new SubscriptionKey("reservation", event.getEntityId()), event);
     }
 }

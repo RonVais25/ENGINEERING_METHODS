@@ -4,6 +4,7 @@ import client.app.Session;
 import client.service.NetworkService;
 import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
+import common.dto.ServerEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -12,6 +13,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -21,8 +23,12 @@ import java.util.List;
  * enforces the legal transitions, so a stale or tampered client cannot drive an
  * illegal one.
  *
- * <p>Extends {@link BaseController} for navigation lifecycle parity; it does not
- * subscribe to push events (realtime reservation push is a later session).
+ * <p>Realtime push: after each successful load the screen subscribes (through the
+ * {@link BaseController#subscribe} helper) to every reservation id on screen, so a
+ * confirm/cancel/update committed by another client refreshes the list within ~1s.
+ * The push handler only re-reads the list (never a mutating op), so applying a
+ * pushed change cannot loop back into another publish. {@link BaseController#onHide()}
+ * auto-unsubscribes when the screen is navigated away.
  */
 public class ReservationListController extends BaseController {
 
@@ -68,12 +74,16 @@ public class ReservationListController extends BaseController {
                 Widgets.showToast(resultLabel, false, res.getMessage());
                 return;
             }
-            List<?> rows = (List<?>) res.getData();
-            populate(rows == null ? List.of() : rows);
+            List<ReservationDTO> rows = new ArrayList<>();
+            if (res.getData() instanceof List<?> raw) {
+                for (Object o : raw) rows.add((ReservationDTO) o);
+            }
+            populate(rows);
+            resubscribe(rows);
         });
     }
 
-    private void populate(List<?> rows) {
+    private void populate(List<ReservationDTO> rows) {
         cardHeaderLabel.setText("RESERVATIONS — VISITOR " + currentVisitorId);
         tableBox.getChildren().setAll(headerRow());
 
@@ -87,9 +97,34 @@ public class ReservationListController extends BaseController {
         }
 
         for (int i = 0; i < rows.size(); i++) {
-            ReservationDTO r = (ReservationDTO) rows.get(i);
-            tableBox.getChildren().add(dataRow(r, i < rows.size() - 1));
+            tableBox.getChildren().add(dataRow(rows.get(i), i < rows.size() - 1));
         }
+    }
+
+    /**
+     * Points this screen's realtime subscriptions at exactly the reservation ids
+     * currently displayed. Drops the previous set first via the
+     * {@link BaseController#unsubscribeAll()} helper (which also sends the matching
+     * UNSUBSCRIBE), so a fresh Load or a push-driven refresh never leaks
+     * subscriptions; {@link BaseController#onHide()} drops the rest on navigation.
+     */
+    private void resubscribe(List<ReservationDTO> rows) {
+        unsubscribeAll();
+        for (ReservationDTO r : rows) {
+            subscribe("reservation", r.getId(), this::onReservationEvent);
+        }
+    }
+
+    /**
+     * Reacts to a pushed reservation change. Runs on the FX thread (the
+     * {@code EventBus} marshals via {@code Platform.runLater}). It only re-reads
+     * the visitor's list (LIST_RESERVATIONS is read-only and publishes nothing),
+     * so applying a pushed change can never re-trigger a publish and loop.
+     *
+     * @param ev the pushed event (its id is one of the displayed reservations)
+     */
+    private void onReservationEvent(ServerEvent ev) {
+        if (currentVisitorId >= 0) loadFor(currentVisitorId);
     }
 
     private HBox headerRow() {
@@ -111,6 +146,10 @@ public class ReservationListController extends BaseController {
         Label partyLbl = cell(String.valueOf(r.getPartySize()), null, 70);
         Label typeLbl  = cell(r.getVisitType().name(),        null, 110);
 
+        // TODO: client.css only defines colours for the "confirmed" (green) and
+        // "pending" (gold) status-tag modifiers, so CANCELLED/WAITING/COMPLETED/
+        // NO_SHOW currently render as plain pills. Add matching rules
+        // (.status-tag.cancelled -> red, .waiting, .completed, .no_show) in client.css.
         Label statusTag = new Label(r.getStatus().name());
         statusTag.getStyleClass().addAll("status-tag", r.getStatus().name().toLowerCase());
         statusTag.setPrefWidth(110);
