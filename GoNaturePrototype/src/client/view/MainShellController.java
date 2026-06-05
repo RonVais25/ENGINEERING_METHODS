@@ -20,7 +20,7 @@ import java.util.function.Predicate;
  * the logged-in user chrome, and the contentArea swap point. All screen-specific
  * behaviour lives in the per-screen controllers that {@link Navigator} loads.
  *
- * <p><strong>Role-awareness.</strong> The sidebar is built from {@link #navItems()},
+ * Role Aware: The sidebar is built from {@link #navItems()},
  * each entry carrying a {@link Predicate} over the {@link Session} that decides
  * whether the current identity may see it. Only the screens that pass are
  * registered with the {@link Navigator} and given a button, so a hidden screen is

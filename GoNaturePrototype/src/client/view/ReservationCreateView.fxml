@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
@@ -47,10 +48,19 @@
             <TextField fx:id="guideField" promptText="Registered guide's national ID (e.g. 200000003)"
                        styleClass="input-field" visible="false" managed="false"/>
 
+            <!-- Paying up front deepens the group discount; the server records it
+                 on the reservation (paid_in_advance) and reflects it in the price. -->
+            <CheckBox fx:id="prePayCheck" text="Pay in advance" styleClass="check-field"/>
+
             <Button fx:id="bookBtn" text="+  Book Visit" onAction="#onBook"
                     styleClass="btn-primary" maxWidth="Infinity"/>
 
             <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+
+            <!-- Payment confirmation, populated from the server's reservation DTO
+                 on a successful booking (see ReservationCreateController#onBook). -->
+            <VBox fx:id="confirmationBox" styleClass="payment-card" spacing="8"
+                  visible="false" managed="false"/>
         </VBox>
     </VBox>
 </ScrollPane>

@@ -6,12 +6,15 @@ import common.dto.ReservationDTO;
 import common.dto.VisitType;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -50,8 +53,10 @@ public class ReservationCreateController extends BaseController {
     @FXML private ComboBox<VisitType>  typeCombo;
     @FXML private Label                guideLabel;
     @FXML private TextField            guideField;
+    @FXML private CheckBox             prePayCheck;
     @FXML private Button               bookBtn;
     @FXML private Label                resultLabel;
+    @FXML private VBox                 confirmationBox;
 
     private final Session session;
 
@@ -97,6 +102,9 @@ public class ReservationCreateController extends BaseController {
 
     @FXML
     private void onBook() {
+        // Clear any confirmation from a previous booking before validating this one.
+        hideConfirmation();
+
         ParkOption park = parkCombo.getValue();
         if (park == null) {
             Widgets.showToast(resultLabel, false, "Please choose a park");
@@ -170,10 +178,13 @@ public class ReservationCreateController extends BaseController {
 
         String visitDate = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);
 
+        // Whether the visitor opts to pay up front; the server prices accordingly.
+        boolean paidInAdvance = prePayCheck.isSelected();
+
         bookBtn.setText("Booking…");
         bookBtn.setDisable(true);
 
-        network.createReservation(park.id(), visitorId, visitDate, visitTime, partySize, visitType, guideId)
+        network.createReservation(park.id(), visitorId, visitDate, visitTime, partySize, visitType, guideId, paidInAdvance)
                .thenAccept(res -> {
                     bookBtn.setText("+  Book Visit");
                     bookBtn.setDisable(false);
@@ -185,6 +196,54 @@ public class ReservationCreateController extends BaseController {
                     Widgets.showToast(resultLabel, true,
                             "Reservation #" + created.getId()
                             + " booked · Confirmation code: " + created.getConfirmationCode());
+                    // Show the server-priced payment confirmation. The total comes
+                    // straight from the returned DTO — never recomputed client-side.
+                    showConfirmation(created);
                });
+    }
+
+    /**
+     * Renders the payment confirmation for a freshly booked reservation from the
+     * server's {@link ReservationDTO}: reservation number, the server-computed
+     * total (price in cents formatted as shekels), and whether it was paid in
+     * advance or is due on arrival.
+     *
+     * @param created the reservation returned by the server
+     */
+    private void showConfirmation(ReservationDTO created) {
+        confirmationBox.getChildren().clear();
+
+        Label title = new Label("✓ Payment Confirmation");
+        title.getStyleClass().add("payment-title");
+
+        double total = created.getPriceCents() / 100.0;
+        String paymentStatus = created.isPaidInAdvance() ? "Paid in advance" : "Due on arrival";
+
+        confirmationBox.getChildren().addAll(
+                title,
+                paymentRow("Reservation", "#" + created.getId()),
+                paymentRow("Total", String.format("₪%.2f", total)),
+                paymentRow("Payment", paymentStatus));
+
+        confirmationBox.setVisible(true);
+        confirmationBox.setManaged(true);
+    }
+
+    /** Builds one key/value line for the payment confirmation panel. */
+    private HBox paymentRow(String key, String value) {
+        Label k = new Label(key);
+        k.getStyleClass().add("key");
+        Label v = new Label(value);
+        v.getStyleClass().add("val");
+        HBox row = new HBox(k, v);
+        row.getStyleClass().add("result-row");
+        return row;
+    }
+
+    /** Hides and empties the payment confirmation panel. */
+    private void hideConfirmation() {
+        confirmationBox.getChildren().clear();
+        confirmationBox.setVisible(false);
+        confirmationBox.setManaged(false);
     }
 }

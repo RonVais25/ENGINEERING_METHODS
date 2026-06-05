@@ -12,6 +12,8 @@ import common.dto.ServerEvent;
 import common.dto.ServerResponse;
 import common.dto.SubscriptionKey;
 import common.dto.VisitType;
+import common.dto.VisitorDTO;
+import server.dao.AuthDAO;
 import server.dao.ReservationDAO;
 import server.net.ClientSession;
 import server.subscription.SubscriptionRegistry;
@@ -50,6 +52,9 @@ import static common.dto.RequestType.UPDATE_RESERVATION;
 public class ReservationController implements DomainController {
 
     private final ReservationDAO dao = new ReservationDAO();
+    private final AuthDAO authDao = new AuthDAO();
+    /** Stateless price calculator, shared across all client threads. */
+    private final PricingService pricing = new PricingService();
 
     @Override
     public Set<RequestType> handledTypes() {
@@ -119,6 +124,17 @@ public class ReservationController implements DomainController {
 
                 int confirmationCode = ThreadLocalRandom.current().nextInt(1000, 10000);
 
+                // A booking is always pre-ordered. Whether the visitor opts to pay
+                // up front (deepens the group discount) comes from the request; the
+                // member discount comes from the visitor's subscription flag.
+                Object  rawPrePaid = request.get("paidInAdvance");
+                boolean prePaid    = rawPrePaid != null && (Boolean) rawPrePaid;
+
+                VisitorDTO visitor  = authDao.findVisitorById(visitorId);
+                boolean    isMember = visitor != null && visitor.isSubscriber();
+
+                int price = pricing.calculate(visitType, isGroup, partySize, true, prePaid, isMember);
+
                 ReservationDTO toInsert = new ReservationDTO(
                         0,                        // id assigned by the DB
                         parkId,
@@ -130,8 +146,8 @@ public class ReservationController implements DomainController {
                         ReservationStatus.PENDING,
                         isGroup,
                         guideId,                  // the validated guide, or null for non-group
-                        partySize * 5000,         // TODO: use PricingService when Payment lands
-                        false,                    // paidInAdvance
+                        price,                    // computed by PricingService
+                        prePaid,                  // paidInAdvance, from the request
                         confirmationCode,
                         null);                    // createdAt — DB default fills it
 
