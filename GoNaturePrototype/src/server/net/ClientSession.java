@@ -37,6 +37,13 @@ public class ClientSession {
     private final Set<SubscriptionKey> subscriptions = new CopyOnWriteArraySet<>();
     private final ReentrantLock writeLock = new ReentrantLock();
 
+    // Who is authenticated on this connection, and which single-login lock kind
+    // ("USER"/"VISITOR") was taken. Both null while logged out. Set on login,
+    // cleared on logout; read on disconnect so OrderServer can release a stale
+    // active_session lock left by a crashed/closed client.
+    private Long loggedInActorId;
+    private String loggedInKind;
+
     /**
      * Wraps an already-connected socket and its already-constructed object streams.
      *
@@ -122,6 +129,34 @@ public class ClientSession {
      */
     public Set<SubscriptionKey> subscriptions() {
         return Collections.unmodifiableSet(subscriptions);
+    }
+
+    /**
+     * @return the id of the actor authenticated on this connection, or
+     *         {@code null} if no one is logged in
+     */
+    public Long getLoggedInActorId() {
+        return loggedInActorId;
+    }
+
+    /**
+     * @return the single-login lock kind held by this connection
+     *         ({@code "USER"}/{@code "VISITOR"}), or {@code null} if logged out
+     */
+    public String getLoggedInKind() {
+        return loggedInKind;
+    }
+
+    /**
+     * Records (on login) or clears (on logout) who is authenticated on this
+     * connection and which single-login lock kind they hold.
+     *
+     * @param actorId the authenticated actor's id, or {@code null} to clear on logout
+     * @param kind    the lock kind {@code "USER"}/{@code "VISITOR"}, or {@code null} to clear
+     */
+    public void setLoggedIn(Long actorId, String kind) {
+        this.loggedInActorId = actorId;
+        this.loggedInKind = kind;
     }
 
     /**

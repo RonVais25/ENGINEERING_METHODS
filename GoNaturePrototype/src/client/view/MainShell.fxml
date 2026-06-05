@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.Cursor?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
@@ -52,10 +53,11 @@
             <StackPane styleClass="user-avatar">
                 <Label fx:id="userInitialsLbl" styleClass="user-initials"/>
             </StackPane>
-            <VBox spacing="1">
+            <VBox spacing="1" HBox.hgrow="ALWAYS">
                 <Label fx:id="userNameLbl" styleClass="user-name"/>
                 <Label fx:id="userIdLbl"   styleClass="user-id"/>
             </VBox>
+            <Button fx:id="logoutBtn" text="Log out" onAction="#onLogout" styleClass="logout-btn"/>
         </HBox>
     </VBox>
 

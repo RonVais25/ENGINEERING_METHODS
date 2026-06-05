@@ -2,6 +2,7 @@ package server.net;
 
 import common.dto.ClientRequest;
 import common.dto.ServerResponse;
+import server.dao.AuthDAO;
 import server.subscription.SubscriptionRegistry;
 
 import java.io.EOFException;
@@ -144,6 +145,14 @@ public class OrderServer {
                 // socket, then close streams+socket.
                 String addr = session.remoteAddressString();
                 int unsubCount = session.subscriptions().size();
+                // Release any single-login lock held by this connection so a
+                // crashed/closed client doesn't leave a stale active_session row
+                // that blocks the actor from logging in again.
+                if (session.getLoggedInActorId() != null) {
+                    try {
+                        new AuthDAO().unlock(session.getLoggedInActorId(), session.getLoggedInKind());
+                    } catch (Exception ignored) {}
+                }
                 SubscriptionRegistry.getInstance().unregisterAll(session);
                 session.close();
                 listener.onLog("[conn -] session=" + addr +

@@ -53,8 +53,11 @@ public class ReservationCreateController extends BaseController {
     @FXML private Button               bookBtn;
     @FXML private Label                resultLabel;
 
+    private final Session session;
+
     public ReservationCreateController(NetworkService network, Session session) {
         super(network);
+        this.session = session;
     }
 
     @FXML
@@ -76,6 +79,13 @@ public class ReservationCreateController extends BaseController {
         // GROUP is selected, hide it otherwise.
         typeCombo.valueProperty().addListener((obs, oldV, newV) -> showGuideField(newV == VisitType.GROUP));
         showGuideField(typeCombo.getValue() == VisitType.GROUP);
+
+        // A logged-in visitor books for themselves: prefill + lock the id field.
+        // Staff leave it blank/editable so they can book on behalf of any visitor.
+        if (session.isVisitor()) {
+            visitorField.setText(String.valueOf(session.getActorId()));
+            visitorField.setEditable(false);
+        }
     }
 
     private void showGuideField(boolean show) {
@@ -93,8 +103,8 @@ public class ReservationCreateController extends BaseController {
             return;
         }
 
-        // TODO: replace with logged-in visitor when Auth lands. For now the
-        // visitor identifies themselves by typing their national ID.
+        // A logged-in visitor's id is prefilled (and locked) above; staff type
+        // the visitor's national ID to book on their behalf.
         String visitorRaw = visitorField.getText() == null ? "" : visitorField.getText().trim();
         long visitorId;
         try {
