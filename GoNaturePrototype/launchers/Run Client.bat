@@ -1,5 +1,5 @@
 @echo off
-REM Double-click to start the GoNature client.
+REM Double-click to start the GoNature client (FXML + CSS).
 
 cd /d "%~dp0\.."
 
@@ -10,6 +10,6 @@ if exist %LIBERICA% (
     set JAVA=java
 )
 
-%JAVA% --add-modules javafx.controls,javafx.graphics -jar dist\GoNatureClient.jar
+%JAVA% --add-modules javafx.controls,javafx.graphics,javafx.fxml -jar dist\GoNatureClient.jar
 
 pause

@@ -70,17 +70,9 @@ EOF
 echo "▸ Building GoNatureClient.jar"
 cat > build/client-manifest.mf <<EOF
 Manifest-Version: 1.0
-Main-Class: client.boundary.GoNatureClientFX
-EOF
-"$JAR_BIN" cfm dist/GoNatureClient.jar build/client-manifest.mf \
-    -C build client -C build common
-
-echo "▸ Building GoNatureClientNew.jar"
-cat > build/client-new-manifest.mf <<EOF
-Manifest-Version: 1.0
 Main-Class: client.boundary.GoNatureClientApp
 EOF
-"$JAR_BIN" cfm dist/GoNatureClientNew.jar build/client-new-manifest.mf \
+"$JAR_BIN" cfm dist/GoNatureClient.jar build/client-manifest.mf \
     -C build client -C build common
 
 echo ""
@@ -88,6 +80,5 @@ echo "✓ Done. Built JARs:"
 ls -lh dist/
 echo ""
 echo "Run with:"
-echo "  java -jar dist/GoNatureServer.jar    (needs MySQL connector at lib/ or ../lib/)"
-echo "  java --add-modules javafx.controls,javafx.graphics            -jar dist/GoNatureClient.jar    (old monolith)"
-echo "  java --add-modules javafx.controls,javafx.graphics,javafx.fxml -jar dist/GoNatureClientNew.jar (FXML rewrite)"
+echo "  java --add-modules javafx.controls,javafx.graphics            -jar dist/GoNatureServer.jar (needs MySQL connector at lib/ or ../lib/)"
+echo "  java --add-modules javafx.controls,javafx.graphics,javafx.fxml -jar dist/GoNatureClient.jar"

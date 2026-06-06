@@ -1,6 +1,7 @@
 package client.app;
 
 import client.service.NetworkService;
+import client.view.BaseController;
 import javafx.css.PseudoClass;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -36,6 +37,10 @@ public class Navigator {
     private final Map<String, Screen> screens = new LinkedHashMap<>();
     private final Map<String, Button> navButtons = new LinkedHashMap<>();
     private String currentId;
+    // Tracked so onHide() can fire on the outgoing controller before we
+    // load the next FXML. Not volatile — go() is only called from the FX
+    // thread, so single-threaded ownership is sufficient.
+    private BaseController currentController;
 
     public Navigator(StackPane contentArea, NetworkService network, Session session,
                      Consumer<Screen> onScreenChange) {
@@ -58,11 +63,30 @@ public class Navigator {
         Screen screen = screens.get(id);
         if (screen == null) throw new IllegalArgumentException("Unknown screen: " + id);
 
+        // 1. Hide the outgoing screen first so its push-channel subscriptions
+        //    are detached BEFORE the new content shows. If we swapped first,
+        //    an event for the abandoned entity could still arrive in the
+        //    brief window before onHide() runs.
+        if (currentController != null) {
+            currentController.onHide();
+            currentController = null;
+        }
+
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(screen.fxml()));
             loader.setControllerFactory(type -> instantiate(type));
             Parent node = loader.load();
             contentArea.getChildren().setAll(node);
+
+            // 2. Show the new screen after FXMLLoader has injected @FXML
+            //    fields and run initialize(). Only push-aware controllers
+            //    (BaseController subclasses) get the lifecycle hooks; the
+            //    others stay oblivious and require no change.
+            Object ctrl = loader.getController();
+            if (ctrl instanceof BaseController bc) {
+                currentController = bc;
+                bc.onShow();
+            }
         } catch (Exception ex) {
             throw new RuntimeException("Failed to load " + screen.fxml(), ex);
         }

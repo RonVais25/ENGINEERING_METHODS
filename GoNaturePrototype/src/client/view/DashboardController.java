@@ -29,6 +29,10 @@ public class DashboardController {
 
     @FXML
     private void initialize() {
+        // TODO: make the Dashboard a real screen — the stat cards and "recent"
+        // rows below are hardcoded demo data (stale order #s, fixed subscriber).
+        // Drive it off the logged-in identity in Session: a visitor's upcoming
+        // reservations / next visit, a staff member's park stats, etc.
         statsRow.getChildren().addAll(
             statCard("ACTIVE ORDERS", "3",      "This month"),
             statCard("NEXT VISIT",    "Jun 15", "Order #1055"),

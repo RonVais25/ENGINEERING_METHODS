@@ -2,6 +2,7 @@ package client.view;
 
 import client.app.Session;
 import client.service.NetworkService;
+import common.dto.EventOp;
 import common.dto.OrderDTO;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -21,8 +22,14 @@ import java.time.format.DateTimeFormatter;
  * Update-Order screen: a two-step flow (find → edit) with a step indicator
  * at the top. The result panel and activity log on the right mirror the
  * Get-Order screen.
+ *
+ * <p>This controller participates in the realtime push channel via
+ * {@link BaseController}: as soon as a search succeeds, it subscribes to
+ * {@code ("order", orderNumber)} so an edit committed by another client
+ * refreshes the local fields without polling. The subscription is
+ * dropped on back-to-step-0, on re-search, and on screen navigation away.
  */
-public class UpdateOrderController {
+public class UpdateOrderController extends BaseController {
 
     @FXML private VBox      leftPanel;
     @FXML private HBox      stepIndicatorSlot;
@@ -39,14 +46,12 @@ public class UpdateOrderController {
     @FXML private Label     s1toast;
     @FXML private VBox      rightPanel;
 
-    private final NetworkService network;
-
     private VBox resultPanel;
     private VBox logBox;
     private int  currentOrderNumber = -1;
 
     public UpdateOrderController(NetworkService network, Session session) {
-        this.network = network;
+        super(network);
     }
 
     @FXML
@@ -104,11 +109,22 @@ public class UpdateOrderController {
             setStepIndicator(1);
             step0.setVisible(false); step0.setManaged(false);
             step1.setVisible(true);  step1.setManaged(true);
+
+            // Drop any previous order's subscription before attaching a new
+            // one — the user can re-search a different id without navigating
+            // away, so onHide() alone wouldn't catch this case.
+            unsubscribeAll();
+            subscribe("order", n, ev -> {
+                if (ev.getOp() == EventOp.UPDATED && ev.getPayload() instanceof OrderDTO updated) {
+                    applyOrderToFields(updated);
+                }
+            });
         });
     }
 
     @FXML
     private void onBack() {
+        unsubscribeAll();
         setStepIndicator(0);
         step0.setVisible(true);  step0.setManaged(true);
         step1.setVisible(false); step1.setManaged(false);
@@ -145,11 +161,32 @@ public class UpdateOrderController {
             Widgets.addLog(logBox, true, "Updated order #" + n);
             setStepIndicator(2);
 
-            // Re-fetch to refresh the result panel with server-confirmed data
+            // The server's UPDATED event will land here too (we're subscribed
+            // to our own change), so the result panel will refresh via
+            // applyOrderToFields. The explicit re-fetch below is kept as a
+            // belt-and-suspenders in case the event is lost in flight.
             network.getOrder(n).thenAccept(r2 -> {
                 if (r2.isSuccess()) Widgets.populateResultPanel(resultPanel, (OrderDTO) r2.getData());
             });
         });
+    }
+
+    /**
+     * Pushes a server-confirmed order snapshot into the visible form fields
+     * and the result panel. Called from the EventBus callback registered in
+     * {@link #onFind}.
+     */
+    private void applyOrderToFields(OrderDTO updated) {
+        // Defensive: if an event somehow fires before @FXML injection
+        // completes (shouldn't happen via the Navigator path), bail out.
+        if (datePicker == null) return;
+
+        try { datePicker.setValue(LocalDate.parse(updated.getOrderDate())); }
+        catch (Exception ignored) {}
+        visitorsSpinner.getValueFactory().setValue(updated.getNumberOfVisitors());
+        Widgets.populateResultPanel(resultPanel, updated);
+        Widgets.addLog(logBox, true, "Order updated remotely");
+        System.out.println("[ui] applied remote update for order #" + updated.getOrderNumber());
     }
 
     private void setStepIndicator(int active) {

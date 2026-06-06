@@ -213,6 +213,32 @@
     -fx-background-color: -g200;
 }
 
+/* Segmented Staff/Visitor toggle on the user-login screen */
+.seg-group { -fx-background-color: -g100; -fx-background-radius: 10; -fx-padding: 3; -fx-spacing: 3; }
+.seg-btn {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-text-fill: -g600;
+    -fx-background-color: transparent;
+    -fx-background-radius: 8;
+    -fx-padding: 9 0 9 0;
+    -fx-cursor: hand;
+}
+.seg-btn:hover    { -fx-background-color: rgba(255,255,255,0.5); }
+.seg-btn:selected { -fx-background-color: white; -fx-text-fill: -g700; }
+
+/* Logout button — sits in the dark sidebar user-row */
+.logout-btn {
+    -fx-font-size: 11;
+    -fx-font-weight: bold;
+    -fx-text-fill: -g300;
+    -fx-background-color: rgba(255,255,255,0.06);
+    -fx-background-radius: 8;
+    -fx-padding: 6 10 6 10;
+    -fx-cursor: hand;
+}
+.logout-btn:hover { -fx-background-color: rgba(255,255,255,0.16); -fx-text-fill: white; }
+
 /* ---------- Status tag ----------------------------------------------------- */
 .status-tag {
     -fx-font-size: 11;
