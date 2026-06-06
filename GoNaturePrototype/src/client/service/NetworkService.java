@@ -133,22 +133,24 @@ public class NetworkService {
      * @param visitorId national-ID-style visitor id
      * @param visitDate visit date, ISO {@code yyyy-MM-dd}
      * @param visitTime visit time {@code HH:mm:ss}, or {@code null}
-     * @param partySize number of people in the party
-     * @param visitType INDIVIDUAL, FAMILY, or GROUP
-     * @param guideId   registered guide's id for GROUP visits, or {@code null} otherwise
+     * @param partySize     number of people in the party
+     * @param visitType     INDIVIDUAL, FAMILY, or GROUP
+     * @param guideId       registered guide's id for GROUP visits, or {@code null} otherwise
+     * @param paidInAdvance whether the visitor opts to pay up front (deepens the group discount)
      * @return future resolving (on the FX thread) with the server's response
      */
     public CompletableFuture<ServerResponse> createReservation(int parkId, long visitorId, String visitDate,
                                                                String visitTime, int partySize, VisitType visitType,
-                                                               Long guideId) {
+                                                               Long guideId, boolean paidInAdvance) {
         ClientRequest req = new ClientRequest(RequestType.CREATE_RESERVATION);
-        req.put("parkId",    parkId);
-        req.put("visitorId", visitorId);
-        req.put("visitDate", visitDate);
-        req.put("visitTime", visitTime);   // nullable
-        req.put("partySize", partySize);
-        req.put("visitType", visitType);
-        req.put("guideId",   guideId);     // null for non-group bookings
+        req.put("parkId",        parkId);
+        req.put("visitorId",     visitorId);
+        req.put("visitDate",     visitDate);
+        req.put("visitTime",     visitTime);   // nullable
+        req.put("partySize",     partySize);
+        req.put("visitType",     visitType);
+        req.put("guideId",       guideId);     // null for non-group bookings
+        req.put("paidInAdvance", paidInAdvance);
         return send(req);
     }
 

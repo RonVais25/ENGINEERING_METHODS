@@ -315,6 +315,22 @@
 .result-row .val    { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g800; }
 .result-row .val.date { -fx-text-fill: -g600; }
 
+/* ---------- Payment confirmation (reservation booking) -------------------- */
+.payment-card {
+    -fx-background-color: -g50;
+    -fx-background-radius: 12;
+    -fx-border-color: -g200;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 16 18 16 18;
+}
+.payment-title { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g600; }
+
+/* "Pay in advance" checkbox on the booking form. */
+.check-field { -fx-font-size: 13; -fx-text-fill: -g600; }
+.check-field .box { -fx-background-color: -g50; -fx-border-color: -g200; -fx-border-width: 1.5; -fx-border-radius: 4; -fx-background-radius: 4; }
+.check-field:selected .mark { -fx-background-color: -g600; }
+
 /* ---------- Activity log -------------------------------------------------- */
 .log-scroll {
     -fx-background: -g50;
