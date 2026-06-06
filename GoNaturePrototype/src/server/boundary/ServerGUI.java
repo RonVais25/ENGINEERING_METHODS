@@ -29,7 +29,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+/**
+ * JavaFX GUI for managing the GoNature server.
+ * Provides controls for starting/stopping the server,
+ * monitoring connected clients, and viewing server activity logs.
+ */
 public class ServerGUI extends Application implements ServerListener {
 
     // Design tokens — mirror the client palette
@@ -67,6 +71,11 @@ public class ServerGUI extends Application implements ServerListener {
     // Log
     private VBox logBox;
 
+    /**
+     * Initializes and displays the main server window.
+     *
+     * @param stage primary application stage
+     */
     @Override
     public void start(Stage stage) {
         BorderPane root = new BorderPane();
@@ -299,6 +308,10 @@ public class ServerGUI extends Application implements ServerListener {
 
     // ─── Server lifecycle ─────────────────────────────────────────────────────
 
+    /**
+     * Starts the server after validating the port
+     * and testing the database connection.
+     */
     private void startServer() {
         int port;
         try {
@@ -326,7 +339,10 @@ public class ServerGUI extends Application implements ServerListener {
         portField.setDisable(true);
         passwordField.setDisable(true);
     }
-
+    
+    /**
+     * Stops the running server.
+     */
     private void stopServer() {
         if (server != null) server.stop();
     }
@@ -442,6 +458,9 @@ public class ServerGUI extends Application implements ServerListener {
 
     // ─── Client row model ─────────────────────────────────────────────────────
 
+    /**
+     * Represents a connected client entry displayed in the table.
+     */
     public static class ClientRow {
         private final javafx.beans.property.SimpleStringProperty ip;
         private final javafx.beans.property.SimpleStringProperty host;
