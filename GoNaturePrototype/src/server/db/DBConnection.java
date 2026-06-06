@@ -4,6 +4,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
+/**
+ * Manages the connection to the system's MySQL database.
+ */
 public class DBConnection {
 
     private static final String URL =
@@ -24,10 +27,21 @@ public class DBConnection {
         return "";
     }
 
+    /**
+     * Sets the database connection password.
+     *
+     * @param pw the new database password to be set
+     */
     public static void setPassword(String pw) {
         password = pw != null ? pw : "";
     }
 
+    /**
+     * Creates and returns an active connection to the database.
+     *
+     * @return an active connection instance to the MySQL database
+     * @throws SQLException if a database access error occurs
+     */
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, password);
     }
