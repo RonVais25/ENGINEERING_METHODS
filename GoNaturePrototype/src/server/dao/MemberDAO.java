@@ -1,0 +1,189 @@
+package server.dao;
+
+import server.db.DBConnection;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLIntegrityConstraintViolationException;
+
+/**
+ * Data access object for member registration: the {@code visitor} base row plus
+ * the {@code subscriber} and {@code guide} extension rows that a SERVICE_REP
+ * creates.
+ *
+ * <p>Follows the same conventions as {@link AuthDAO} and {@link ReservationDAO}:
+ * each method opens a short-lived {@link java.sql.Connection} from
+ * {@link server.db.DBConnection}, runs parameterized statements, and signals
+ * failure through the return value rather than propagating SQL exceptions. A
+ * subscriber or guide <em>is</em> a visitor with one extra row, so callers
+ * first {@link #upsertVisitor} the base identity and then add the role row.
+ *
+ * <p>Duplicate detection (already a subscriber / already a guide) relies on the
+ * extension tables' {@code visitor_id} primary key: the role-row insert is
+ * attempted and a {@link SQLIntegrityConstraintViolationException} is caught and
+ * reported as {@code false}. This mirrors {@link AuthDAO#lock} and avoids the
+ * check-then-insert race a separate existence query would open.
+ */
+public class MemberDAO {
+
+    /**
+     * Checks whether a visitor row already exists for the given national ID.
+     *
+     * @param id the visitor (national) id to probe
+     * @return {@code true} if a matching {@code visitor} row exists, {@code false}
+     *         if none matches or the query fails
+     */
+    public boolean visitorExists(long id) {
+        String sql = "SELECT 1 FROM visitor WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Find-or-create the base {@code visitor} row for a national ID.
+     *
+     * <p>{@code visitor.id} is an assigned national ID (not auto-increment), so a
+     * new visitor is inserted with the id supplied from the form; re-registering
+     * an existing visitor updates their contact details instead of failing on the
+     * primary key. The {@code is_subscriber} flag is only ever raised, never
+     * lowered: when registering a subscriber ({@code isSubscriber == true}) it is
+     * set {@code TRUE}, but registering an existing subscriber as a guide
+     * ({@code isSubscriber == false}) leaves their subscription flag untouched so
+     * the member discount keeps firing.
+     *
+     * @param id           the visitor's assigned national id (primary key)
+     * @param fullName     the visitor's display name
+     * @param phone        the visitor's phone number
+     * @param email        the visitor's email address
+     * @param isSubscriber whether to mark the visitor as a subscriber; {@code false}
+     *                     never clears an existing subscription
+     */
+    public void upsertVisitor(long id, String fullName, String phone, String email, boolean isSubscriber) {
+        if (visitorExists(id)) {
+            // Update contact details. Only raise is_subscriber (when registering a
+            // subscriber); the guide path passes false and must not downgrade an
+            // existing subscriber, so that branch leaves the flag alone.
+            String sql = isSubscriber
+                    ? "UPDATE visitor SET full_name = ?, phone = ?, email = ?, is_subscriber = TRUE WHERE id = ?"
+                    : "UPDATE visitor SET full_name = ?, phone = ?, email = ? WHERE id = ?";
+
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setString(1, fullName);
+                stmt.setString(2, phone);
+                stmt.setString(3, email);
+                stmt.setLong(4, id);
+                stmt.executeUpdate();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            String sql = "INSERT INTO visitor (id, full_name, phone, email, is_subscriber) VALUES (?, ?, ?, ?, ?)";
+
+            try (Connection conn = DBConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setLong(1, id);
+                stmt.setString(2, fullName);
+                stmt.setString(3, phone);
+                stmt.setString(4, email);
+                stmt.setBoolean(5, isSubscriber);
+                stmt.executeUpdate();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Promotes a visitor to a subscriber: marks {@code visitor.is_subscriber}
+     * {@code TRUE} and inserts the {@code subscriber} row with today's join date.
+     *
+     * <p>The caller must have created the base visitor (see {@link #upsertVisitor})
+     * first. The {@code subscriber} insert is attempted directly; a duplicate
+     * primary key means the visitor is already a subscriber, which is caught and
+     * reported as {@code false} rather than raising an error.
+     *
+     * @param visitorId  the visitor's national id
+     * @param familySize the subscriber's family size
+     * @return {@code true} if a new subscriber row was created, {@code false} if
+     *         the visitor was already a subscriber or the insert failed
+     */
+    public boolean registerSubscriber(long visitorId, int familySize) {
+        String insertSql = "INSERT INTO subscriber (visitor_id, family_size, joined_on) VALUES (?, ?, CURDATE())";
+        String flagSql   = "UPDATE visitor SET is_subscriber = TRUE WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConnection()) {
+
+            try (PreparedStatement insert = conn.prepareStatement(insertSql)) {
+                insert.setLong(1, visitorId);
+                insert.setInt(2, familySize);
+                insert.executeUpdate();
+            } catch (SQLIntegrityConstraintViolationException dup) {
+                // Duplicate subscriber.visitor_id -> already a subscriber.
+                return false;
+            }
+
+            // New subscriber row created: make sure the visitor flag is set so the
+            // member discount in PricingService fires for their bookings.
+            try (PreparedStatement flag = conn.prepareStatement(flagSql)) {
+                flag.setLong(1, visitorId);
+                flag.executeUpdate();
+            }
+            return true;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Registers a visitor as a group guide by inserting the {@code guide} row with
+     * today's approval date and the service rep who registered them.
+     *
+     * <p>The caller must have created the base visitor (see {@link #upsertVisitor})
+     * first. The insert is attempted directly; a duplicate primary key means the
+     * visitor is already a guide, which is caught and reported as {@code false}.
+     *
+     * @param visitorId          the visitor's national id
+     * @param registeredByUserId the id of the SERVICE_REP performing the registration
+     * @return {@code true} if a new guide row was created, {@code false} if the
+     *         visitor was already a guide or the insert failed
+     */
+    public boolean registerGuide(long visitorId, int registeredByUserId) {
+        String sql = "INSERT INTO guide (visitor_id, registered_by, approved_on) VALUES (?, ?, CURDATE())";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, visitorId);
+            stmt.setInt(2, registeredByUserId);
+            stmt.executeUpdate();
+            return true;
+
+        } catch (SQLIntegrityConstraintViolationException dup) {
+            // Duplicate guide.visitor_id -> already a registered guide.
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+}

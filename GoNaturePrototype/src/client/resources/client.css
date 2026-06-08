@@ -227,6 +227,22 @@
 .seg-btn:hover    { -fx-background-color: rgba(255,255,255,0.5); }
 .seg-btn:selected { -fx-background-color: white; -fx-text-fill: -g700; }
 
+/* Dev-only quick-login shortcuts on the user-login screen */
+.quick-label { -fx-font-size: 10; -fx-text-fill: -g400; -fx-padding: 4 0 0 0; }
+.quick-row   { -fx-alignment: center; }
+.quick-btn {
+    -fx-font-size: 11;
+    -fx-text-fill: -g700;
+    -fx-background-color: -g100;
+    -fx-background-radius: 8;
+    -fx-border-color: -g200;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 5 9 5 9;
+    -fx-cursor: hand;
+}
+.quick-btn:hover { -fx-background-color: -g200; }
+
 /* Logout button — sits in the dark sidebar user-row */
 .logout-btn {
     -fx-font-size: 11;

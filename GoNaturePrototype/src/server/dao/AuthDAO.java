@@ -66,6 +66,45 @@ public class AuthDAO {
     }
 
     /**
+     * Looks up a staff user by their primary key.
+     *
+     * <p>Used for server-side authorization: the {@link server.net.ClientSession}
+     * carries only the logged-in actor's id (not their role), so a controller
+     * that must gate an operation by role re-reads the {@code user} row here. As
+     * with {@link #findStaffByCredentials}, the returned DTO omits the password.
+     *
+     * @param id the user identifier to fetch
+     * @return the matching {@link UserDTO}, or {@code null} if no row matches or the query fails
+     */
+    public UserDTO findUserById(long id) {
+        String sql = "SELECT id, username, full_name, role, park_id FROM `user` WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int parkRaw = rs.getInt("park_id");
+                    Integer parkId = rs.wasNull() ? null : parkRaw;
+                    return new UserDTO(
+                            rs.getInt("id"),
+                            rs.getString("username"),
+                            rs.getString("full_name"),
+                            Role.valueOf(rs.getString("role")),
+                            parkId
+                    );
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    /**
      * Looks up a visitor by their national ID (login-by-ID).
      *
      * @param id the visitor identifier to fetch

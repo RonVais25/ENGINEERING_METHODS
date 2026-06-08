@@ -39,6 +39,8 @@ public class MainShellController {
     private static final Predicate<Session> STAFF_ONLY   = Session::isStaff;
     private static final Predicate<Session> MANAGER_ONLY =
             s -> s.isStaff() && (s.getRole() == Role.PARK_MANAGER || s.getRole() == Role.DEPT_MANAGER);
+    private static final Predicate<Session> SERVICE_REP_ONLY =
+            s -> s.isStaff() && s.getRole() == Role.SERVICE_REP;
 
     @FXML private VBox      navBox;
     @FXML private StackPane contentArea;
@@ -115,7 +117,12 @@ public class MainShellController {
             new NavItem(new Screen("new", "+", "New Booking", "/client/view/NewBookingView.fxml",
                         "New Booking", "Reserve your next park visit"), STAFF_ONLY),
             new NavItem(new Screen("history", "☰", "History", "/client/view/HistoryView.fxml",
-                        "History", "All your past orders"), STAFF_ONLY)
+                        "History", "All your past orders"), STAFF_ONLY),
+            // Member registration — service reps only.
+            new NavItem(new Screen("regsub", "★", "Register Subscriber", "/client/view/SubscriberRegisterView.fxml",
+                        "Register Subscriber", "Sign up a new subscriber (members earn a discount)"), SERVICE_REP_ONLY),
+            new NavItem(new Screen("regguide", "✚", "Register Guide", "/client/view/GuideRegisterView.fxml",
+                        "Register Guide", "Register a visitor as a group guide"), SERVICE_REP_ONLY)
             // Future manager-only screens (e.g. parameter-change approvals) go here
             // with the MANAGER_ONLY predicate.
         );

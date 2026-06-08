@@ -4,6 +4,7 @@
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -48,5 +49,11 @@
 
         <Label fx:id="errorLabel" styleClass="login-error" wrapText="true"
                visible="false" managed="false"/>
+
+        <!-- Dev-only one-click logins for the seeded accounts (pw: changeme).
+             Buttons are built in UserLoginController#buildQuickLoginButtons. -->
+        <Label text="Quick login · dev" styleClass="quick-label"/>
+        <FlowPane fx:id="quickLoginBox" styleClass="quick-row" hgap="6" vgap="6"
+                  maxWidth="Infinity"/>
     </VBox>
 </StackPane>

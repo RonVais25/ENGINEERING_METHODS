@@ -203,6 +203,51 @@ public class NetworkService {
         return send(new ClientRequest(RequestType.LOGOUT));
     }
 
+    /**
+     * Registers a subscriber (SERVICE_REP only — the server re-checks the role).
+     * The visitor is found-or-created from {@code visitorId} and the supplied
+     * details, then promoted to a subscriber. On success the response carries a
+     * {@link common.dto.VisitorDTO}; on failure the message explains why (e.g.
+     * "already a subscriber" or "Only a service representative …").
+     *
+     * @param visitorId  the subscriber's national id
+     * @param fullName   the subscriber's full name
+     * @param phone      the subscriber's phone number
+     * @param email      the subscriber's email address
+     * @param familySize the subscriber's family size
+     */
+    public CompletableFuture<ServerResponse> registerSubscriber(long visitorId, String fullName,
+                                                                String phone, String email, int familySize) {
+        ClientRequest req = new ClientRequest(RequestType.REGISTER_SUBSCRIBER);
+        req.put("visitorId",  visitorId);
+        req.put("fullName",   fullName);
+        req.put("phone",      phone);
+        req.put("email",      email);
+        req.put("familySize", familySize);
+        return send(req);
+    }
+
+    /**
+     * Registers a visitor as a group guide (SERVICE_REP only — the server
+     * re-checks the role and stamps the guide row with the logged-in rep's id).
+     * The visitor is found-or-created from {@code visitorId} and the supplied
+     * details without changing their subscriber status.
+     *
+     * @param visitorId the guide's national id
+     * @param fullName  the guide's full name
+     * @param phone     the guide's phone number
+     * @param email     the guide's email address
+     */
+    public CompletableFuture<ServerResponse> registerGuide(long visitorId, String fullName,
+                                                           String phone, String email) {
+        ClientRequest req = new ClientRequest(RequestType.REGISTER_GUIDE);
+        req.put("visitorId", visitorId);
+        req.put("fullName",  fullName);
+        req.put("phone",     phone);
+        req.put("email",     email);
+        return send(req);
+    }
+
     /** Result bundle for {@link #probe(String, int)}. */
     public static final class ProbeResult {
         public final ClientConnection connection;
