@@ -39,6 +39,8 @@ public class MainShellController {
     private static final Predicate<Session> STAFF_ONLY   = Session::isStaff;
     private static final Predicate<Session> MANAGER_ONLY =
             s -> s.isStaff() && (s.getRole() == Role.PARK_MANAGER || s.getRole() == Role.DEPT_MANAGER);
+    private static final Predicate<Session> SERVICE_REP_ONLY =
+            s -> s.isStaff() && s.getRole() == Role.SERVICE_REP;
     private static final Predicate<Session> PARK_MANAGER_ONLY =
             s -> s.isStaff() && s.getRole() == Role.PARK_MANAGER;
     private static final Predicate<Session> DEPT_MANAGER_ONLY =
@@ -120,6 +122,11 @@ public class MainShellController {
                         "New Booking", "Reserve your next park visit"), STAFF_ONLY),
             new NavItem(new Screen("history", "☰", "History", "/client/view/HistoryView.fxml",
                         "History", "All your past orders"), STAFF_ONLY),
+            // Member registration — service reps only.
+            new NavItem(new Screen("regsub", "★", "Register Subscriber", "/client/view/SubscriberRegisterView.fxml",
+                        "Register Subscriber", "Sign up a new subscriber (members earn a discount)"), SERVICE_REP_ONLY),
+            new NavItem(new Screen("regguide", "✚", "Register Guide", "/client/view/GuideRegisterView.fxml",
+                        "Register Guide", "Register a visitor as a group guide"), SERVICE_REP_ONLY),
             // Manager-only park screens — gated to a single role each so a hidden
             // screen is also unreachable (not registered with the Navigator).
             new NavItem(new Screen("parkparams", "⚙", "Park Settings",

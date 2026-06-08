@@ -40,7 +40,7 @@ import static common.dto.RequestType.REQUEST_PARAM_CHANGE;
  *
  * <p><strong>Trust boundary.</strong> Roles are enforced here on the server (not
  * merely gated in the UI) by recovering the logged-in actor's {@link Role} and
- * {@code park_id} from the {@link ClientSession} via {@link AuthDAO#findStaffById}.
+ * {@code park_id} from the {@link ClientSession} via {@link AuthDAO#findUserById}.
  * A manager's target park is always derived from their own {@code park_id} —
  * never from a client-supplied park id. Approve/reject re-check the {@code PENDING}
  * state so a decision is never applied twice.
@@ -240,7 +240,7 @@ public class ParkController implements DomainController {
         if (actorId == null || !"USER".equals(session.getLoggedInKind())) {
             return null;
         }
-        return authDao.findStaffById(actorId);
+        return authDao.findUserById(actorId);
     }
 
     /**
