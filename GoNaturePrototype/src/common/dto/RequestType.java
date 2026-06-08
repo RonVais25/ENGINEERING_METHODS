@@ -29,6 +29,7 @@ public enum RequestType {
 
     // parks
     GET_PARK,
+    LIST_PARKS,
     REQUEST_PARAM_CHANGE,
     LIST_PENDING_CHANGES,
     APPROVE_PARAM_CHANGE,
