@@ -3,6 +3,7 @@ package client.service;
 import client.app.Session;
 import client.net.ClientConnection;
 import common.dto.ClientRequest;
+import common.dto.ParamField;
 import common.dto.RequestType;
 import common.dto.ServerResponse;
 import common.dto.VisitType;
@@ -172,6 +173,74 @@ public class NetworkService {
     public CompletableFuture<ServerResponse> cancelReservation(int reservationId) {
         ClientRequest req = new ClientRequest(RequestType.CANCEL_RESERVATION);
         req.put("reservationId", reservationId);
+        return send(req);
+    }
+
+    /* ---------- Parks & parameter-change approval workflow ---------------- */
+
+    /**
+     * Fetches the logged-in park manager's own park — no id is sent, so the
+     * server derives it from the session. Response {@code getData()} is a
+     * {@link common.dto.ParkDTO}.
+     */
+    public CompletableFuture<ServerResponse> getMyPark() {
+        return send(new ClientRequest(RequestType.GET_PARK));
+    }
+
+    /**
+     * Lists every park, for the booking dropdown. Response {@code getData()} is a
+     * {@code List<}{@link common.dto.ParkDTO}{@code >}.
+     */
+    public CompletableFuture<ServerResponse> listParks() {
+        return send(new ClientRequest(RequestType.LIST_PARKS));
+    }
+
+    /**
+     * Submits a park-parameter change request (PARK_MANAGER only). Only the field
+     * and new value travel on the wire — the target park is derived server-side
+     * from the manager's own assignment, never trusted from the client. The change
+     * is stored PENDING and does not touch the park until a department manager
+     * approves it.
+     *
+     * @param field    which park parameter to change
+     * @param newValue the requested new value
+     */
+    public CompletableFuture<ServerResponse> requestParamChange(ParamField field, int newValue) {
+        ClientRequest req = new ClientRequest(RequestType.REQUEST_PARAM_CHANGE);
+        req.put("field",    field);
+        req.put("newValue", newValue);
+        return send(req);
+    }
+
+    /**
+     * Lists all PENDING parameter-change requests (DEPT_MANAGER only). Response
+     * {@code getData()} is a {@code List<}{@link common.dto.ParameterChangeRequestDTO}{@code >}.
+     */
+    public CompletableFuture<ServerResponse> listPendingChanges() {
+        return send(new ClientRequest(RequestType.LIST_PENDING_CHANGES));
+    }
+
+    /**
+     * Approves a pending change (DEPT_MANAGER only); on success the new value is
+     * written to the park. Fails if the request is no longer PENDING.
+     *
+     * @param requestId the change request to approve
+     */
+    public CompletableFuture<ServerResponse> approveParamChange(int requestId) {
+        ClientRequest req = new ClientRequest(RequestType.APPROVE_PARAM_CHANGE);
+        req.put("requestId", requestId);
+        return send(req);
+    }
+
+    /**
+     * Rejects a pending change (DEPT_MANAGER only); the park is left unchanged.
+     * Fails if the request is no longer PENDING.
+     *
+     * @param requestId the change request to reject
+     */
+    public CompletableFuture<ServerResponse> rejectParamChange(int requestId) {
+        ClientRequest req = new ClientRequest(RequestType.REJECT_PARAM_CHANGE);
+        req.put("requestId", requestId);
         return send(req);
     }
 

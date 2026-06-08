@@ -39,6 +39,10 @@ public class MainShellController {
     private static final Predicate<Session> STAFF_ONLY   = Session::isStaff;
     private static final Predicate<Session> MANAGER_ONLY =
             s -> s.isStaff() && (s.getRole() == Role.PARK_MANAGER || s.getRole() == Role.DEPT_MANAGER);
+    private static final Predicate<Session> PARK_MANAGER_ONLY =
+            s -> s.isStaff() && s.getRole() == Role.PARK_MANAGER;
+    private static final Predicate<Session> DEPT_MANAGER_ONLY =
+            s -> s.isStaff() && s.getRole() == Role.DEPT_MANAGER;
 
     @FXML private VBox      navBox;
     @FXML private StackPane contentArea;
@@ -115,9 +119,15 @@ public class MainShellController {
             new NavItem(new Screen("new", "+", "New Booking", "/client/view/NewBookingView.fxml",
                         "New Booking", "Reserve your next park visit"), STAFF_ONLY),
             new NavItem(new Screen("history", "☰", "History", "/client/view/HistoryView.fxml",
-                        "History", "All your past orders"), STAFF_ONLY)
-            // Future manager-only screens (e.g. parameter-change approvals) go here
-            // with the MANAGER_ONLY predicate.
+                        "History", "All your past orders"), STAFF_ONLY),
+            // Manager-only park screens — gated to a single role each so a hidden
+            // screen is also unreachable (not registered with the Navigator).
+            new NavItem(new Screen("parkparams", "⚙", "Park Settings",
+                        "/client/view/ParkParamsView.fxml",
+                        "Park Settings", "Request changes to your park's parameters"), PARK_MANAGER_ONLY),
+            new NavItem(new Screen("approvals", "✓", "Approvals",
+                        "/client/view/ApprovalQueueView.fxml",
+                        "Approvals", "Review pending parameter-change requests"), DEPT_MANAGER_ONLY)
         );
     }
 
