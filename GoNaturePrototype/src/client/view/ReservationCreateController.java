@@ -2,6 +2,7 @@ package client.view;
 
 import client.app.Session;
 import client.service.NetworkService;
+import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
 import common.dto.VisitType;
 import javafx.fxml.FXML;
@@ -18,6 +19,7 @@ import javafx.scene.layout.VBox;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * Booking form for a new park reservation (INDIVIDUAL / FAMILY / GROUP visits).
@@ -67,12 +69,10 @@ public class ReservationCreateController extends BaseController {
 
     @FXML
     private void initialize() {
-        // TODO: load parks dynamically when the Parks feature lands. Until then
-        // the dropdown mirrors the two seeded parks from setup.sql.
-        parkCombo.getItems().setAll(
-                new ParkOption(1, "Galilee Park"),
-                new ParkOption(2, "Carmel Park"));
-        parkCombo.getSelectionModel().selectFirst();
+        // Park list comes from the server (LIST_PARKS) so the dropdown always
+        // reflects the real parks; each option carries the park id used by
+        // CREATE_RESERVATION.
+        loadParks();
 
         partySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 2));
@@ -98,6 +98,29 @@ public class ReservationCreateController extends BaseController {
         guideLabel.setManaged(show);
         guideField.setVisible(show);
         guideField.setManaged(show);
+    }
+
+    /**
+     * Populates the park dropdown from the server via {@code LIST_PARKS}. Each
+     * {@link ParkOption} carries the park id (used by {@code CREATE_RESERVATION}),
+     * rendering only the name. On failure the dropdown stays empty and a toast
+     * explains why, so a booking can't be made against a stale hardcoded id.
+     */
+    private void loadParks() {
+        network.listParks().thenAccept(res -> {
+            if (!res.isSuccess()) {
+                Widgets.showToast(resultLabel, false, res.getMessage());
+                return;
+            }
+            parkCombo.getItems().clear();
+            if (res.getData() instanceof List<?> raw) {
+                for (Object o : raw) {
+                    ParkDTO p = (ParkDTO) o;
+                    parkCombo.getItems().add(new ParkOption(p.getId(), p.getName()));
+                }
+            }
+            parkCombo.getSelectionModel().selectFirst();
+        });
     }
 
     @FXML

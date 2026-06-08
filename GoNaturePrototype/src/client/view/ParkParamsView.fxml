@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Park parameter editor (PARK_MANAGER only). ScrollPane root so the form
+     scrolls when it doesn't fit, matching ReservationCreateView. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.ParkParamsController"
+            fitToWidth="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" alignment="TOP_CENTER" spacing="12">
+
+        <!-- Current values -->
+        <VBox styleClass="card" maxWidth="560" spacing="12">
+            <Label text="PARK PARAMETERS" styleClass="section-label"/>
+
+            <VBox styleClass="payment-card" spacing="8">
+                <Label fx:id="parkNameLabel" text="Loading…" styleClass="payment-title"/>
+                <HBox styleClass="result-row">
+                    <Label text="Max Capacity" styleClass="key"/>
+                    <Label fx:id="maxCapValue" text="—" styleClass="val"/>
+                </HBox>
+                <HBox styleClass="result-row with-divider">
+                    <Label text="Gap Size" styleClass="key"/>
+                    <Label fx:id="gapValue" text="—" styleClass="val"/>
+                </HBox>
+                <HBox styleClass="result-row with-divider">
+                    <Label text="Default Stay (minutes)" styleClass="key"/>
+                    <Label fx:id="stayValue" text="—" styleClass="val"/>
+                </HBox>
+            </VBox>
+        </VBox>
+
+        <!-- Request a change -->
+        <VBox styleClass="card" maxWidth="560" spacing="14">
+            <Label text="REQUEST A CHANGE" styleClass="section-label"/>
+
+            <Label text="Parameter" styleClass="field-label"/>
+            <ComboBox fx:id="fieldCombo" maxWidth="Infinity" styleClass="input-field"/>
+
+            <Label text="New Value" styleClass="field-label"/>
+            <TextField fx:id="newValueField" promptText="e.g. 120" styleClass="input-field"/>
+
+            <Button fx:id="submitBtn" text="Submit for Approval" onAction="#onSubmit"
+                    styleClass="btn-primary" maxWidth="Infinity"/>
+
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <!-- Session-local list of what this manager submitted -->
+        <VBox styleClass="history-card" maxWidth="560">
+            <HBox styleClass="history-card-header">
+                <Label text="SUBMITTED THIS SESSION" styleClass="section-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <VBox fx:id="requestsBox" spacing="0">
+                <HBox styleClass="history-row">
+                    <Label text="No requests submitted yet." styleClass="history-cell muted"/>
+                </HBox>
+            </VBox>
+        </VBox>
+    </VBox>
+</ScrollPane>
