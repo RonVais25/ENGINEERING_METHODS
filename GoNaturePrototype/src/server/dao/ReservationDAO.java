@@ -53,6 +53,35 @@ public class ReservationDAO {
     }
 
     /**
+     * Looks up a single reservation by its booking confirmation code — the lookup
+     * the gate performs at entry, where the visitor presents the code printed on
+     * their booking. Confirmation codes are not unique by schema; on the (rare)
+     * chance two reservations share a code, the most recent row wins.
+     *
+     * @param confirmationCode the booking confirmation code to match
+     * @return the matching {@link ReservationDTO}, or {@code null} if none matches or the query fails
+     */
+    public ReservationDTO findByConfirmationCode(int confirmationCode) {
+        String sql = "SELECT * FROM reservation WHERE confirmation_code = ? ORDER BY id DESC LIMIT 1";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, confirmationCode);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return map(rs);
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    /**
      * Lists every reservation owned by a visitor, most recent visit first.
      *
      * @param visitorId the visitor whose reservations to fetch

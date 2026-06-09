@@ -113,7 +113,9 @@ CREATE TABLE waiting_list_entry (
     CONSTRAINT fk_wle_reservation FOREIGN KEY (reservation_id) REFERENCES reservation(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- visit: an actual entry into a park
+-- visit: an actual entry into a park.
+-- price_cents/visit_type are persisted only for CASUAL walk-ins (no reservation);
+-- reservation-backed visits leave them NULL and derive both from the reservation.
 CREATE TABLE visit (
     id              INT PRIMARY KEY AUTO_INCREMENT,
     reservation_id  INT NULL,
@@ -122,6 +124,8 @@ CREATE TABLE visit (
     entered_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     exited_at       DATETIME NULL,
     headcount       INT NOT NULL DEFAULT 1,
+    price_cents     INT NULL,
+    visit_type      ENUM('INDIVIDUAL','FAMILY','GROUP') NULL,
     CONSTRAINT fk_visit_reservation FOREIGN KEY (reservation_id) REFERENCES reservation(id),
     CONSTRAINT fk_visit_park        FOREIGN KEY (park_id)        REFERENCES park(id),
     CONSTRAINT fk_visit_visitor     FOREIGN KEY (visitor_id)     REFERENCES visitor(id)
