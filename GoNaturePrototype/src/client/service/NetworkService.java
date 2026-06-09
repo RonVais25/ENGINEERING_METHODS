@@ -333,6 +333,29 @@ public class NetworkService {
         return send(new ClientRequest(RequestType.LOGOUT));
     }
 
+    /* ---------- Notifications --------------------------------------------- */
+
+    /**
+     * Lists the logged-in actor's notifications, newest first (the offline-fetch
+     * path for the notification center). The server derives the recipient from
+     * the session, so no id is sent. Response {@code getData()} is a
+     * {@code List<}{@link common.dto.NotificationDTO}{@code >}.
+     */
+    public CompletableFuture<ServerResponse> listNotifications() {
+        return send(new ClientRequest(RequestType.LIST_NOTIFICATIONS));
+    }
+
+    /**
+     * Acknowledges (marks read) a single notification, clearing its unread state.
+     *
+     * @param notificationId the notification to acknowledge
+     */
+    public CompletableFuture<ServerResponse> ackNotification(int notificationId) {
+        ClientRequest req = new ClientRequest(RequestType.ACK_NOTIFICATION);
+        req.put("notificationId", notificationId);
+        return send(req);
+    }
+
     /**
      * Registers a subscriber (SERVICE_REP only — the server re-checks the role).
      * The visitor is found-or-created from {@code visitorId} and the supplied

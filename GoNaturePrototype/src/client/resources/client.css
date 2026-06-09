@@ -405,5 +405,30 @@
 .success-title        { -fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: -g800; }
 .success-msg          { -fx-font-size: 14; -fx-text-fill: -g500; }
 
+/* ---------- Notifications -------------------------------------------------- */
+/* Notification center rows: body + meta line, with unread rows highlighted. */
+.notif-body { -fx-font-size: 13; -fx-text-fill: -g800; }
+.notif-meta { -fx-font-size: 11; -fx-text-fill: -g400; }
+.notif-meta.muted { -fx-text-fill: -g300; }
+.history-row.unread {
+    -fx-background-color: -g50;
+    -fx-border-color: -g400;
+    -fx-border-width: 0 0 0 3;
+}
+
+/* Realtime simulation popup (non-modal, undecorated stage). */
+.notif-popup {
+    -fx-background-color: white;
+    -fx-background-radius: 14;
+    -fx-border-color: -g300;
+    -fx-border-radius: 14;
+    -fx-border-width: 1.5;
+    -fx-padding: 16 18 16 18;
+    -fx-spacing: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 18, 0.2, 0, 4);
+}
+.notif-popup-title { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: -g600; }
+.notif-popup-body  { -fx-font-size: 13; -fx-text-fill: -g800; }
+
 /* ---------- ScrollPane defaults ------------------------------------------- */
 .scroll-pane, .scroll-pane > .viewport { -fx-background: transparent; -fx-background-color: transparent; }

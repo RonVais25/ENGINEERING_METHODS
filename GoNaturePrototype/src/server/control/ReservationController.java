@@ -55,6 +55,8 @@ public class ReservationController implements DomainController {
     private final AuthDAO authDao = new AuthDAO();
     /** Stateless price calculator, shared across all client threads. */
     private final PricingService pricing = new PricingService();
+    /** Stateless notification helper, shared across all client threads. */
+    private final NotificationService notificationService = new NotificationService();
 
     @Override
     public Set<RequestType> handledTypes() {
@@ -183,6 +185,10 @@ public class ReservationController implements DomainController {
                 // get exactly what was committed, then broadcast.
                 ReservationDTO confirmed = dao.getById(id);
                 publishReservation(ServerEvent.updated("reservation", id, confirmed));
+                // Notify the visitor their booking is confirmed. Persisted + pushed
+                // if they are online; otherwise it waits in their notification center.
+                notificationService.send(confirmed.getVisitorId(), null, "SIM_EMAIL",
+                        "Your reservation #" + id + " was confirmed.");
                 return new ServerResponse(true, "Reservation confirmed.", confirmed);
             }
 
@@ -202,6 +208,10 @@ public class ReservationController implements DomainController {
                 }
                 ReservationDTO cancelled = dao.getById(id);
                 publishReservation(ServerEvent.updated("reservation", id, cancelled));
+                // Notify the visitor their booking was cancelled (push if online,
+                // else fetched from their notification center on next login).
+                notificationService.send(cancelled.getVisitorId(), null, "SIM_EMAIL",
+                        "Your reservation #" + id + " was cancelled.");
                 return new ServerResponse(true, "Reservation cancelled.", cancelled);
             }
 

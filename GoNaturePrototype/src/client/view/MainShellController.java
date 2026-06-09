@@ -3,14 +3,26 @@ package client.view;
 import client.app.Navigator;
 import client.app.Navigator.Screen;
 import client.app.Session;
+import client.net.EventBus;
 import client.service.NetworkService;
+import common.dto.ClientRequest;
+import common.dto.NotificationDTO;
+import common.dto.RequestType;
 import common.dto.Role;
+import common.dto.ServerEvent;
+import common.dto.SubscriptionKey;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -95,6 +107,10 @@ public class MainShellController {
 
         network.addConnectionListener(this::updateConnStatus);
 
+        // Subscribe to our own notifications for the lifetime of this login, so a
+        // notification sent while we're online surfaces as an instant popup.
+        subscribeToNotifications();
+
         if (firstId != null) navigator.go(firstId);
     }
 
@@ -112,6 +128,9 @@ public class MainShellController {
                         "Book Visit", "Reserve a park visit (reservations)"), EVERYONE),
             new NavItem(new Screen("myres", "☑", "My Reservations", "/client/view/ReservationListView.fxml",
                         "My Reservations", "View, confirm or cancel your reservations"), EVERYONE),
+            // Notification center — every logged-in actor can review their messages.
+            new NavItem(new Screen("notifications", "🔔", "Notifications", "/client/view/NotificationCenterView.fxml",
+                        "Notifications", "Messages addressed to you"), EVERYONE),
             // Order tools — staff only (legacy order desk).
             // TODO: retire the legacy Order feature entirely once reservations
             // cover every flow — delete these four screens + their controllers/
@@ -153,8 +172,119 @@ public class MainShellController {
     }
 
     private void finishLogout() {
+        // Drop our notification subscription before the identity is cleared so the
+        // server stops pushing to this connection and the next login starts clean.
+        unsubscribeFromNotifications();
         session.clearIdentity();
         onLogout.run();
+    }
+
+    /* ---------- Notifications (session-lifetime push + popup) -------------- */
+
+    /** Local handle for the logged-in actor's notification subscription, dropped on logout. */
+    private EventBus.Subscription notifSub;
+    /** The key {@link #notifSub} is registered against, retained so logout can UNSUBSCRIBE it. */
+    private SubscriptionKey notifKey;
+
+    /**
+     * Registers interest in the logged-in actor's own notifications. Sends a
+     * fire-and-forget SUBSCRIBE for {@code ("notification", actorId)} and attaches
+     * a local {@link EventBus} callback. Unlike per-screen {@link BaseController}
+     * subscriptions, this one lives for the whole login (across screen swaps), so
+     * it is managed here in the shell rather than drained on navigation.
+     */
+    private void subscribeToNotifications() {
+        long actorId = session.getActorId();
+        if (actorId < 0) return;
+
+        notifKey = new SubscriptionKey("notification", actorId);
+        ClientRequest req = new ClientRequest(RequestType.SUBSCRIBE);
+        req.put("entity",   "notification");
+        req.put("entityId", actorId);
+        network.send(req); // fire-and-forget; same pattern as BaseController.subscribe
+
+        notifSub = EventBus.getInstance().subscribe(notifKey, this::onNotificationEvent);
+    }
+
+    /** Detaches the notification subscription and tells the server to stop pushing. */
+    private void unsubscribeFromNotifications() {
+        if (notifSub == null) return;
+        ClientRequest req = new ClientRequest(RequestType.UNSUBSCRIBE);
+        req.put("entity",   "notification");
+        req.put("entityId", notifKey.entityId());
+        network.send(req);
+        notifSub.unsubscribe();
+        notifSub = null;
+        notifKey = null;
+    }
+
+    /**
+     * Handles a pushed notification event (already marshalled onto the FX thread by
+     * {@link EventBus}). Shows the simulation popup for the carried
+     * {@link NotificationDTO}; ignores events without the expected payload.
+     */
+    private void onNotificationEvent(ServerEvent ev) {
+        if (ev.getPayload() instanceof NotificationDTO n) {
+            showNotificationPopup(n);
+        }
+    }
+
+    /**
+     * Shows a non-blocking, auto-dismissing popup with the simulation text
+     * <em>"Simulation — would send via &lt;channel&gt; to &lt;target&gt;: &lt;body&gt;"</em>.
+     *
+     * <p>Deliberately uses a non-modal, undecorated {@link Stage} (not
+     * {@code Alert.showAndWait()}) so it never freezes the FX event loop or blocks
+     * interaction with the shell. A daemon timer closes it after a few seconds.
+     *
+     * @param n the notification to render
+     */
+    private void showNotificationPopup(NotificationDTO n) {
+        String text = "Simulation — would send via " + n.getChannel()
+                + " to " + n.getSimulatedTarget() + ": " + n.getBody();
+
+        Label title = new Label("🔔 Notification");
+        title.getStyleClass().add("notif-popup-title");
+
+        Label body = new Label(text);
+        body.getStyleClass().add("notif-popup-body");
+        body.setWrapText(true);
+        body.setMaxWidth(300);
+
+        Button dismiss = new Button("Dismiss");
+        dismiss.getStyleClass().add("btn-secondary");
+
+        VBox box = new VBox(10, title, body, dismiss);
+        box.getStyleClass().add("notif-popup");
+
+        Stage popup = new Stage();
+        popup.initStyle(StageStyle.UNDECORATED);
+        popup.initModality(Modality.NONE);
+
+        Scene shellScene = contentArea.getScene();
+        Window owner = shellScene != null ? shellScene.getWindow() : null;
+        if (owner != null) popup.initOwner(owner);
+
+        Scene scene = new Scene(box);
+        if (shellScene != null) scene.getStylesheets().addAll(shellScene.getStylesheets());
+        popup.setScene(scene);
+
+        dismiss.setOnAction(e -> popup.close());
+        // Anchor bottom-right of the shell window once the popup has been sized.
+        popup.setOnShown(e -> {
+            if (owner != null) {
+                popup.setX(owner.getX() + owner.getWidth()  - popup.getWidth()  - 24);
+                popup.setY(owner.getY() + owner.getHeight() - popup.getHeight() - 24);
+            }
+        });
+        popup.show();
+
+        Thread t = new Thread(() -> {
+            try { Thread.sleep(8000); } catch (InterruptedException ignored) {}
+            Platform.runLater(() -> { if (popup.isShowing()) popup.close(); });
+        });
+        t.setDaemon(true);
+        t.start();
     }
 
     /** First letters of the first two name tokens, e.g. "Dana Department" → "DD". */
