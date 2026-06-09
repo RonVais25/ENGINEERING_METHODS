@@ -52,6 +52,8 @@ public class ParkController implements DomainController {
     private final AuthDAO authDao = new AuthDAO();
     /** Read-only collaborator for {@link RequestType#CHECK_AVAILABILITY}. */
     private final ReservationDAO reservationDao = new ReservationDAO();
+    /** Stateless notification helper, shared across all client threads. */
+    private final NotificationService notificationService = new NotificationService();
 
     @Override
     public Set<RequestType> handledTypes() {
@@ -175,6 +177,9 @@ public class ParkController implements DomainController {
                     return new ServerResponse(false, "That request is no longer pending.");
                 }
                 parkDao.updateField(req.getParkId(), req.getField(), req.getNewValue());
+                // Notify the requesting park manager their change was approved.
+                notificationService.send(null, req.getRequestedBy(), "SIM_EMAIL",
+                        "Your parameter change request #" + requestId + " was approved.");
                 return new ServerResponse(true, "Change approved and applied.");
             }
 
@@ -202,6 +207,9 @@ public class ParkController implements DomainController {
                 if (!changeDao.decide(requestId, ChangeStatus.REJECTED, me.getId())) {
                     return new ServerResponse(false, "That request is no longer pending.");
                 }
+                // Notify the requesting park manager their change was rejected.
+                notificationService.send(null, req.getRequestedBy(), "SIM_EMAIL",
+                        "Your parameter change request #" + requestId + " was rejected.");
                 return new ServerResponse(true, "Change rejected.");
             }
 

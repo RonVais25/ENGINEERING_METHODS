@@ -149,6 +149,9 @@ CREATE TABLE parameter_change_request (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- notification: simulated/popup message addressed to a visitor or a user.
+-- acknowledged_at backs the notification center's unread highlight (NULL = unread).
+-- It is distinct from sent_at because sent_at is stamped at delivery time, before
+-- the recipient has actually seen the message, so it cannot double as a seen-marker.
 CREATE TABLE notification (
     id                   INT PRIMARY KEY AUTO_INCREMENT,
     recipient_visitor_id BIGINT NULL,
@@ -157,6 +160,7 @@ CREATE TABLE notification (
     body                 TEXT NOT NULL,
     scheduled_for        DATETIME NULL,
     sent_at              DATETIME NULL,
+    acknowledged_at      DATETIME NULL,
     created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_notification_visitor FOREIGN KEY (recipient_visitor_id) REFERENCES visitor(id),
     CONSTRAINT fk_notification_user    FOREIGN KEY (recipient_user_id)    REFERENCES `user`(id)
