@@ -244,6 +244,67 @@ public class NetworkService {
         return send(req);
     }
 
+    /* ---------- Gate: entry / exit / casual walk-ins / occupancy ----------- */
+
+    /**
+     * Admits a visitor against a CONFIRMED reservation (PARK_EMPLOYEE only — the
+     * server re-checks the role and that the gate operates the employee's own
+     * park). The server validates the code, the matching visitor id, and the
+     * park. Response {@code getData()} is the opened {@link common.dto.VisitDTO}.
+     *
+     * @param confirmationCode the booking confirmation code presented at the gate
+     * @param visitorId        the national id presented, which must match the reservation
+     */
+    public CompletableFuture<ServerResponse> enterVisit(int confirmationCode, long visitorId) {
+        ClientRequest req = new ClientRequest(RequestType.ENTER_VISIT);
+        req.put("confirmationCode", confirmationCode);
+        req.put("visitorId",        visitorId);
+        return send(req);
+    }
+
+    /**
+     * Records a visitor's exit, closing their open visit (PARK_EMPLOYEE only). The
+     * open visit is found by confirmation code when supplied, otherwise by visitor
+     * id; a reservation-backed visit also flips its reservation to COMPLETED. Pass
+     * exactly one of the two — the other as {@code null}.
+     *
+     * @param confirmationCode the booking confirmation code, or {@code null} to exit by visitor id
+     * @param visitorId        the visitor's national id, or {@code null} to exit by code
+     */
+    public CompletableFuture<ServerResponse> exitVisit(Integer confirmationCode, Long visitorId) {
+        ClientRequest req = new ClientRequest(RequestType.EXIT_VISIT);
+        if (confirmationCode != null) req.put("confirmationCode", confirmationCode);
+        if (visitorId != null)        req.put("visitorId",        visitorId);
+        return send(req);
+    }
+
+    /**
+     * Records a casual walk-in at the employee's park (PARK_EMPLOYEE only). The
+     * server enforces the physical-capacity gate (rejecting with "park full" when
+     * it would exceed {@code maxCapacity - gapSize}) and prices the visit; the
+     * price is returned on the {@link common.dto.VisitDTO}, never recomputed here.
+     *
+     * @param partySize the number of people walking in
+     * @param visitType INDIVIDUAL, FAMILY, or GROUP
+     * @param visitorId an optional national id (a subscriber earns the member discount), or {@code null}
+     */
+    public CompletableFuture<ServerResponse> casualVisit(int partySize, VisitType visitType, Long visitorId) {
+        ClientRequest req = new ClientRequest(RequestType.CASUAL_VISIT);
+        req.put("partySize", partySize);
+        req.put("visitType", visitType);
+        if (visitorId != null) req.put("visitorId", visitorId);
+        return send(req);
+    }
+
+    /**
+     * Fetches live occupancy for the employee's own park (PARK_EMPLOYEE only — no
+     * park id is sent, so the server derives it from the session). Response
+     * {@code getData()} is an {@link common.dto.OccupancyDTO}.
+     */
+    public CompletableFuture<ServerResponse> currentOccupancy() {
+        return send(new ClientRequest(RequestType.CURRENT_OCCUPANCY));
+    }
+
     /**
      * Authenticates a staff user. On success the response carries a
      * {@link common.dto.UserDTO} in {@code getData()}; on failure the message

@@ -45,6 +45,8 @@ public class MainShellController {
             s -> s.isStaff() && s.getRole() == Role.PARK_MANAGER;
     private static final Predicate<Session> DEPT_MANAGER_ONLY =
             s -> s.isStaff() && s.getRole() == Role.DEPT_MANAGER;
+    private static final Predicate<Session> PARK_EMPLOYEE_ONLY =
+            s -> s.isStaff() && s.getRole() == Role.PARK_EMPLOYEE;
 
     @FXML private VBox      navBox;
     @FXML private StackPane contentArea;
@@ -127,6 +129,9 @@ public class MainShellController {
                         "Register Subscriber", "Sign up a new subscriber (members earn a discount)"), SERVICE_REP_ONLY),
             new NavItem(new Screen("regguide", "✚", "Register Guide", "/client/view/GuideRegisterView.fxml",
                         "Register Guide", "Register a visitor as a group guide"), SERVICE_REP_ONLY),
+            // Gate — front-line park employee's entry/exit/walk-in tool.
+            new NavItem(new Screen("gate", "⇄", "Gate", "/client/view/GateView.fxml",
+                        "Gate", "Park entry, exit & casual walk-ins"), PARK_EMPLOYEE_ONLY),
             // Manager-only park screens — gated to a single role each so a hidden
             // screen is also unreachable (not registered with the Navigator).
             new NavItem(new Screen("parkparams", "⚙", "Park Settings",

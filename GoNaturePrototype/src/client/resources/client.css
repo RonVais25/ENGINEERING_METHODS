@@ -264,6 +264,10 @@
 }
 .status-tag.confirmed { -fx-text-fill: -g600; -fx-background-color: -g100; }
 .status-tag.pending   { -fx-text-fill: -gold-fg; -fx-background-color: -gold-bg; }
+.status-tag.completed { -fx-text-fill: white;    -fx-background-color: -g500; }
+.status-tag.cancelled { -fx-text-fill: -red;     -fx-background-color: #fef2f2; }
+.status-tag.waiting   { -fx-text-fill: -gold-fg; -fx-background-color: -gold-bg; }
+.status-tag.no_show   { -fx-text-fill: -red;     -fx-background-color: #fef2f2; }
 .status-tag.on-dark   { -fx-text-fill: white;  -fx-background-color: rgba(255,255,255,0.15); }
 
 /* ---------- Toast --------------------------------------------------------- */
