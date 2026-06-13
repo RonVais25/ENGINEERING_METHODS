@@ -1,0 +1,57 @@
+package server.scheduler;
+
+import java.util.List;
+import java.util.function.Consumer;
+
+import common.dto.ReservationDTO;
+import common.dto.ReservationStatus;
+import server.control.NotificationService;
+import server.dao.ReservationDAO;
+
+/**
+ * Marks past CONFIRMED reservations that nobody ever entered the park for as
+ * {@link ReservationStatus#NO_SHOW}. Each poll it asks
+ * {@link ReservationDAO#findNoShowCandidates()} for reservations whose visit date
+ * is past and that have no {@code visit} row, flips each to NO_SHOW (which stamps
+ * {@code status_changed_at}), and sends the visitor a courtesy notification.
+ */
+public class NoShowJob implements SchedulerJob {
+
+    /** Registry key / manual-trigger handle for this job. */
+    public static final String NAME = "no-show";
+
+    /** Stateless DAO collaborator, shared across runs. */
+    private final ReservationDAO reservationDao = new ReservationDAO();
+
+    /** Stateless notification helper, used for the courtesy no-show notice. */
+    private final NotificationService notifications = new NotificationService();
+
+    /** One-line summary sink, wired to the server console activity log. */
+    private final Consumer<String> log;
+
+    public NoShowJob(Consumer<String> log) {
+        this.log = log;
+    }
+
+    @Override
+    public String name() {
+        return NAME;
+    }
+
+    @Override
+    public void runOnce() {
+        List<ReservationDTO> candidates = reservationDao.findNoShowCandidates();
+        int marked = 0;
+        for (ReservationDTO r : candidates) {
+            if (reservationDao.updateStatus(r.getId(), ReservationStatus.NO_SHOW)) {
+                marked++;
+                notifications.send(r.getVisitorId(), null, "SIM_EMAIL",
+                        "You were marked as a no-show for reservation #" + r.getId()
+                                + " (visit date " + r.getVisitDate() + ").");
+            }
+        }
+        if (marked > 0) {
+            log.accept("[scheduler] " + NAME + ": marked " + marked + " reservation(s) NO_SHOW");
+        }
+    }
+}

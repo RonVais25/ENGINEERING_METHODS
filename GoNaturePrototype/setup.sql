@@ -98,6 +98,12 @@ CREATE TABLE reservation (
     paid_in_advance   BOOLEAN NOT NULL DEFAULT FALSE,
     confirmation_code INT NULL,
     created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- status_changed_at: stamped by ReservationDAO.updateStatus on every status
+    -- transition (cancel/confirm/grab/complete/no-show). Backs the Cancellations
+    -- Report. reminder_sent_at: reserved for the Scheduler's ReminderJob (session b)
+    -- so a confirmation reminder is sent at most once per reservation.
+    status_changed_at DATETIME NULL,
+    reminder_sent_at  DATETIME NULL,
     CONSTRAINT fk_reservation_park    FOREIGN KEY (park_id)    REFERENCES park(id),
     CONSTRAINT fk_reservation_visitor FOREIGN KEY (visitor_id) REFERENCES visitor(id),
     CONSTRAINT fk_reservation_guide   FOREIGN KEY (guide_id)   REFERENCES guide(visitor_id)

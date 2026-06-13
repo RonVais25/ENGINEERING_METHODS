@@ -164,14 +164,20 @@ public class ReservationDAO {
     }
 
     /**
-     * Updates the lifecycle status of a reservation.
+     * Updates the lifecycle status of a reservation and stamps
+     * {@code status_changed_at = NOW()} in the same statement.
+     *
+     * <p>This is the single choke point for every status transition (confirm,
+     * cancel, accept-grab, exit→completed, no-show), so the timestamp is recorded
+     * in one place rather than at each call site. The stamp backs the Cancellations
+     * Report's "when was it cancelled" column.
      *
      * @param id     the reservation to update
      * @param status the new status
      * @return {@code true} if a row was updated, {@code false} otherwise
      */
     public boolean updateStatus(int id, ReservationStatus status) {
-        String sql = "UPDATE reservation SET status = ? WHERE id = ?";
+        String sql = "UPDATE reservation SET status = ?, status_changed_at = NOW() WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -217,6 +223,134 @@ public class ReservationDAO {
         }
 
         return false;
+    }
+
+    /**
+     * Finds the reservations that the no-show sweep should mark
+     * {@link ReservationStatus#NO_SHOW}: those still {@code CONFIRMED} whose
+     * {@code visit_date} is strictly before today (a same-day booking can still
+     * arrive) and for which no {@code visit} row was ever recorded — i.e. the party
+     * never entered the park. Ordered by date for a stable sweep.
+     *
+     * @return the no-show candidates (possibly empty); never {@code null}
+     */
+    public List<ReservationDTO> findNoShowCandidates() {
+        String sql = "SELECT r.* FROM reservation r " +
+                "WHERE r.status = 'CONFIRMED' " +
+                "  AND r.visit_date < CURDATE() " +
+                "  AND NOT EXISTS (SELECT 1 FROM visit v WHERE v.reservation_id = r.id) " +
+                "ORDER BY r.visit_date ASC, r.id ASC";
+        List<ReservationDTO> result = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                result.add(map(rs));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    /**
+     * Finds the PENDING reservations due a confirmation reminder: those whose visit
+     * (combining {@code visit_date} with {@code visit_time}, or midnight when the
+     * time is null) falls between now and {@code leadHours} from now, and that have
+     * not already been reminded ({@code reminder_sent_at IS NULL}). The null guard
+     * is what stops the reminder being re-sent on every poll. Past visits are
+     * excluded — a reminder to confirm a visit that has already happened is moot.
+     *
+     * @param leadHours how far ahead of the visit a reminder should fire
+     * @return the reservations due a reminder (possibly empty); never {@code null}
+     */
+    public List<ReservationDTO> findReminderCandidates(int leadHours) {
+        String sql = "SELECT r.* FROM reservation r " +
+                "WHERE r.status = 'PENDING' " +
+                "  AND r.reminder_sent_at IS NULL " +
+                "  AND TIMESTAMP(r.visit_date, COALESCE(r.visit_time, '00:00:00')) >= NOW() " +
+                "  AND TIMESTAMP(r.visit_date, COALESCE(r.visit_time, '00:00:00')) <= NOW() + INTERVAL ? HOUR " +
+                "ORDER BY r.visit_date ASC, r.id ASC";
+        List<ReservationDTO> result = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, leadHours);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(map(rs));
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    /**
+     * Stamps {@code reminder_sent_at = NOW()} on a reservation, marking that its
+     * confirmation reminder has gone out so {@link #findReminderCandidates} will
+     * skip it on the next poll.
+     *
+     * @param id the reservation that was just reminded
+     * @return {@code true} if a row was updated, {@code false} otherwise
+     */
+    public boolean markReminderSent(int id) {
+        String sql = "UPDATE reservation SET reminder_sent_at = NOW() WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+            return stmt.executeUpdate() > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    /**
+     * Finds the PENDING reservations whose confirmation window has lapsed: still
+     * {@code PENDING}, already reminded ({@code reminder_sent_at IS NOT NULL}), and
+     * reminded more than {@code timeoutMinutes} ago. The {@code status = 'PENDING'}
+     * filter is what makes confirming in time safe — once a visitor confirms
+     * (PENDING→CONFIRMED) the row drops out of this result and is never cancelled.
+     *
+     * @param timeoutMinutes the confirmation window length, in minutes
+     * @return the reservations to auto-cancel (possibly empty); never {@code null}
+     */
+    public List<ReservationDTO> findConfirmTimeoutCandidates(int timeoutMinutes) {
+        String sql = "SELECT r.* FROM reservation r " +
+                "WHERE r.status = 'PENDING' " +
+                "  AND r.reminder_sent_at IS NOT NULL " +
+                "  AND r.reminder_sent_at + INTERVAL ? MINUTE < NOW() " +
+                "ORDER BY r.visit_date ASC, r.id ASC";
+        List<ReservationDTO> result = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, timeoutMinutes);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(map(rs));
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
     }
 
     /**

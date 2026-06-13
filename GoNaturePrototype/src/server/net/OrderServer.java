@@ -3,6 +3,7 @@ package server.net;
 import common.dto.ClientRequest;
 import common.dto.ServerResponse;
 import server.dao.AuthDAO;
+import server.scheduler.SchedulerService;
 import server.subscription.SubscriptionRegistry;
 
 import java.io.EOFException;
@@ -24,6 +25,11 @@ public class OrderServer {
     private ServerSocket serverSocket;
     private volatile boolean running;
 
+    // Timed-job runner: started alongside the accept loop and shut down in stop()
+    // so its threads live exactly as long as the server. Jobs log their one-line
+    // summaries through the same ServerListener as the rest of the server.
+    private final SchedulerService scheduler;
+
     // Every accepted client socket is tracked so stop() can force-close them.
     // Without this, server.stop() only stops accept() — existing handleClient
     // threads keep running and the clients can still send requests.
@@ -32,16 +38,34 @@ public class OrderServer {
     public OrderServer(int port, ServerListener listener) {
         this.port = port;
         this.listener = listener;
+        // Job summaries flow into the same activity log as connection events.
+        this.scheduler = new SchedulerService(listener::onLog);
     }
 
     public void start() {
         Thread t = new Thread(this::runAcceptLoop, "OrderServer-accept");
         t.setDaemon(true);
         t.start();
+        // Begin the timed jobs once the accept loop is launching (DB password has
+        // already been set by the GUI before start()).
+        scheduler.start();
+    }
+
+    /**
+     * The server's timed-job runner — exposed so the server console can wire its
+     * manual "run now" triggers to {@link SchedulerService#runNow(String)} /
+     * {@link SchedulerService#runAllNow()}.
+     *
+     * @return this server's scheduler
+     */
+    public SchedulerService getScheduler() {
+        return scheduler;
     }
 
     public void stop() {
         running = false;
+        // Stop the timed jobs first so no sweep runs against a tearing-down server.
+        scheduler.shutdown();
         try {
             if (serverSocket != null && !serverSocket.isClosed()) {
                 serverSocket.close();
