@@ -153,6 +153,12 @@
 .date-picker .arrow-button .arrow {
     -fx-background-color: -g500;
 }
+/* TODO: the open DatePicker popup (Book Visit screen, datePicker) renders the
+   month + year header white-on-white, so they're unreadable. The rules above
+   only style the closed control; add .date-picker-popup styling for the header —
+   e.g. give .date-picker-popup .month-year-pane a -g100 background (or set
+   .date-picker-popup .spinner .label -fx-text-fill: -g800) so the month/year
+   read as dark text. Also check the day-of-week / day-cell colours while there. */
 
 /* Spinner — match the .input-field / .date-picker look */
 .spinner {
@@ -429,6 +435,16 @@
 }
 .notif-popup-title { -fx-font-size: 12; -fx-font-weight: bold; -fx-text-fill: -g600; }
 .notif-popup-body  { -fx-font-size: 13; -fx-text-fill: -g800; }
+
+/* ---------- Waiting list --------------------------------------------------- */
+/* A row with a live grab offer is highlighted (gold accent, matching the WAITING
+   status pill); .wl-countdown shows the time left until grab_expires_at. */
+.history-row.wl-offer {
+    -fx-background-color: -gold-bg;
+    -fx-border-color: -gold-fg;
+    -fx-border-width: 0 0 0 3;
+}
+.wl-countdown { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -gold-fg; }
 
 /* ---------- ScrollPane defaults ------------------------------------------- */
 .scroll-pane, .scroll-pane > .viewport { -fx-background: transparent; -fx-background-color: transparent; }

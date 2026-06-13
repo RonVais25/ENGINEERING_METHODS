@@ -6,7 +6,10 @@ import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
 import common.dto.VisitType;
 import javafx.fxml.FXML;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
@@ -20,6 +23,7 @@ import javafx.scene.layout.VBox;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Booking form for a new park reservation (INDIVIDUAL / FAMILY / GROUP visits).
@@ -207,12 +211,25 @@ public class ReservationCreateController extends BaseController {
         bookBtn.setText("Booking…");
         bookBtn.setDisable(true);
 
-        network.createReservation(park.id(), visitorId, visitDate, visitTime, partySize, visitType, guideId, paidInAdvance)
+        // visitTime/guideId are reassigned above, so capture final copies for the
+        // async callback (and the waitlist re-send, which reuses the same inputs).
+        final String visitTimeFinal = visitTime;
+        final Long   guideIdFinal   = guideId;
+
+        network.createReservation(park.id(), visitorId, visitDate, visitTimeFinal, partySize, visitType, guideIdFinal, paidInAdvance)
                .thenAccept(res -> {
                     bookBtn.setText("+  Book Visit");
                     bookBtn.setDisable(false);
                     if (!res.isSuccess()) {
-                        Widgets.showToast(resultLabel, false, res.getMessage());
+                        // Only the "park full" capacity rejection offers the waiting
+                        // list; every other failure (bad guide, group cap, …) is just
+                        // surfaced as a toast.
+                        if (isCapacityFailure(res.getMessage())) {
+                            promptJoinWaitlist(park.id(), visitorId, visitDate, visitTimeFinal,
+                                    partySize, visitType, guideIdFinal, paidInAdvance);
+                        } else {
+                            Widgets.showToast(resultLabel, false, res.getMessage());
+                        }
                         return;
                     }
                     ReservationDTO created = (ReservationDTO) res.getData();
@@ -222,6 +239,51 @@ public class ReservationCreateController extends BaseController {
                     // Show the server-priced payment confirmation. The total comes
                     // straight from the returned DTO — never recomputed client-side.
                     showConfirmation(created);
+               });
+    }
+
+    /**
+     * Whether a failed {@code CREATE_RESERVATION} was rejected specifically for lack
+     * of capacity (the only case that offers the waiting list). Matches the server's
+     * "No capacity for that date …" message; any other failure is a plain error.
+     *
+     * @param message the server's failure message
+     * @return {@code true} if this was the capacity-full rejection
+     */
+    private boolean isCapacityFailure(String message) {
+        return message != null && message.contains("No capacity");
+    }
+
+    /**
+     * Asks the visitor whether to join the waiting list after a park-full rejection.
+     * On confirm, re-sends the <em>same</em> booking inputs as {@code JOIN_WAITLIST}.
+     */
+    private void promptJoinWaitlist(int parkId, long visitorId, String visitDate, String visitTime,
+                                    int partySize, VisitType visitType, Long guideId, boolean paidInAdvance) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Park is full for that date — join the waiting list?",
+                ButtonType.YES, ButtonType.NO);
+        confirm.setHeaderText(null);
+        confirm.setTitle("Park Full");
+        // Match the app theme: reuse the scene's stylesheet on the dialog pane.
+        Scene scene = bookBtn.getScene();
+        if (scene != null) confirm.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
+
+        Optional<ButtonType> choice = confirm.showAndWait();
+        if (choice.isEmpty() || choice.get() != ButtonType.YES) {
+            return;
+        }
+
+        bookBtn.setDisable(true);
+        network.joinWaitlist(parkId, visitorId, visitDate, visitTime, partySize, visitType, guideId, paidInAdvance)
+               .thenAccept(res -> {
+                    bookBtn.setDisable(false);
+                    if (!res.isSuccess()) {
+                        Widgets.showToast(resultLabel, false, res.getMessage());
+                        return;
+                    }
+                    Widgets.showToast(resultLabel, true,
+                            "You're on the waiting list — your spot will be honored when a slot frees up.");
                });
     }
 

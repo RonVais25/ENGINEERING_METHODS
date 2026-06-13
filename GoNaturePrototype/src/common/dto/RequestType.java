@@ -26,6 +26,7 @@ public enum RequestType {
     JOIN_WAITLIST,
     LEAVE_WAITLIST,
     ACCEPT_GRAB,
+    LIST_WAITLIST,
 
     // parks
     GET_PARK,
