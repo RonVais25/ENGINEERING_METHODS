@@ -582,6 +582,47 @@ public class ReservationController implements DomainController {
     }
 
     /**
+     * Auto-cancels every PENDING reservation that was reminded to confirm but did
+     * not do so within {@link SchedulerConfig#getConfirmTimeoutMinutes()} minutes.
+     * For each lapsed reservation this mirrors the {@code CANCEL_RESERVATION} path:
+     * flip it to CANCELLED (stamping {@code status_changed_at}), broadcast the
+     * change so an online visitor's screen updates, notify the visitor, and offer
+     * the freed slot to the waiting list via {@link #offerGrabToNext}.
+     *
+     * <p>Only still-{@code PENDING} rows are touched (see
+     * {@link ReservationDAO#findConfirmTimeoutCandidates}), so a visitor who
+     * confirmed in time (PENDING→CONFIRMED) is never cancelled by this sweep — the
+     * paired {@link server.scheduler.ReminderJob} sends the reminder, this sweep
+     * enforces its deadline.
+     *
+     * <p>Driven on a fixed interval by the Scheduler
+     * ({@link server.scheduler.ConfirmTimeoutJob}); also exercisable manually from
+     * the server console.
+     *
+     * @return the number of reservations auto-cancelled (0 when none were due)
+     */
+    public int expireUnconfirmedReservations() {
+        List<ReservationDTO> candidates =
+                dao.findConfirmTimeoutCandidates(SchedulerConfig.getConfirmTimeoutMinutes());
+        int cancelled = 0;
+        for (ReservationDTO candidate : candidates) {
+            if (!dao.updateStatus(candidate.getId(), ReservationStatus.CANCELLED)) {
+                continue;
+            }
+            cancelled++;
+            ReservationDTO row = dao.getById(candidate.getId());
+            publishReservation(ServerEvent.updated("reservation", row.getId(), row));
+            notificationService.send(row.getVisitorId(), null, "SIM_EMAIL",
+                    "Your reservation #" + row.getId()
+                            + " was auto-cancelled (not confirmed in time).");
+            // The cancelled PENDING booking freed a real slot — offer it to the
+            // FIFO-first waiting party that fits this park/date.
+            offerGrabToNext(row.getParkId(), row.getVisitDate());
+        }
+        return cancelled;
+    }
+
+    /**
      * Fans a reservation change out to every client subscribed to that
      * reservation id, via the shared {@link SubscriptionRegistry} (the same
      * realtime-push path the order domain uses). The subscription key's entity

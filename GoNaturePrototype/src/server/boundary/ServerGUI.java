@@ -17,7 +17,9 @@ import javafx.stage.Stage;
 import server.db.DBConnection;
 import server.net.OrderServer;
 import server.net.ServerListener;
+import server.scheduler.ConfirmTimeoutJob;
 import server.scheduler.NoShowJob;
+import server.scheduler.ReminderJob;
 import server.scheduler.WaitlistGrabExpiryJob;
 
 import java.net.Inet4Address;
@@ -223,17 +225,31 @@ public class ServerGUI extends Application implements ServerListener {
         Label title = new Label("SCHEDULER");
         title.setStyle("-fx-font-size:11; -fx-font-weight:bold; -fx-text-fill:" + G500 + ";");
 
-        Label hint = new Label("Manual triggers for the timed jobs (demo controls).");
+        Label hint = new Label("Manual triggers (demo controls).");
         hint.setStyle("-fx-font-size:11; -fx-text-fill:" + G600 + ";");
         hint.setWrapText(true);
 
-        Button grabBtn   = buildSchedulerButton("▸  Run grab-expiry job",
-                () -> WaitlistGrabExpiryJob.NAME);
-        Button noShowBtn = buildSchedulerButton("▸  Run no-show job",
-                () -> NoShowJob.NAME);
-        Button allBtn    = buildSchedulerButton("⟳  Run all jobs now", null);
+        Button grabBtn     = buildSchedulerButton("Grab-expiry",     () -> WaitlistGrabExpiryJob.NAME);
+        Button noShowBtn   = buildSchedulerButton("No-show",         () -> NoShowJob.NAME);
+        Button reminderBtn = buildSchedulerButton("Reminder",        () -> ReminderJob.NAME);
+        Button timeoutBtn  = buildSchedulerButton("Confirm-timeout", () -> ConfirmTimeoutJob.NAME);
+        Button allBtn      = buildSchedulerButton("⟳  Run all jobs", null);
 
-        card.getChildren().addAll(title, hint, grabBtn, noShowBtn, allBtn);
+        // Two-per-line grid so every trigger is visible without scrolling; the
+        // "run all" button spans both columns on its own row.
+        GridPane grid = new GridPane();
+        grid.setHgap(8);
+        grid.setVgap(8);
+        ColumnConstraints c1 = new ColumnConstraints(); c1.setPercentWidth(50);
+        ColumnConstraints c2 = new ColumnConstraints(); c2.setPercentWidth(50);
+        grid.getColumnConstraints().addAll(c1, c2);
+        grid.add(grabBtn,     0, 0);
+        grid.add(noShowBtn,   1, 0);
+        grid.add(reminderBtn, 0, 1);
+        grid.add(timeoutBtn,  1, 1);
+        grid.add(allBtn,      0, 2, 2, 1); // span both columns
+
+        card.getChildren().addAll(title, hint, grid);
         return card;
     }
 
@@ -247,7 +263,7 @@ public class ServerGUI extends Application implements ServerListener {
      * @param jobName supplies the target job name, or {@code null} to run all jobs
      */
     private Button buildSchedulerButton(String text, java.util.function.Supplier<String> jobName) {
-        Button btn = buildSecondaryButton(text);
+        Button btn = buildSecondaryButtonCompact(text);
         btn.setMaxWidth(Double.MAX_VALUE);
         btn.setDisable(true);
         btn.setOnAction(e -> {
@@ -504,6 +520,18 @@ public class ServerGUI extends Application implements ServerListener {
         String base = "-fx-font-size:14; -fx-font-weight:bold; -fx-text-fill:" + G700 +
                       "; -fx-background-radius:10; -fx-border-radius:10; -fx-border-width:1.5;" +
                       " -fx-padding:11 18 11 18; -fx-cursor:hand;";
+        btn.setStyle(base + "-fx-background-color:" + G100 + "; -fx-border-color:" + G200 + ";");
+        btn.setOnMouseEntered(e -> btn.setStyle(base + "-fx-background-color:" + G200 + "; -fx-border-color:" + G200 + ";"));
+        btn.setOnMouseExited(e  -> btn.setStyle(base + "-fx-background-color:" + G100 + "; -fx-border-color:" + G200 + ";"));
+        return btn;
+    }
+
+    /** Smaller secondary button — used for the two-per-line scheduler triggers. */
+    private Button buildSecondaryButtonCompact(String text) {
+        Button btn = new Button(text);
+        String base = "-fx-font-size:12; -fx-font-weight:bold; -fx-text-fill:" + G700 +
+                      "; -fx-background-radius:8; -fx-border-radius:8; -fx-border-width:1.5;" +
+                      " -fx-padding:7 8 7 8; -fx-cursor:hand;";
         btn.setStyle(base + "-fx-background-color:" + G100 + "; -fx-border-color:" + G200 + ";");
         btn.setOnMouseEntered(e -> btn.setStyle(base + "-fx-background-color:" + G200 + "; -fx-border-color:" + G200 + ";"));
         btn.setOnMouseExited(e  -> btn.setStyle(base + "-fx-background-color:" + G100 + "; -fx-border-color:" + G200 + ";"));

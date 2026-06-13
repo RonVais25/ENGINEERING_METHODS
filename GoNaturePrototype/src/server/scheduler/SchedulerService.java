@@ -57,6 +57,8 @@ public class SchedulerService {
 
         register(new WaitlistGrabExpiryJob(log));
         register(new NoShowJob(log));
+        register(new ReminderJob(log));
+        register(new ConfirmTimeoutJob(log));
     }
 
     private void register(SchedulerJob job) {
