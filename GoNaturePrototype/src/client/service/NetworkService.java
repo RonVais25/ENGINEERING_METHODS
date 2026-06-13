@@ -471,6 +471,45 @@ public class NetworkService {
         return send(req);
     }
 
+    /* ---------- Reports (DEPT_MANAGER) ------------------------------------ */
+
+    /**
+     * Runs the Visits-by-Type report (DEPT_MANAGER only — the server re-checks the
+     * role). Response {@code getData()} is a {@link common.dto.VisitsReportDTO}.
+     *
+     * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
+     * @param parkId a specific park id, or {@code null} for the whole region (all parks)
+     */
+    public CompletableFuture<ServerResponse> visitsReport(String from, String to, Integer parkId) {
+        return reportRequest(RequestType.REPORT_VISITS_BY_TYPE, from, to, parkId);
+    }
+
+    /**
+     * Runs the Cancellations report (DEPT_MANAGER only — the server re-checks the
+     * role). Response {@code getData()} is a {@link common.dto.CancellationsReportDTO}.
+     *
+     * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
+     * @param parkId a specific park id, or {@code null} for the whole region (all parks)
+     */
+    public CompletableFuture<ServerResponse> cancellationsReport(String from, String to, Integer parkId) {
+        return reportRequest(RequestType.REPORT_CANCELLATIONS, from, to, parkId);
+    }
+
+    /**
+     * Shared builder for the two report requests. A {@code null} park id travels as
+     * the {@code "ALL"} sentinel, which the server normalises (together with a
+     * missing/blank value) to "whole region".
+     */
+    private CompletableFuture<ServerResponse> reportRequest(RequestType type, String from, String to, Integer parkId) {
+        ClientRequest req = new ClientRequest(type);
+        req.put("from", from);
+        req.put("to",   to);
+        req.put("parkId", parkId == null ? "ALL" : parkId);
+        return send(req);
+    }
+
     /** Result bundle for {@link #probe(String, int)}. */
     public static final class ProbeResult {
         public final ClientConnection connection;
