@@ -212,6 +212,38 @@ public class WaitlistDAO {
     }
 
     /**
+     * Lists a visitor's active waiting-list entries — those whose reservation is
+     * still {@code WAITING} — in FIFO (queue) order. Backs the visitor-facing
+     * waitlist screen, which shows each entry's queue position and any live grab
+     * offer (the offer columns travel on the mapped {@link WaitlistEntryDTO}).
+     *
+     * @param visitorId the owning visitor's national id
+     * @return the visitor's WAITING entries (possibly empty); never {@code null}
+     */
+    public List<WaitlistEntryDTO> findActiveByVisitor(long visitorId) {
+        String sql = SELECT_BASE +
+                "WHERE r.status = 'WAITING' AND r.visitor_id = ? " +
+                "ORDER BY w.queued_at ASC, w.id ASC";
+        List<WaitlistEntryDTO> result = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, visitorId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(map(rs));
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    /**
      * Lists every entry whose active offer has lapsed — those with an offer set
      * ({@code grab_offered_at IS NOT NULL}) whose {@code grab_expires_at} is now in
      * the past, ordered FIFO. These are the entries that forfeited their slot and

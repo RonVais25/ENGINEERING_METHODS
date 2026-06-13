@@ -33,6 +33,7 @@ import static common.dto.RequestType.GET_RESERVATION;
 import static common.dto.RequestType.JOIN_WAITLIST;
 import static common.dto.RequestType.LEAVE_WAITLIST;
 import static common.dto.RequestType.LIST_RESERVATIONS;
+import static common.dto.RequestType.LIST_WAITLIST;
 import static common.dto.RequestType.UPDATE_RESERVATION;
 
 /**
@@ -91,7 +92,8 @@ public class ReservationController implements DomainController {
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(CREATE_RESERVATION, GET_RESERVATION, UPDATE_RESERVATION, CANCEL_RESERVATION,
-                LIST_RESERVATIONS, CONFIRM_RESERVATION, JOIN_WAITLIST, LEAVE_WAITLIST, ACCEPT_GRAB);
+                LIST_RESERVATIONS, CONFIRM_RESERVATION, JOIN_WAITLIST, LEAVE_WAITLIST, ACCEPT_GRAB,
+                LIST_WAITLIST);
     }
 
     @Override
@@ -117,6 +119,17 @@ public class ReservationController implements DomainController {
                 List<ReservationDTO> reservations = dao.findByVisitor(visitorId);
 
                 return new ServerResponse(true, "Reservations listed.", reservations);
+            }
+
+            case LIST_WAITLIST: {
+                // Read-only view of a visitor's WAITING entries (queue position +
+                // any live grab offer). The visitor id is supplied by the caller,
+                // mirroring LIST_RESERVATIONS; the offer columns travel on the DTO.
+                long visitorId = ((Number) request.get("visitorId")).longValue();
+
+                List<WaitlistEntryDTO> entries = waitlistDao.findActiveByVisitor(visitorId);
+
+                return new ServerResponse(true, "Waiting list listed.", entries);
             }
 
             case CREATE_RESERVATION: {

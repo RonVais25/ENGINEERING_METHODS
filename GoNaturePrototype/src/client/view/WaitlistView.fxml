@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- My Waiting List (visitor-facing): the visitor's WAITING reservations, with any
+     live grab offer shown prominently (countdown + Accept) and Leave/Decline on
+     every entry. Same ScrollPane + history-table pattern as NotificationCenterView. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.WaitlistController"
+            fitToWidth="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" spacing="12">
+
+        <VBox styleClass="card" spacing="12">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="MY WAITING LIST" styleClass="section-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="refreshBtn" text="Refresh" onAction="#onRefresh" styleClass="btn-secondary"/>
+            </HBox>
+            <Label text="When a park is full you can wait for a slot. If one opens you'll get a notification and one hour to claim it here."
+                   styleClass="field-label" wrapText="true"/>
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <VBox styleClass="history-card" VBox.vgrow="ALWAYS">
+            <HBox styleClass="history-card-header">
+                <Label fx:id="cardHeaderLabel" text="YOUR WAITING LIST" styleClass="section-label"/>
+            </HBox>
+            <VBox fx:id="tableBox" spacing="0"/>
+        </VBox>
+    </VBox>
+</ScrollPane>

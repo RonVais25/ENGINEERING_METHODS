@@ -49,6 +49,7 @@ public class MainShellController {
     // Visibility predicates — drive gating off the live Session, never hardcoded.
     private static final Predicate<Session> EVERYONE     = s -> true;
     private static final Predicate<Session> STAFF_ONLY   = Session::isStaff;
+    private static final Predicate<Session> VISITOR_ONLY = Session::isVisitor;
     private static final Predicate<Session> MANAGER_ONLY =
             s -> s.isStaff() && (s.getRole() == Role.PARK_MANAGER || s.getRole() == Role.DEPT_MANAGER);
     private static final Predicate<Session> SERVICE_REP_ONLY =
@@ -128,6 +129,9 @@ public class MainShellController {
                         "Book Visit", "Reserve a park visit (reservations)"), EVERYONE),
             new NavItem(new Screen("myres", "☑", "My Reservations", "/client/view/ReservationListView.fxml",
                         "My Reservations", "View, confirm or cancel your reservations"), EVERYONE),
+            // Waiting list — visitor-facing: claim a freed slot when a park was full.
+            new NavItem(new Screen("waitlist", "⏳", "Waiting List", "/client/view/WaitlistView.fxml",
+                        "Waiting List", "Claim a freed slot when a park was full"), VISITOR_ONLY),
             // Notification center — every logged-in actor can review their messages.
             new NavItem(new Screen("notifications", "🔔", "Notifications", "/client/view/NotificationCenterView.fxml",
                         "Notifications", "Messages addressed to you"), EVERYONE),

@@ -176,6 +176,76 @@ public class NetworkService {
         return send(req);
     }
 
+    /* ---------- Waiting list ---------------------------------------------- */
+
+    /**
+     * Joins the waiting list for a full park/date — same inputs as a booking. The
+     * server creates a WAITING reservation (no capacity gate) plus its queue entry
+     * and prices it server-side. Response {@code getData()} is the created
+     * {@link common.dto.WaitlistEntryDTO}.
+     *
+     * @param parkId        target park id
+     * @param visitorId     national-ID-style visitor id
+     * @param visitDate     visit date, ISO {@code yyyy-MM-dd}
+     * @param visitTime     visit time {@code HH:mm:ss}, or {@code null}
+     * @param partySize     number of people in the party
+     * @param visitType     INDIVIDUAL, FAMILY, or GROUP
+     * @param guideId       registered guide's id for GROUP visits, or {@code null} otherwise
+     * @param paidInAdvance whether the visitor opts to pay up front
+     */
+    public CompletableFuture<ServerResponse> joinWaitlist(int parkId, long visitorId, String visitDate,
+                                                          String visitTime, int partySize, VisitType visitType,
+                                                          Long guideId, boolean paidInAdvance) {
+        ClientRequest req = new ClientRequest(RequestType.JOIN_WAITLIST);
+        req.put("parkId",        parkId);
+        req.put("visitorId",     visitorId);
+        req.put("visitDate",     visitDate);
+        req.put("visitTime",     visitTime);   // nullable
+        req.put("partySize",     partySize);
+        req.put("visitType",     visitType);
+        req.put("guideId",       guideId);     // null for non-group
+        req.put("paidInAdvance", paidInAdvance);
+        return send(req);
+    }
+
+    /**
+     * Lists a visitor's active waiting-list entries (queue position + any live grab
+     * offer). Response {@code getData()} is a
+     * {@code List<}{@link common.dto.WaitlistEntryDTO}{@code >}.
+     *
+     * @param visitorId the owning visitor's national id
+     */
+    public CompletableFuture<ServerResponse> listWaitlist(long visitorId) {
+        ClientRequest req = new ClientRequest(RequestType.LIST_WAITLIST);
+        req.put("visitorId", visitorId);
+        return send(req);
+    }
+
+    /**
+     * Accepts an active grab offer, confirming the WAITING reservation (the server
+     * re-validates the offer window and capacity). Response {@code getData()} is the
+     * now-CONFIRMED {@link common.dto.ReservationDTO}.
+     *
+     * @param reservationId the offered WAITING reservation to claim
+     */
+    public CompletableFuture<ServerResponse> acceptGrab(int reservationId) {
+        ClientRequest req = new ClientRequest(RequestType.ACCEPT_GRAB);
+        req.put("reservationId", reservationId);
+        return send(req);
+    }
+
+    /**
+     * Leaves the waiting list for a WAITING reservation. If a grab offer is active
+     * this is a decline, and the server advances the freed slot to the next in line.
+     *
+     * @param reservationId the WAITING reservation to remove from the queue
+     */
+    public CompletableFuture<ServerResponse> leaveWaitlist(int reservationId) {
+        ClientRequest req = new ClientRequest(RequestType.LEAVE_WAITLIST);
+        req.put("reservationId", reservationId);
+        return send(req);
+    }
+
     /* ---------- Parks & parameter-change approval workflow ---------------- */
 
     /**
