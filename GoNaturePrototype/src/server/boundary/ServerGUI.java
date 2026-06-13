@@ -17,6 +17,8 @@ import javafx.stage.Stage;
 import server.db.DBConnection;
 import server.net.OrderServer;
 import server.net.ServerListener;
+import server.scheduler.NoShowJob;
+import server.scheduler.WaitlistGrabExpiryJob;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -59,6 +61,9 @@ public class ServerGUI extends Application implements ServerListener {
     private PasswordField passwordField;
     private Button        startBtn;
     private Button        stopBtn;
+
+    // Scheduler manual-trigger buttons (enabled only while the server runs).
+    private final List<Button> schedulerButtons = new ArrayList<>();
 
     // Reachable-at info (populated on start)
     private VBox  reachableBox;
@@ -139,7 +144,7 @@ public class ServerGUI extends Application implements ServerListener {
     // ─── Body ─────────────────────────────────────────────────────────────────
 
     private SplitPane buildBody() {
-        VBox leftCol  = new VBox(16, buildControlCard());
+        VBox leftCol  = new VBox(16, buildControlCard(), buildSchedulerCard());
         leftCol.setPadding(new Insets(22, 14, 22, 22));
         leftCol.setMinWidth(320);
 
@@ -204,6 +209,63 @@ public class ServerGUI extends Application implements ServerListener {
         card.getChildren().addAll(title, portLbl, portField, pwLbl, passwordField,
                                   btnRow, reachableTitle, reachableBox);
         return card;
+    }
+
+    /**
+     * Builds the scheduler control card: one "run now" button per timed job plus a
+     * "Run all jobs now" button. These are the manual triggers used during the
+     * defense — each fires an off-cycle run via {@link OrderServer#getScheduler()}.
+     * The buttons start disabled and are enabled only while the server runs.
+     */
+    private VBox buildSchedulerCard() {
+        VBox card = buildCard();
+
+        Label title = new Label("SCHEDULER");
+        title.setStyle("-fx-font-size:11; -fx-font-weight:bold; -fx-text-fill:" + G500 + ";");
+
+        Label hint = new Label("Manual triggers for the timed jobs (demo controls).");
+        hint.setStyle("-fx-font-size:11; -fx-text-fill:" + G600 + ";");
+        hint.setWrapText(true);
+
+        Button grabBtn   = buildSchedulerButton("▸  Run grab-expiry job",
+                () -> WaitlistGrabExpiryJob.NAME);
+        Button noShowBtn = buildSchedulerButton("▸  Run no-show job",
+                () -> NoShowJob.NAME);
+        Button allBtn    = buildSchedulerButton("⟳  Run all jobs now", null);
+
+        card.getChildren().addAll(title, hint, grabBtn, noShowBtn, allBtn);
+        return card;
+    }
+
+    /**
+     * Creates a full-width scheduler trigger button. When {@code jobName} is
+     * {@code null} the button runs every job; otherwise it runs the named one.
+     * Registered in {@link #schedulerButtons} so the server lifecycle can
+     * enable/disable it, and disabled to start.
+     *
+     * @param text    the button caption
+     * @param jobName supplies the target job name, or {@code null} to run all jobs
+     */
+    private Button buildSchedulerButton(String text, java.util.function.Supplier<String> jobName) {
+        Button btn = buildSecondaryButton(text);
+        btn.setMaxWidth(Double.MAX_VALUE);
+        btn.setDisable(true);
+        btn.setOnAction(e -> {
+            if (server == null) return;
+            if (jobName == null) {
+                server.getScheduler().runAllNow();
+            } else {
+                server.getScheduler().runNow(jobName.get());
+            }
+        });
+        schedulerButtons.add(btn);
+        return btn;
+    }
+
+    private void setSchedulerButtonsEnabled(boolean enabled) {
+        for (Button b : schedulerButtons) {
+            b.setDisable(!enabled);
+        }
     }
 
     private void populateReachable() {
@@ -353,6 +415,7 @@ public class ServerGUI extends Application implements ServerListener {
         Platform.runLater(() -> {
             statusDot.setFill(Color.web("#64c864"));
             statusLabel.setText("Running on port " + port);
+            setSchedulerButtonsEnabled(true);
             appendLog(true, "Server started on port " + port);
             for (String ip : getLanIPv4()) {
                 appendLog(true, "Reachable at " + ip + ":" + port);
@@ -368,6 +431,7 @@ public class ServerGUI extends Application implements ServerListener {
             stopBtn.setDisable(true);
             portField.setDisable(false);
             passwordField.setDisable(false);
+            setSchedulerButtonsEnabled(false);
             appendLog(true, "Server stopped");
         });
     }

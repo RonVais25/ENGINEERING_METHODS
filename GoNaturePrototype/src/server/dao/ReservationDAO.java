@@ -164,14 +164,20 @@ public class ReservationDAO {
     }
 
     /**
-     * Updates the lifecycle status of a reservation.
+     * Updates the lifecycle status of a reservation and stamps
+     * {@code status_changed_at = NOW()} in the same statement.
+     *
+     * <p>This is the single choke point for every status transition (confirm,
+     * cancel, accept-grab, exit→completed, no-show), so the timestamp is recorded
+     * in one place rather than at each call site. The stamp backs the Cancellations
+     * Report's "when was it cancelled" column.
      *
      * @param id     the reservation to update
      * @param status the new status
      * @return {@code true} if a row was updated, {@code false} otherwise
      */
     public boolean updateStatus(int id, ReservationStatus status) {
-        String sql = "UPDATE reservation SET status = ? WHERE id = ?";
+        String sql = "UPDATE reservation SET status = ?, status_changed_at = NOW() WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -217,6 +223,38 @@ public class ReservationDAO {
         }
 
         return false;
+    }
+
+    /**
+     * Finds the reservations that the no-show sweep should mark
+     * {@link ReservationStatus#NO_SHOW}: those still {@code CONFIRMED} whose
+     * {@code visit_date} is strictly before today (a same-day booking can still
+     * arrive) and for which no {@code visit} row was ever recorded — i.e. the party
+     * never entered the park. Ordered by date for a stable sweep.
+     *
+     * @return the no-show candidates (possibly empty); never {@code null}
+     */
+    public List<ReservationDTO> findNoShowCandidates() {
+        String sql = "SELECT r.* FROM reservation r " +
+                "WHERE r.status = 'CONFIRMED' " +
+                "  AND r.visit_date < CURDATE() " +
+                "  AND NOT EXISTS (SELECT 1 FROM visit v WHERE v.reservation_id = r.id) " +
+                "ORDER BY r.visit_date ASC, r.id ASC";
+        List<ReservationDTO> result = new ArrayList<>();
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                result.add(map(rs));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
     }
 
     /**

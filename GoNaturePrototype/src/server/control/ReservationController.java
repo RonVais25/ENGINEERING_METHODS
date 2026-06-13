@@ -23,6 +23,7 @@ import server.dao.ParkDAO;
 import server.dao.ReservationDAO;
 import server.dao.WaitlistDAO;
 import server.net.ClientSession;
+import server.scheduler.SchedulerConfig;
 import server.subscription.SubscriptionRegistry;
 
 import static common.dto.RequestType.ACCEPT_GRAB;
@@ -85,9 +86,6 @@ public class ReservationController implements DomainController {
     /** Format for the {@code grab_expires_at} deadline strings handed to {@link WaitlistDAO}. */
     private static final DateTimeFormatter SQL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-    /** How long an offered grab stays claimable before it lapses. */
-    private static final int GRAB_TTL_HOURS = 1;
 
     @Override
     public Set<RequestType> handledTypes() {
@@ -523,10 +521,10 @@ public class ReservationController implements DomainController {
      * Offers a freed slot to the next waiting visitor. Recomputes the live capacity
      * for the park/date, finds the FIFO-first WAITING entry whose party fits (and
      * that does not already hold an offer), marks it offered for
-     * {@link #GRAB_TTL_HOURS} hour(s), and notifies that visitor. A no-op when no
-     * capacity is free or no eligible entry is waiting (e.g. the head party is too
-     * large to fit the freed slot — the must-fit rule skips it rather than blocking
-     * the queue).
+     * {@link SchedulerConfig#getGrabWindowMinutes()} minute(s), and notifies that
+     * visitor. A no-op when no capacity is free or no eligible entry is waiting
+     * (e.g. the head party is too large to fit the freed slot — the must-fit rule
+     * skips it rather than blocking the queue).
      *
      * <p>Called after any event that frees a real slot: a cancelled
      * PENDING/CONFIRMED reservation, a declined offer, or a lapsed offer.
@@ -543,33 +541,44 @@ public class ReservationController implements DomainController {
         if (next == null) {
             return; // queue empty, or every waiting party is larger than the freed slot
         }
-        String expires = LocalDateTime.now().plusHours(GRAB_TTL_HOURS).format(SQL_DATETIME);
+        int windowMinutes = SchedulerConfig.getGrabWindowMinutes();
+        String expires = LocalDateTime.now().plusMinutes(windowMinutes).format(SQL_DATETIME);
         waitlistDao.markOffered(next.getId(), expires);
 
         ParkDTO park = parkDao.getById(parkId);
         String parkName = (park != null) ? park.getName() : ("park #" + parkId);
         notificationService.send(next.getVisitorId(), null, "SIM_EMAIL",
                 "A slot opened for " + parkName + " on " + visitDate
-                + " — you have " + GRAB_TTL_HOURS + " hour to claim it.");
+                + " — you have " + windowMinutes + " minute(s) to claim it.");
     }
 
     /**
      * Sweeps every grab offer whose deadline has passed: the offeree forfeited, so
-     * each lapsed entry is removed and the grab is advanced to the next eligible
-     * waiting party for that same park/date (via {@link #offerGrabToNext}). The
-     * forfeited reservation itself is left WAITING but with no queue entry — by
-     * design this session only removes the entry; a later session decides the
-     * forfeited reservation's fate.
+     * each lapsed entry is removed, its now-orphaned WAITING reservation is
+     * CANCELLED (via {@link ReservationDAO#updateStatus}, which also stamps
+     * {@code status_changed_at}), and the grab is advanced to the next eligible
+     * waiting party for that same park/date (via {@link #offerGrabToNext}).
      *
-     * <p>Public and side-effecting but timer-free: a later Scheduler session drives
-     * it on a fixed interval. This session exercises it manually.
+     * <p>Cancelling the forfeited reservation resolves the orphaned-WAITING loose
+     * end: a WAITING reservation never consumes capacity, so this does not change
+     * the headroom {@link #offerGrabToNext} recomputes for the next party.
+     *
+     * <p>Driven on a fixed interval by the Scheduler
+     * ({@link server.scheduler.WaitlistGrabExpiryJob}); also exercisable manually
+     * from the server console.
+     *
+     * @return the number of lapsed offers processed (0 when none were due)
      */
-    public void expireOverdueOffers() {
+    public int expireOverdueOffers() {
         List<WaitlistEntryDTO> expired = waitlistDao.findExpiredOffers();
         for (WaitlistEntryDTO entry : expired) {
             waitlistDao.removeEntry(entry.getId());
+            // Forfeit-fix: the offeree let the window lapse. Cancel its orphaned
+            // WAITING reservation instead of leaving it WAITING with no queue entry.
+            dao.updateStatus(entry.getReservationId(), ReservationStatus.CANCELLED);
             offerGrabToNext(entry.getParkId(), entry.getVisitDate());
         }
+        return expired.size();
     }
 
     /**
