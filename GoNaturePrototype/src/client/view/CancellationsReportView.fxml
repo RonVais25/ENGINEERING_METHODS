@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Cancellations report (DEPT_MANAGER only): a per-day table of cancelled /
+     no-show reservations over a date range and (optionally) one park, with a
+     totals row and range-summary tiles. Tabular counterpart to the visits chart. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.CancellationsReportController"
+            fitToWidth="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" spacing="12">
+
+        <!-- Filter row: date range + park-or-all + Generate. -->
+        <VBox styleClass="card" spacing="12">
+            <Label text="CANCELLATIONS &amp; NO-SHOWS" styleClass="section-label"/>
+            <HBox spacing="14" alignment="BOTTOM_LEFT">
+                <VBox spacing="6">
+                    <Label text="From" styleClass="field-label"/>
+                    <DatePicker fx:id="fromPicker" promptText="dd / mm / yyyy" styleClass="date-picker"/>
+                </VBox>
+                <VBox spacing="6">
+                    <Label text="To" styleClass="field-label"/>
+                    <DatePicker fx:id="toPicker" promptText="dd / mm / yyyy" styleClass="date-picker"/>
+                </VBox>
+                <VBox spacing="6">
+                    <Label text="Park" styleClass="field-label"/>
+                    <ComboBox fx:id="parkCombo" prefWidth="180" styleClass="input-field"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="generateBtn" text="Generate" onAction="#onGenerate" styleClass="btn-primary"/>
+            </HBox>
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <!-- Range-summary tiles: totals + average per day. -->
+        <HBox fx:id="summaryBox" spacing="12"/>
+
+        <!-- Per-day table. -->
+        <VBox styleClass="history-card" VBox.vgrow="ALWAYS">
+            <HBox styleClass="history-card-header">
+                <Label fx:id="cardHeaderLabel" text="CANCELLATIONS &amp; NO-SHOWS" styleClass="section-label"/>
+            </HBox>
+            <VBox fx:id="tableBox" spacing="0"/>
+        </VBox>
+    </VBox>
+</ScrollPane>

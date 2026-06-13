@@ -61,6 +61,8 @@ public class MainShellController {
     private static final Predicate<Session> PARK_EMPLOYEE_ONLY =
             s -> s.isStaff() && s.getRole() == Role.PARK_EMPLOYEE;
 
+    // TODO: anchor the sidebar (logo + user/login chrome) so it stays fixed while
+    // the screen content area scrolls independently.
     @FXML private VBox      navBox;
     @FXML private StackPane contentArea;
     @FXML private Label     topbarTitle;
@@ -162,7 +164,14 @@ public class MainShellController {
                         "Park Settings", "Request changes to your park's parameters"), PARK_MANAGER_ONLY),
             new NavItem(new Screen("approvals", "✓", "Approvals",
                         "/client/view/ApprovalQueueView.fxml",
-                        "Approvals", "Review pending parameter-change requests"), DEPT_MANAGER_ONLY)
+                        "Approvals", "Review pending parameter-change requests"), DEPT_MANAGER_ONLY),
+            // Department-manager reports — visits-by-type (chart) and cancellations (table).
+            new NavItem(new Screen("visitsreport", "📊", "Visits Report",
+                        "/client/view/VisitsReportView.fxml",
+                        "Visits Report", "Visits by type — individuals vs organized groups"), DEPT_MANAGER_ONLY),
+            new NavItem(new Screen("cancelreport", "📉", "Cancellations Report",
+                        "/client/view/CancellationsReportView.fxml",
+                        "Cancellations Report", "Cancellations & no-shows by day"), DEPT_MANAGER_ONLY)
         );
     }
 

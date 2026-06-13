@@ -448,3 +448,30 @@
 
 /* ---------- ScrollPane defaults ------------------------------------------- */
 .scroll-pane, .scroll-pane > .viewport { -fx-background: transparent; -fx-background-color: transparent; }
+
+/* ---------- Reports (dept-manager): bar chart + summary tiles ------------- */
+/* Visits-by-Type chart. Single series, so every bar is .default-color0 — recolour
+   it to the brand green and keep the plot clean (no vertical grid, soft baseline). */
+.report-chart { -fx-padding: 4 0 0 0; }
+.report-chart .default-color0.chart-bar { -fx-bar-fill: -g500; }
+.report-chart .chart-plot-background       { -fx-background-color: transparent; }
+.report-chart .chart-vertical-grid-lines   { -fx-stroke: transparent; }
+.report-chart .chart-horizontal-grid-lines { -fx-stroke: -g100; }
+.report-chart .axis        { -fx-tick-label-fill: -g500; -fx-font-size: 11; }
+.report-chart .axis-label  { -fx-text-fill: -g600; -fx-font-size: 11; -fx-font-weight: bold; }
+.report-chart .chart-title { -fx-text-fill: -g600; -fx-font-size: 12; -fx-font-weight: bold; }
+
+/* Summary stat tiles shared by both reports (avg stay / totals / average per day). */
+.stat-tile {
+    -fx-background-color: -g50; -fx-background-radius: 12;
+    -fx-border-color: -g200; -fx-border-radius: 12; -fx-border-width: 1;
+    -fx-padding: 14 18 14 18;
+}
+.stat-tile-label { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: -g500; }
+.stat-tile-value { -fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.stat-tile-sub   { -fx-font-size: 12; -fx-text-fill: -g500; }
+
+/* Cancellations table: bold, tinted totals row. */
+.history-cell.total       { -fx-font-weight: bold; -fx-text-fill: -g800; }
+.history-row.total-row    { -fx-background-color: -g50; -fx-border-color: -g200; -fx-border-width: 1 0 0 0; }
+.history-row.total-row:hover { -fx-background-color: -g50; }
