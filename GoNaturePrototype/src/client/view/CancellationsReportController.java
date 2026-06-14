@@ -59,7 +59,6 @@ public class CancellationsReportController extends BaseController {
 
     @FXML
     private void initialize() {
-        // TODO: fix the dept-manager reports screen layout to fit the content area better.
         toPicker.setValue(LocalDate.now());
         fromPicker.setValue(LocalDate.now().minusMonths(1));
         tableBox.getChildren().setAll(headerRow());

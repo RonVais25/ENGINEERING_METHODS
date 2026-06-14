@@ -15,6 +15,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
@@ -242,8 +244,17 @@ public class WaitlistController extends BaseController {
                 headerCell("DATE",    110),
                 headerCell("PARTY",    70),
                 headerCell("STATUS",  150),
+                flexSpacer(),
                 headerCell("ACTIONS",   0));
         return row;
+    }
+
+    /** A zero-width filler that absorbs the row's slack so fixed columns and the
+     *  action buttons keep their natural widths instead of being squeezed. */
+    private Region flexSpacer() {
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        return spacer;
     }
 
     private HBox dataRow(WaitlistEntryDTO e, boolean withDivider) {
@@ -260,16 +271,18 @@ public class WaitlistController extends BaseController {
 
             Button acceptBtn = new Button("Accept");
             acceptBtn.getStyleClass().add("btn-primary");
+            acceptBtn.setMinWidth(Region.USE_PREF_SIZE);
             acceptBtn.setOnAction(ev -> accept(e.getReservationId()));
 
             Button declineBtn = new Button("Decline");
             declineBtn.getStyleClass().add("btn-secondary");
+            declineBtn.setMinWidth(Region.USE_PREF_SIZE);
             declineBtn.setOnAction(ev -> leave(e.getReservationId()));
 
             HBox actions = new HBox(8, acceptBtn, declineBtn);
             actions.setAlignment(Pos.CENTER_LEFT);
 
-            row = new HBox(parkLbl, dateLbl, partyLbl, countdownLbl, actions);
+            row = new HBox(parkLbl, dateLbl, partyLbl, countdownLbl, flexSpacer(), actions);
             row.getStyleClass().addAll("history-row", "wl-offer");
 
             tickTargets.add(new TickTarget(LocalDateTime.parse(e.getGrabExpiresAt(), TS), countdownLbl, acceptBtn));
@@ -281,12 +294,13 @@ public class WaitlistController extends BaseController {
 
             Button leaveBtn = new Button("Leave");
             leaveBtn.getStyleClass().add("btn-secondary");
+            leaveBtn.setMinWidth(Region.USE_PREF_SIZE);
             leaveBtn.setOnAction(ev -> leave(e.getReservationId()));
 
             HBox actions = new HBox(8, leaveBtn);
             actions.setAlignment(Pos.CENTER_LEFT);
 
-            row = new HBox(parkLbl, dateLbl, partyLbl, statusTag, actions);
+            row = new HBox(parkLbl, dateLbl, partyLbl, statusTag, flexSpacer(), actions);
             row.getStyleClass().add("history-row");
         }
 

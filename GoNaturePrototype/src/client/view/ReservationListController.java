@@ -21,6 +21,8 @@ import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.time.LocalDate;
@@ -162,8 +164,17 @@ public class ReservationListController extends BaseController {
                 headerCell("PARTY",   70),
                 headerCell("TYPE",   110),
                 headerCell("STATUS", 110),
+                flexSpacer(),
                 headerCell("ACTIONS", 0));
         return row;
+    }
+
+    /** A zero-width filler that absorbs the row's slack so fixed columns and the
+     *  action buttons keep their natural widths instead of being squeezed. */
+    private Region flexSpacer() {
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        return spacer;
     }
 
     private HBox dataRow(ReservationDTO r, boolean withDivider) {
@@ -172,10 +183,6 @@ public class ReservationListController extends BaseController {
         Label partyLbl = cell(String.valueOf(r.getPartySize()), null, 70);
         Label typeLbl  = cell(r.getVisitType().name(),        null, 110);
 
-        // TODO: client.css only defines colours for the "confirmed" (green) and
-        // "pending" (gold) status-tag modifiers, so CANCELLED/WAITING/COMPLETED/
-        // NO_SHOW currently render as plain pills. Add matching rules
-        // (.status-tag.cancelled -> red, .waiting, .completed, .no_show) in client.css.
         Label statusTag = new Label(r.getStatus().name());
         statusTag.getStyleClass().addAll("status-tag", r.getStatus().name().toLowerCase());
         statusTag.setPrefWidth(110);
@@ -198,13 +205,24 @@ public class ReservationListController extends BaseController {
         editBtn.setDisable(!canEdit(r.getStatus()));
         editBtn.setOnAction(e -> edit(r));
 
+        // Pin each button to its preferred (label) width so a tight row never
+        // shrinks them into ellipsized stubs ("Ac.." / "Ca.." / "E..").
+        for (Button b : new Button[] { confirmBtn, cancelBtn, editBtn }) {
+            b.setMinWidth(Region.USE_PREF_SIZE);
+        }
+
         HBox actions = new HBox(8, confirmBtn, cancelBtn, editBtn);
         actions.setAlignment(Pos.CENTER_LEFT);
 
         // TODO: make the row clickable to open a read-only detail view (GET_RESERVATION
         // by id) showing the full reservation — time, price, confirmation code, guide,
         // waitlist position. Right now a visitor can list rows but can't drill into one.
-        HBox row = new HBox(idLbl, dateLbl, partyLbl, typeLbl, statusTag, actions);
+        //
+        // A flexible spacer takes the row's slack so the actions keep their natural
+        // width on the right; when space is tight the spacer collapses first (and
+        // then the info cells), never the buttons. The header row carries a matching
+        // spacer so the ACTIONS column header stays aligned over the buttons.
+        HBox row = new HBox(idLbl, dateLbl, partyLbl, typeLbl, statusTag, flexSpacer(), actions);
         row.getStyleClass().add("history-row");
         if (withDivider) row.getStyleClass().add("with-divider");
         return row;

@@ -68,7 +68,6 @@ public class VisitsReportController extends BaseController {
 
     @FXML
     private void initialize() {
-        // TODO: fix the dept-manager reports screen layout to fit the content area better.
         // Sensible default window: the last month up to today; the manager adjusts.
         toPicker.setValue(LocalDate.now());
         fromPicker.setValue(LocalDate.now().minusMonths(1));
