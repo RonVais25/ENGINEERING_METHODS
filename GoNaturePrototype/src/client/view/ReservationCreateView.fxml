@@ -28,6 +28,16 @@
             <TextField fx:id="visitorField" promptText="National ID (e.g. 200000001)"
                        styleClass="input-field"/>
 
+            <!-- Contact: email and phone are both required (email is the booking's
+                 notification target). Both prefill from a logged-in visitor's record. -->
+            <Label text="Email" styleClass="field-label"/>
+            <TextField fx:id="emailField" promptText="name@example.com (required)"
+                       styleClass="input-field"/>
+
+            <Label text="Phone" styleClass="field-label"/>
+            <TextField fx:id="phoneField" promptText="e.g. 050-1234567 (at least 10 digits)"
+                       styleClass="input-field"/>
+
             <Label text="Visit Date" styleClass="field-label"/>
             <DatePicker fx:id="datePicker" maxWidth="Infinity"
                         promptText="dd / mm / yyyy" styleClass="date-picker"/>

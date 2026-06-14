@@ -17,6 +17,10 @@ public class VisitorDTO implements Serializable {
     private long id;
     /** Display name of the visitor. */
     private String fullName;
+    /** Contact phone number on file, or {@code null} if none recorded. */
+    private String phone;
+    /** Contact email on file, or {@code null} if none recorded. */
+    private String email;
     /** Whether this visitor holds a subscription. */
     private boolean isSubscriber;
 
@@ -25,11 +29,15 @@ public class VisitorDTO implements Serializable {
      *
      * @param id           national-ID-style visitor identifier
      * @param fullName     display name of the visitor
+     * @param phone        contact phone number on file, or {@code null}
+     * @param email        contact email on file, or {@code null}
      * @param isSubscriber whether the visitor holds a subscription
      */
-    public VisitorDTO(long id, String fullName, boolean isSubscriber) {
+    public VisitorDTO(long id, String fullName, String phone, String email, boolean isSubscriber) {
         this.id = id;
         this.fullName = fullName;
+        this.phone = phone;
+        this.email = email;
         this.isSubscriber = isSubscriber;
     }
 
@@ -41,6 +49,16 @@ public class VisitorDTO implements Serializable {
     /** @return the display name of the visitor */
     public String getFullName() {
         return fullName;
+    }
+
+    /** @return the contact phone number on file, or {@code null} if none recorded */
+    public String getPhone() {
+        return phone;
+    }
+
+    /** @return the contact email on file, or {@code null} if none recorded */
+    public String getEmail() {
+        return email;
     }
 
     /** @return whether the visitor holds a subscription */

@@ -109,7 +109,7 @@ public class AuthController implements DomainController {
                             "Visitor " + visitorId + " is already a subscriber.");
                 }
 
-                VisitorDTO v = new VisitorDTO(visitorId, fullName, true);
+                VisitorDTO v = new VisitorDTO(visitorId, fullName, phone, email, true);
                 return new ServerResponse(true,
                         "Subscriber registered: " + fullName + " (#" + visitorId + ").", v);
             }

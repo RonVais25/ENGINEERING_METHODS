@@ -19,6 +19,7 @@ import common.dto.VisitType;
 import common.dto.VisitorDTO;
 import common.dto.WaitlistEntryDTO;
 import server.dao.AuthDAO;
+import server.dao.MemberDAO;
 import server.dao.ParkDAO;
 import server.dao.ReservationDAO;
 import server.dao.WaitlistDAO;
@@ -74,6 +75,8 @@ public class ReservationController implements DomainController {
 
     private final ReservationDAO dao = new ReservationDAO();
     private final AuthDAO authDao = new AuthDAO();
+    /** Upserts the booking visitor's contact so the FK holds and notifications have a target. */
+    private final MemberDAO memberDao = new MemberDAO();
     /** Stateless price calculator, shared across all client threads. */
     private final PricingService pricing = new PricingService();
     /** Stateless notification helper, shared across all client threads. */
@@ -137,6 +140,22 @@ public class ReservationController implements DomainController {
                 String    visitTime = (String) request.get("visitTime"); // nullable
                 int       partySize = (int) request.get("partySize");
                 VisitType visitType = (VisitType) request.get("visitType");
+                String    email     = (String) request.get("email");
+                String    phone     = (String) request.get("phone");
+
+                // Email + phone are both required to book: email is the visitor's
+                // notification target, phone the fallback contact. Validated here
+                // (not just on the client) so a crafted request can't book a
+                // contactless visitor.
+                if (!isValidEmail(email)) {
+                    return new ServerResponse(false, "A valid email is required to book.");
+                }
+                if (!isValidPhone(phone)) {
+                    return new ServerResponse(false, "A valid phone number is required to book (at least 10 digits).");
+                }
+                // Save contact + guarantee the visitor row exists before the insert,
+                // so the reservation's visitor_id FK holds even for a brand-new id.
+                memberDao.upsertContact(visitorId, email.trim(), phone.trim());
 
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
@@ -307,6 +326,19 @@ public class ReservationController implements DomainController {
                 String    visitTime = (String) request.get("visitTime"); // nullable
                 int       partySize = (int) request.get("partySize");
                 VisitType visitType = (VisitType) request.get("visitType");
+                String    email     = (String) request.get("email");
+                String    phone     = (String) request.get("phone");
+
+                // Same contact rule as a booking: email + phone are both required and
+                // the visitor row is upserted so the WAITING reservation's FK holds and
+                // the grab-offer notification has a target.
+                if (!isValidEmail(email)) {
+                    return new ServerResponse(false, "A valid email is required to book.");
+                }
+                if (!isValidPhone(phone)) {
+                    return new ServerResponse(false, "A valid phone number is required to book (at least 10 digits).");
+                }
+                memberDao.upsertContact(visitorId, email.trim(), phone.trim());
 
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
@@ -472,6 +504,47 @@ public class ReservationController implements DomainController {
      * @param target  the status the caller wants to apply
      * @return {@code true} if the transition is permitted
      */
+    /**
+     * Basic server-side email sanity check for the booking contact: non-blank and
+     * containing both an {@code '@'} and a {@code '.'}. Deliberately lenient (this
+     * is a teaching prototype, not an RFC validator) but enough to reject the empty
+     * or obviously malformed addresses the client guard also blocks, so a crafted
+     * request cannot slip a contactless booking past the server.
+     *
+     * @param email the candidate email from the request, possibly {@code null}
+     * @return {@code true} if the email looks well-formed enough to accept
+     */
+    private boolean isValidEmail(String email) {
+        if (email == null) {
+            return false;
+        }
+        String trimmed = email.trim();
+        return trimmed.contains("@") && trimmed.contains(".");
+    }
+
+    /**
+     * Basic server-side phone check for the booking contact: it must carry at least
+     * ten digits (a national mobile number's worth), ignoring any formatting such as
+     * dashes, spaces, parentheses or a leading {@code '+'}. Deliberately lenient on
+     * punctuation but strict enough to reject a stray {@code "3"} the client guard
+     * also blocks, mirroring {@link #isValidEmail}.
+     *
+     * @param phone the candidate phone from the request, possibly {@code null}
+     * @return {@code true} if it contains at least ten digits
+     */
+    private boolean isValidPhone(String phone) {
+        if (phone == null) {
+            return false;
+        }
+        int digits = 0;
+        for (int i = 0; i < phone.length(); i++) {
+            if (Character.isDigit(phone.charAt(i))) {
+                digits++;
+            }
+        }
+        return digits >= 10;
+    }
+
     private boolean isLegalTransition(ReservationStatus current, ReservationStatus target) {
         switch (current) {
             case PENDING:   return target == ReservationStatus.CONFIRMED

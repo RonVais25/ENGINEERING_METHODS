@@ -138,11 +138,14 @@ public class NetworkService {
      * @param visitType     INDIVIDUAL, FAMILY, or GROUP
      * @param guideId       registered guide's id for GROUP visits, or {@code null} otherwise
      * @param paidInAdvance whether the visitor opts to pay up front (deepens the group discount)
+     * @param email         the visitor's contact email (required; the booking's notification target)
+     * @param phone         the visitor's contact phone (required)
      * @return future resolving (on the FX thread) with the server's response
      */
     public CompletableFuture<ServerResponse> createReservation(int parkId, long visitorId, String visitDate,
                                                                String visitTime, int partySize, VisitType visitType,
-                                                               Long guideId, boolean paidInAdvance) {
+                                                               Long guideId, boolean paidInAdvance,
+                                                               String email, String phone) {
         ClientRequest req = new ClientRequest(RequestType.CREATE_RESERVATION);
         req.put("parkId",        parkId);
         req.put("visitorId",     visitorId);
@@ -152,6 +155,8 @@ public class NetworkService {
         req.put("visitType",     visitType);
         req.put("guideId",       guideId);     // null for non-group bookings
         req.put("paidInAdvance", paidInAdvance);
+        req.put("email",         email);
+        req.put("phone",         phone);
         return send(req);
     }
 
@@ -192,10 +197,13 @@ public class NetworkService {
      * @param visitType     INDIVIDUAL, FAMILY, or GROUP
      * @param guideId       registered guide's id for GROUP visits, or {@code null} otherwise
      * @param paidInAdvance whether the visitor opts to pay up front
+     * @param email         the visitor's contact email (required; target for the grab-offer notification)
+     * @param phone         the visitor's contact phone (required)
      */
     public CompletableFuture<ServerResponse> joinWaitlist(int parkId, long visitorId, String visitDate,
                                                           String visitTime, int partySize, VisitType visitType,
-                                                          Long guideId, boolean paidInAdvance) {
+                                                          Long guideId, boolean paidInAdvance,
+                                                          String email, String phone) {
         ClientRequest req = new ClientRequest(RequestType.JOIN_WAITLIST);
         req.put("parkId",        parkId);
         req.put("visitorId",     visitorId);
@@ -205,6 +213,8 @@ public class NetworkService {
         req.put("visitType",     visitType);
         req.put("guideId",       guideId);     // null for non-group
         req.put("paidInAdvance", paidInAdvance);
+        req.put("email",         email);
+        req.put("phone",         phone);
         return send(req);
     }
 

@@ -111,7 +111,7 @@ public class AuthDAO {
      * @return the matching {@link VisitorDTO}, or {@code null} if no row matches or the query fails
      */
     public VisitorDTO findVisitorById(long id) {
-        String sql = "SELECT id, full_name, is_subscriber FROM visitor WHERE id = ?";
+        String sql = "SELECT id, full_name, phone, email, is_subscriber FROM visitor WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -122,6 +122,8 @@ public class AuthDAO {
                     return new VisitorDTO(
                             rs.getLong("id"),
                             rs.getString("full_name"),
+                            rs.getString("phone"),
+                            rs.getString("email"),
                             rs.getBoolean("is_subscriber")
                     );
                 }
