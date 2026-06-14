@@ -11,6 +11,7 @@ import common.dto.ClientRequest;
 import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
+import common.dto.ReservationUpdateResultDTO;
 import common.dto.RequestType;
 import common.dto.ServerEvent;
 import common.dto.ServerResponse;
@@ -311,12 +312,27 @@ public class ReservationController implements DomainController {
                             "No capacity for that date (free: " + Math.max(effectiveFree, 0) + ").");
                 }
 
-                if (!dao.updateDateAndParty(id, visitDate, visitTime, partySize)) {
+                // Recompute the price for the new party size. A booking is always
+                // pre-ordered; the visit type, paid-in-advance flag and the visitor's
+                // member status all come from the existing reservation/visitor — not
+                // defaults — so the recomputed price matches how it was first priced.
+                // Persisting it in the same update is the fix for the stale-price
+                // defect (a party change used to leave price_cents untouched).
+                int oldPrice = existing.getPriceCents();
+                VisitorDTO visitor  = authDao.findVisitorById(existing.getVisitorId());
+                boolean    isMember = visitor != null && visitor.isSubscriber();
+                int newPrice = pricing.calculate(existing.getVisitType(), existing.isGroup(),
+                        partySize, true, existing.isPaidInAdvance(), isMember);
+
+                if (!dao.updateReschedule(id, visitDate, visitTime, partySize, newPrice)) {
                     return new ServerResponse(false, "Update failed.");
                 }
                 ReservationDTO updated = dao.getById(id);
                 publishReservation(ServerEvent.updated("reservation", id, updated));
-                return new ServerResponse(true, "Reservation updated.", updated);
+                // Return the fresh row plus old/new price so the client can settle the
+                // difference (collect / refund / quote at the gate).
+                return new ServerResponse(true, "Reservation updated.",
+                        new ReservationUpdateResultDTO(updated, oldPrice, newPrice));
             }
 
             case JOIN_WAITLIST: {
