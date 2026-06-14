@@ -181,6 +181,29 @@ public class NetworkService {
         return send(req);
     }
 
+    /**
+     * Reschedules a PENDING/CONFIRMED reservation (date / optional time / party
+     * size). The server re-checks the status, the group cap and capacity, then
+     * recomputes the price. On success the response {@code getData()} is a
+     * {@link common.dto.ReservationUpdateResultDTO} carrying the updated
+     * {@link common.dto.ReservationDTO} plus the old and new price so the caller can
+     * settle the difference.
+     *
+     * @param reservationId the reservation to reschedule
+     * @param visitDate     the new visit date, ISO {@code yyyy-MM-dd}
+     * @param visitTime     the new visit time {@code HH:mm:ss}, or {@code null}
+     * @param partySize     the new party size
+     */
+    public CompletableFuture<ServerResponse> updateReservation(int reservationId, String visitDate,
+                                                               String visitTime, int partySize) {
+        ClientRequest req = new ClientRequest(RequestType.UPDATE_RESERVATION);
+        req.put("reservationId", reservationId);
+        req.put("visitDate",     visitDate);
+        req.put("visitTime",     visitTime);   // nullable
+        req.put("partySize",     partySize);
+        return send(req);
+    }
+
     /* ---------- Waiting list ---------------------------------------------- */
 
     /**

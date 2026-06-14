@@ -194,16 +194,24 @@ public class ReservationDAO {
     }
 
     /**
-     * Updates the scheduling fields (date, time, party size) of a reservation.
+     * Reschedules a reservation: updates the scheduling fields (date, time, party
+     * size) <em>and</em> the recomputed price in the same statement.
      *
-     * @param id        the reservation to update
-     * @param visitDate the new visit date, ISO {@code yyyy-MM-dd}
-     * @param visitTime the new visit time ({@code HH:mm:ss}), or {@code null} to clear it
-     * @param partySize the new party size
+     * <p>The price is written here because changing the party size changes what the
+     * party owes; persisting it alongside the schedule keeps the row's
+     * {@code price_cents} consistent with its {@code party_size} instead of leaving
+     * a stale price behind. The caller computes the new price (via
+     * {@code PricingService}) and passes it in.
+     *
+     * @param id         the reservation to update
+     * @param visitDate  the new visit date, ISO {@code yyyy-MM-dd}
+     * @param visitTime  the new visit time ({@code HH:mm:ss}), or {@code null} to clear it
+     * @param partySize  the new party size
+     * @param priceCents the recomputed price for the new party size, in cents
      * @return {@code true} if a row was updated, {@code false} otherwise
      */
-    public boolean updateDateAndParty(int id, String visitDate, String visitTime, int partySize) {
-        String sql = "UPDATE reservation SET visit_date = ?, visit_time = ?, party_size = ? WHERE id = ?";
+    public boolean updateReschedule(int id, String visitDate, String visitTime, int partySize, int priceCents) {
+        String sql = "UPDATE reservation SET visit_date = ?, visit_time = ?, party_size = ?, price_cents = ? WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -215,7 +223,8 @@ public class ReservationDAO {
                 stmt.setNull(2, java.sql.Types.TIME);
             }
             stmt.setInt(3, partySize);
-            stmt.setInt(4, id);
+            stmt.setInt(4, priceCents);
+            stmt.setInt(5, id);
             return stmt.executeUpdate() > 0;
 
         } catch (Exception e) {
