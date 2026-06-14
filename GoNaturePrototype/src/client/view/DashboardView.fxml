@@ -2,22 +2,35 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.VBox?>
 
+<!-- Role-aware overview: a greeting, a few real summary cards, an attention line
+     and a quick-link launchpad. It summarizes and routes — it is deliberately
+     NOT another reservation list (that is "My Reservations"). Every card is
+     populated by the controller from a live server response. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.DashboardController"
             fitToWidth="true" styleClass="scroll-pane">
 
-    <VBox styleClass="screen-padded">
+    <VBox styleClass="screen-padded" spacing="18">
 
-        <!-- Stat cards row — three equal cells, populated by the controller -->
+        <!-- Greeting — by name + role, from the live Session -->
+        <VBox spacing="2">
+            <Label fx:id="greetingLbl" styleClass="dash-greeting"/>
+            <Label fx:id="roleLbl"     styleClass="dash-greeting-sub"/>
+        </VBox>
+
+        <!-- Role-aware summary cards, populated asynchronously by the controller -->
         <HBox fx:id="statsRow" spacing="14"/>
 
-        <!-- Recent orders card -->
-        <VBox fx:id="recentCard" styleClass="card" VBox.vgrow="ALWAYS">
-            <Label text="RECENT ORDERS" styleClass="section-label"/>
-            <VBox fx:id="recentList" spacing="0"/>
+        <!-- Attention line — shown only when there's something to flag -->
+        <Label fx:id="alertLabel" styleClass="dash-alert" wrapText="true"
+               visible="false" managed="false"/>
+
+        <!-- Quick links — a role-appropriate launchpad (summarize &amp; route) -->
+        <VBox styleClass="card" spacing="12">
+            <Label text="QUICK LINKS" styleClass="section-label"/>
+            <HBox fx:id="quickLinks" spacing="12"/>
         </VBox>
     </VBox>
 </ScrollPane>

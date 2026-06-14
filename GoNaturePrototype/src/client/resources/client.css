@@ -308,6 +308,27 @@
 .stat-card-value { -fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: -g500; }
 .stat-card-sub   { -fx-font-size: 12; -fx-text-fill: -g400; }
 
+/* Dashboard greeting (by name) + attention line. The alert is amber when
+ * something needs attention and switches to a calm green via the .calm modifier. */
+.dash-greeting     { -fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.dash-greeting-sub { -fx-font-size: 13; -fx-text-fill: -g400; }
+.dash-alert {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-text-fill: -gold-fg;
+    -fx-background-color: -gold-bg;
+    -fx-border-color: derive(-gold-fg, 55%);
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 12 16 12 16;
+}
+.dash-alert.calm {
+    -fx-text-fill: -g600;
+    -fx-background-color: -g100;
+    -fx-border-color: -g200;
+}
+
 /* Dashboard recent order row */
 .recent-row         { -fx-padding: 10 4 10 4; -fx-cursor: hand; -fx-alignment: center-left; }
 .recent-row:hover   { -fx-background-color: -g50; -fx-background-radius: 8; }
