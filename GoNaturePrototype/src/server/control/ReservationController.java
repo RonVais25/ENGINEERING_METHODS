@@ -242,8 +242,8 @@ public class ReservationController implements DomainController {
                 if (!dao.updateStatus(id, ReservationStatus.CONFIRMED)) {
                     return new ServerResponse(false, "Confirm failed.");
                 }
-                // Re-fetch the persisted row (mirrors OrderController) so subscribers
-                // get exactly what was committed, then broadcast.
+                // Re-fetch the persisted row so subscribers get exactly what was
+                // committed, then broadcast.
                 ReservationDTO confirmed = dao.getById(id);
                 publishReservation(ServerEvent.updated("reservation", id, confirmed));
                 // Notify the visitor their booking is confirmed. Persisted + pushed

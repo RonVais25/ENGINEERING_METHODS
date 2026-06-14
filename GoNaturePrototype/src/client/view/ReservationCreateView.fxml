@@ -9,8 +9,8 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Root is a ScrollPane (same pattern as HistoryView) so the tall form
-     scrolls when it doesn't fit the content area instead of being clipped. -->
+<!-- Root is a ScrollPane so the tall form scrolls when it doesn't fit the
+     content area instead of being clipped. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.ReservationCreateController"
             fitToWidth="true" styleClass="scroll-pane">

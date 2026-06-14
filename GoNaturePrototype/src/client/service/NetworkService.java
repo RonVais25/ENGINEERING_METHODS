@@ -102,28 +102,6 @@ public class NetworkService {
         return future;
     }
 
-    public CompletableFuture<ServerResponse> getOrder(int orderNumber) {
-        ClientRequest req = new ClientRequest(RequestType.GET_ORDER);
-        req.put("orderNumber", orderNumber);
-        return send(req);
-    }
-
-    public CompletableFuture<ServerResponse> updateOrder(int orderNumber, String newDate, int newVisitors) {
-        ClientRequest req = new ClientRequest(RequestType.UPDATE_ORDER);
-        req.put("orderNumber", orderNumber);
-        req.put("newDate",     newDate);
-        req.put("newVisitors", newVisitors);
-        return send(req);
-    }
-
-    public CompletableFuture<ServerResponse> insertOrder(String orderDate, int numberOfVisitors, int subscriberId) {
-        ClientRequest req = new ClientRequest(RequestType.INSERT_ORDER);
-        req.put("orderDate",        orderDate);
-        req.put("numberOfVisitors", numberOfVisitors);
-        req.put("subscriberId",     subscriberId);
-        return send(req);
-    }
-
     /**
      * Creates a reservation. {@code visitTime} may be {@code null} (no preferred
      * time). The {@link VisitType} is sent as the enum itself — it lives in

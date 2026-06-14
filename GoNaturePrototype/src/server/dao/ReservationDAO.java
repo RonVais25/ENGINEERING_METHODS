@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * Data access object for the {@code reservation} table.
  *
- * <p>Follows the same conventions as {@link OrderDAO}: each method opens a
+ * <p>Follows the project's standard DAO conventions: each method opens a
  * short-lived {@link java.sql.Connection} from {@link server.db.DBConnection},
  * runs parameterized statements, and maps rows to {@link ReservationDTO}. SQL
  * exceptions are logged and surfaced as a {@code null}/{@code false}/{@code -1}

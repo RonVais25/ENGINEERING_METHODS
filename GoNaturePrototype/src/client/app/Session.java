@@ -17,14 +17,10 @@ import common.dto.VisitorDTO;
  */
 public class Session {
 
-    /** Legacy demo subscriber id used by the (pre-auth) Order screens. */
-    public static final int DEFAULT_SUBSCRIBER_ID = 42069;
-
     // Connection (set by the connection screen).
     private ClientConnection connection;
     private String host;
     private int port;
-    private final int subscriberId = DEFAULT_SUBSCRIBER_ID;
 
     // Identity (set by the user-login screen). At most one is non-null.
     private UserDTO    user;     // staff login
@@ -33,9 +29,6 @@ public class Session {
     public ClientConnection getConnection() { return connection; }
     public String getHost()                 { return host; }
     public int getPort()                    { return port; }
-
-    /** @return the legacy demo subscriber id used by the Order screens */
-    public int getSubscriberId()            { return subscriberId; }
 
     /** Promotes a freshly probed connection into the session (connection screen). */
     public void login(ClientConnection conn, String host, int port) {
