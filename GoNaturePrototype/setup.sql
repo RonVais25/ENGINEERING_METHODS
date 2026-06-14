@@ -6,7 +6,6 @@ USE gonature;
 -- re-running this script always starts from a clean slate.
 -- ---------------------------------------------------------------------------
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS `Order`;
 DROP TABLE IF EXISTS active_session;
 DROP TABLE IF EXISTS notification;
 DROP TABLE IF EXISTS parameter_change_request;
@@ -19,22 +18,6 @@ DROP TABLE IF EXISTS park;
 DROP TABLE IF EXISTS visitor;
 DROP TABLE IF EXISTS `user`;
 SET FOREIGN_KEY_CHECKS = 1;
-
--- ===========================================================================
--- EXISTING DEMO TABLE -- DO NOT MODIFY
--- ===========================================================================
-CREATE TABLE `Order` (
-    order_number          INT PRIMARY KEY,
-    order_date            DATE NOT NULL,
-    number_of_visitors    INT  NOT NULL,
-    confirmation_code     INT  NOT NULL,
-    subscriber_id         INT  NOT NULL,
-    date_of_placing_order DATE NOT NULL
-);
-
-INSERT INTO `Order` VALUES (1023, '2026-06-12', 4, 392,  4821, '2026-04-20');
-INSERT INTO `Order` VALUES (1055, '2026-06-15', 2, 1774, 4821, '2026-04-28');
-INSERT INTO `Order` VALUES (1087, '2026-06-28', 6, 2891, 4821, '2026-05-02');
 
 -- user: staff accounts. park_id FK is deferred (circular with park.manager_id)
 CREATE TABLE `user` (

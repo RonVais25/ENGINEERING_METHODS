@@ -11,7 +11,6 @@ import common.dto.SubscriptionKey;
 import server.control.AuthController;
 import server.control.DomainController;
 import server.control.NotificationController;
-import server.control.OrderController;
 import server.control.ParkController;
 import server.control.ReportController;
 import server.control.ReservationController;
@@ -34,7 +33,6 @@ public class RequestRouter {
         // Every domain controller registered here. Each declares the ops it
         // owns via handledTypes(); we fan those out into the dispatch map.
         List<DomainController> registered = List.of(
-                new OrderController(),
                 new AuthController(),
                 new ReservationController(),
                 new ParkController(),

@@ -14,7 +14,7 @@ import java.sql.SQLIntegrityConstraintViolationException;
  * Data access object for authentication: staff/visitor credential lookups and
  * the single-login lock backed by the {@code active_session} table.
  *
- * <p>Follows the same conventions as {@link OrderDAO}: each method opens a
+ * <p>Follows the project's standard DAO conventions: each method opens a
  * short-lived {@link java.sql.Connection} from {@link server.db.DBConnection},
  * runs parameterized statements, and maps rows to DTOs. SQL exceptions are
  * logged and surfaced as a {@code null}/{@code false} return rather than being

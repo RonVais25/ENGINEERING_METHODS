@@ -8,7 +8,7 @@
 <?import javafx.scene.layout.VBox?>
 
 <!-- My Reservations: look up a visitor's reservations and confirm/cancel them.
-     ScrollPane root (same pattern as HistoryView) so the table scrolls. -->
+     ScrollPane root so the table scrolls when it doesn't fit. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.ReservationListController"
             fitToWidth="true" styleClass="scroll-pane">

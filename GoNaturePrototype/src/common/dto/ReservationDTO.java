@@ -7,9 +7,9 @@ import java.io.Serializable;
  *
  * <p>Instances are created server-side by {@link server.dao.ReservationDAO} from a
  * database row and serialized across the socket to the client inside a
- * {@link common.dto.ServerResponse}. As with {@link OrderDTO}, date/time fields are
- * carried as strings (ISO {@code yyyy-MM-dd} for the visit date) to avoid coupling
- * the wire format to {@code java.sql} types.
+ * {@link common.dto.ServerResponse}. Date/time fields are carried as strings
+ * (ISO {@code yyyy-MM-dd} for the visit date) to avoid coupling the wire format
+ * to {@code java.sql} types.
  *
  * <p>Columns that are nullable in the database ({@code guide_id},
  * {@code confirmation_code}) are modelled with boxed {@link Long}/{@link Integer}
