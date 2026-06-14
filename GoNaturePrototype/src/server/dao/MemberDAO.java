@@ -112,6 +112,50 @@ public class MemberDAO {
     }
 
     /**
+     * Find-or-create a visitor by national ID, saving only their contact details.
+     *
+     * <p>Used by the booking path so a reservation's {@code visitor_id} foreign key
+     * always resolves and the visitor's email/phone are on file for notifications.
+     * Unlike {@link #upsertVisitor}, this never writes {@code full_name} or
+     * {@code is_subscriber}: a brand-new visitor is inserted with those left at
+     * their defaults ({@code full_name} NULL, {@code is_subscriber} FALSE), while an
+     * existing visitor has <em>only</em> their two contact columns updated. That
+     * matters when a registered subscriber re-books — their name and subscription
+     * flag (and thus the member discount) must survive the upsert untouched.
+     *
+     * @param id    the visitor's assigned national id (primary key)
+     * @param email the visitor's email address
+     * @param phone the visitor's phone number
+     */
+    public void upsertContact(long id, String email, String phone) {
+        // Update only the two contact columns on an existing row so a subscriber's
+        // full_name / is_subscriber are never clobbered; insert a contact-only row
+        // (name NULL, not a subscriber) when the visitor is brand new.
+        boolean exists = visitorExists(id);
+        String sql = exists
+                ? "UPDATE visitor SET email = ?, phone = ? WHERE id = ?"
+                : "INSERT INTO visitor (id, email, phone) VALUES (?, ?, ?)";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            if (exists) {
+                stmt.setString(1, email);
+                stmt.setString(2, phone);
+                stmt.setLong(3, id);
+            } else {
+                stmt.setLong(1, id);
+                stmt.setString(2, email);
+                stmt.setString(3, phone);
+            }
+            stmt.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Promotes a visitor to a subscriber: marks {@code visitor.is_subscriber}
      * {@code TRUE} and inserts the {@code subscriber} row with today's join date.
      *
