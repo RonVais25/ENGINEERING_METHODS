@@ -7,6 +7,7 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
 <!-- Root is a ScrollPane so the tall form scrolls when it doesn't fit the
@@ -42,9 +43,16 @@
             <DatePicker fx:id="datePicker" maxWidth="Infinity"
                         promptText="dd / mm / yyyy" styleClass="date-picker"/>
 
+            <!-- Clock-style time picker: an hour:minute Spinner pair. Optional —
+                 the "Set a time" toggle gates it; left unchecked it sends no
+                 preferred time (null visitTime), exactly like the old blank field. -->
             <Label text="Visit Time (optional)" styleClass="field-label"/>
-            <TextField fx:id="timeField" promptText="HH:mm — leave blank for no preference"
-                       styleClass="input-field"/>
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <CheckBox fx:id="timeEnabledCheck" text="Set a time" styleClass="check-field"/>
+                <Spinner fx:id="hourSpinner"   styleClass="spinner"/>
+                <Label text=":" styleClass="field-label"/>
+                <Spinner fx:id="minuteSpinner" styleClass="spinner"/>
+            </HBox>
 
             <Label text="Party Size" styleClass="field-label"/>
             <Spinner fx:id="partySpinner" editable="true" maxWidth="Infinity" styleClass="spinner"/>

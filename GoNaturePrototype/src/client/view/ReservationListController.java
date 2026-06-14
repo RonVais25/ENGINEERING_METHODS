@@ -8,6 +8,8 @@ import common.dto.ReservationUpdateResultDTO;
 import common.dto.ServerEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -214,10 +216,6 @@ public class ReservationListController extends BaseController {
         HBox actions = new HBox(8, confirmBtn, cancelBtn, editBtn);
         actions.setAlignment(Pos.CENTER_LEFT);
 
-        // TODO: make the row clickable to open a read-only detail view (GET_RESERVATION
-        // by id) showing the full reservation — time, price, confirmation code, guide,
-        // waitlist position. Right now a visitor can list rows but can't drill into one.
-        //
         // A flexible spacer takes the row's slack so the actions keep their natural
         // width on the right; when space is tight the spacer collapses first (and
         // then the info cells), never the buttons. The header row carries a matching
@@ -225,7 +223,89 @@ public class ReservationListController extends BaseController {
         HBox row = new HBox(idLbl, dateLbl, partyLbl, typeLbl, statusTag, flexSpacer(), actions);
         row.getStyleClass().add("history-row");
         if (withDivider) row.getStyleClass().add("with-divider");
+
+        // Clicking a row opens a read-only detail of the full reservation. The
+        // action buttons keep their own clicks (Confirm/Cancel/Edit) — a click that
+        // lands on (or inside) a Button is ignored here so it doesn't also open the
+        // detail. Everything shown comes from the DTO already in hand, so no extra
+        // server round-trip and no edit controls.
+        row.setCursor(Cursor.HAND);
+        row.setOnMouseClicked(e -> {
+            if (!clickHitButton(e.getTarget())) showDetail(r);
+        });
         return row;
+    }
+
+    /** True if the click landed on a Button (or a node inside one), so the row's
+     *  click handler should defer to that button's own action instead of opening
+     *  the detail view. */
+    private boolean clickHitButton(Object target) {
+        Node n = (target instanceof Node) ? (Node) target : null;
+        while (n != null) {
+            if (n instanceof Button) return true;
+            n = n.getParent();
+        }
+        return false;
+    }
+
+    /**
+     * Opens a small read-only detail of one reservation: every field the row hints
+     * at, spelled out — date, time, party, type, status, price, payment, guide and
+     * confirmation code. View-only by design: a single Close button and no editable
+     * controls (rescheduling stays on the Edit action). All values come from the
+     * {@link ReservationDTO} already loaded, so opening a detail never calls the
+     * server.
+     *
+     * @param r the reservation whose row was clicked
+     */
+    private void showDetail(ReservationDTO r) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Reservation #" + r.getId());
+        dialog.setHeaderText("Reservation details (read-only)");
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(16);
+        grid.setVgap(8);
+
+        int row = 0;
+        addDetail(grid, row++, "Reservation",       "#" + r.getId());
+        addDetail(grid, row++, "Park",              "#" + r.getParkId());
+        addDetail(grid, row++, "Visitor",           String.valueOf(r.getVisitorId()));
+        addDetail(grid, row++, "Visit date",        orDash(r.getVisitDate()));
+        addDetail(grid, row++, "Visit time",        orDash(r.getVisitTime()));
+        addDetail(grid, row++, "Party size",        String.valueOf(r.getPartySize()));
+        addDetail(grid, row++, "Visit type",        r.getVisitType().name());
+        addDetail(grid, row++, "Status",            r.getStatus().name());
+        addDetail(grid, row++, "Price",             String.format("₪%.2f", r.getPriceCents() / 100.0));
+        addDetail(grid, row++, "Payment",           r.isPaidInAdvance() ? "Paid in advance" : "Due on arrival");
+        addDetail(grid, row++, "Guide",             r.getGuideId() == null ? "—" : String.valueOf(r.getGuideId()));
+        addDetail(grid, row++, "Confirmation code", r.getConfirmationCode() == null
+                ? "—" : String.valueOf(r.getConfirmationCode()));
+        addDetail(grid, row++, "Created",           orDash(r.getCreatedAt()));
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Match the app theme: reuse the scene's stylesheet on the dialog pane.
+        Scene scene = tableBox.getScene();
+        if (scene != null) dialog.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
+
+        dialog.showAndWait();
+    }
+
+    /** Adds one read-only "key: value" line to the detail grid. */
+    private void addDetail(GridPane grid, int row, String key, String value) {
+        Label k = new Label(key);
+        k.getStyleClass().add("key");
+        Label v = new Label(value);
+        v.getStyleClass().add("val");
+        grid.add(k, 0, row);
+        grid.add(v, 1, row);
+    }
+
+    /** Renders a blank/null field as an em dash so empty values read cleanly. */
+    private String orDash(String value) {
+        return (value == null || value.isBlank()) ? "—" : value;
     }
 
     /** Cancel is legal from PENDING, CONFIRMED or WAITING (mirrors the server rule). */

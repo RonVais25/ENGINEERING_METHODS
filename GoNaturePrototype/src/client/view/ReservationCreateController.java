@@ -21,7 +21,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -57,7 +56,9 @@ public class ReservationCreateController extends BaseController {
     @FXML private TextField            emailField;
     @FXML private TextField            phoneField;
     @FXML private DatePicker           datePicker;
-    @FXML private TextField            timeField;
+    @FXML private CheckBox             timeEnabledCheck;
+    @FXML private Spinner<Integer>     hourSpinner;
+    @FXML private Spinner<Integer>     minuteSpinner;
     @FXML private Spinner<Integer>     partySpinner;
     @FXML private ComboBox<VisitType>  typeCombo;
     @FXML private Label                guideLabel;
@@ -83,6 +84,19 @@ public class ReservationCreateController extends BaseController {
 
         partySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 2));
+
+        // Clock-style optional visit time: hour 0–23 and minute in 5-minute steps,
+        // both wrapping. The pair is disabled until "Set a time" is ticked; left
+        // unticked the booking sends no preferred time (null visitTime), preserving
+        // the old blank-field semantics.
+        hourSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 9));
+        minuteSpinner.setValueFactory(
+                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 55, 0, 5));
+        hourSpinner.getValueFactory().setWrapAround(true);
+        minuteSpinner.getValueFactory().setWrapAround(true);
+        hourSpinner.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        minuteSpinner.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
 
         typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
         typeCombo.getSelectionModel().selectFirst();
@@ -178,19 +192,12 @@ public class ReservationCreateController extends BaseController {
             return;
         }
 
-        // TODO: replace the free-text time field with a clock-style time picker
-        // (e.g. hour/minute spinners) for choosing the optional visit hour.
-        // Optional time: blank → null; otherwise must parse to HH:mm[:ss].
+        // Optional visit time from the clock-style picker: only sent when "Set a
+        // time" is ticked, formatted HH:mm:ss to match the existing wire format;
+        // otherwise null (no preference), exactly like the old blank field.
         String visitTime = null;
-        String timeRaw = timeField.getText() == null ? "" : timeField.getText().trim();
-        if (!timeRaw.isEmpty()) {
-            try {
-                LocalTime t = LocalTime.parse(timeRaw);
-                visitTime = t.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            } catch (Exception ex) {
-                Widgets.showToast(resultLabel, false, "Enter time as HH:mm (e.g. 09:30) or leave blank");
-                return;
-            }
+        if (timeEnabledCheck.isSelected()) {
+            visitTime = String.format("%02d:%02d:00", hourSpinner.getValue(), minuteSpinner.getValue());
         }
 
         // Commit any text typed into the editable spinner before reading it.
