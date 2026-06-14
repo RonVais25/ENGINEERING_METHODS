@@ -13,7 +13,7 @@
      totals row and range-summary tiles. Tabular counterpart to the visits chart. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.CancellationsReportController"
-            fitToWidth="true" styleClass="scroll-pane">
+            fitToWidth="true" fitToHeight="true" styleClass="scroll-pane">
 
     <VBox styleClass="screen-padded" spacing="12">
 
