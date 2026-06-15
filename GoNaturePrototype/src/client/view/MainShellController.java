@@ -48,8 +48,8 @@ public class MainShellController {
     // Visibility predicates — drive gating off the live Session, never hardcoded.
     private static final Predicate<Session> EVERYONE     = s -> true;
     private static final Predicate<Session> VISITOR_ONLY = Session::isVisitor;
-    private static final Predicate<Session> MANAGER_ONLY =
-            s -> s.isStaff() && (s.getRole() == Role.PARK_MANAGER || s.getRole() == Role.DEPT_MANAGER);
+    //private static final Predicate<Session> MANAGER_ONLY =
+    //        s -> s.isStaff() && (s.getRole() == Role.PARK_MANAGER || s.getRole() == Role.DEPT_MANAGER);
     private static final Predicate<Session> SERVICE_REP_ONLY =
             s -> s.isStaff() && s.getRole() == Role.SERVICE_REP;
     private static final Predicate<Session> PARK_MANAGER_ONLY =
@@ -59,8 +59,9 @@ public class MainShellController {
     private static final Predicate<Session> PARK_EMPLOYEE_ONLY =
             s -> s.isStaff() && s.getRole() == Role.PARK_EMPLOYEE;
 
-    // TODO: anchor the sidebar (logo + user/login chrome) so it stays fixed while
-    // the screen content area scrolls independently.
+    // Sidebar (logo + nav + user/login chrome) is pinned by the BorderPane in
+    // MainShell.fxml (left), so it stays fixed while only the center content
+    // scrolls; these fields are injected into that fixed sidebar.
     @FXML private VBox      navBox;
     @FXML private StackPane contentArea;
     @FXML private Label     topbarTitle;

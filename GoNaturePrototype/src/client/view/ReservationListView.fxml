@@ -13,7 +13,9 @@
             fx:controller="client.view.ReservationListController"
             fitToWidth="true" styleClass="scroll-pane">
 
-    <VBox styleClass="screen-padded" spacing="12">
+    <!-- fx:id so the controller can swap this whole column out for the on-screen
+         edit flow (step indicator + wizard) and restore it afterwards. -->
+    <VBox fx:id="screenRoot" styleClass="screen-padded" spacing="12">
 
         <VBox styleClass="card" spacing="12">
             <Label text="MY RESERVATIONS" styleClass="section-label"/>

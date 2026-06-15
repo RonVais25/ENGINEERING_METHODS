@@ -2,7 +2,6 @@ package client.boundary;
 
 import client.app.Session;
 import client.service.NetworkService;
-import client.view.LoginController;
 import client.view.MainShellController;
 import client.view.UserLoginController;
 import javafx.application.Application;
@@ -10,7 +9,6 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
 import java.net.URL;
 
 /**
@@ -18,14 +16,15 @@ import java.net.URL;
  * NetworkService and drives the screen flow:
  *
  * <pre>
- *   connection screen (utility stage) → user-login screen → main shell
- *                                            ↑__________________|
- *                                                  (logout)
+ *   user-login screen (connect + sign in) → main shell
+ *                          ↑___________________|
+ *                                 (logout)
  * </pre>
  *
- * The connection screen is a small separate stage; the user-login screen and
- * the main shell both render on the primary stage, swapping scenes. All visual
- * styling lives in client.css.
+ * The combined user-login screen collects the server host/port and the
+ * credentials in one step (it PING-probes the server before authenticating);
+ * it and the main shell both render on the primary stage, swapping scenes. All
+ * visual styling lives in client.css.
  */
 public class GoNatureClientApp extends Application {
 
@@ -41,7 +40,7 @@ public class GoNatureClientApp extends Application {
     @Override
     public void start(Stage mainStage) throws Exception {
         this.mainStage = mainStage;
-        showConnect();
+        showUserLogin();
     }
 
     @Override
@@ -51,32 +50,12 @@ public class GoNatureClientApp extends Application {
 
     public static void main(String[] args) { launch(args); }
 
-    // TODO: streamline first-run UX — fold the connection step into the login
-    // screen (one combined "connect + sign in" form, or auto-connect to a
-    // configured/last-used server) so users don't face two separate windows.
-    /** Step 1: small connection window — probe host:port, then hand off to login. */
-    private void showConnect() throws Exception {
-        Stage connectStage = new Stage();
-        connectStage.setTitle("Connect to GoNature Server");
-        connectStage.initStyle(StageStyle.UTILITY);
-        connectStage.setResizable(false);
-
-        FXMLLoader loader = new FXMLLoader(resource("/client/view/LoginView.fxml"));
-        loader.setControllerFactory(type -> new LoginController(network, session, () -> {
-            connectStage.close();
-            showUserLogin();
-        }));
-        Parent root = loader.load();
-
-        Scene scene = new Scene(root, 320, 320);
-        scene.getStylesheets().add(stylesheet());
-        connectStage.setScene(scene);
-        connectStage.show();
-    }
-
     /**
-     * Step 2: identity login on the primary stage. Reused on logout, so it
-     * always starts from a clean {@link Session} identity (the caller clears it).
+     * Step 1: the combined connect + sign-in screen on the primary stage. It
+     * collects the server host/port together with the credentials and PING-probes
+     * the server before authenticating. Reused on logout, so it always starts from
+     * a clean {@link Session} identity (the caller clears it); the live connection
+     * is kept across logout, so a re-login reuses it instead of re-probing.
      */
     private void showUserLogin() {
         try {
@@ -84,7 +63,7 @@ public class GoNatureClientApp extends Application {
             loader.setControllerFactory(type -> new UserLoginController(network, session, this::showMain));
             Parent root = loader.load();
 
-            Scene scene = new Scene(root, 420, 560);
+            Scene scene = new Scene(root, 420, 600);
             scene.getStylesheets().add(stylesheet());
             mainStage.setResizable(false);
             mainStage.setScene(scene);
@@ -96,7 +75,7 @@ public class GoNatureClientApp extends Application {
         }
     }
 
-    /** Step 3: the role-aware main shell. Logout returns to the user-login screen. */
+    /** Step 2: the role-aware main shell. Logout returns to the user-login screen. */
     private void showMain() {
         try {
             FXMLLoader loader = new FXMLLoader(resource("/client/view/MainShell.fxml"));

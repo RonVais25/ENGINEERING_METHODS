@@ -8,10 +8,11 @@ import common.dto.ReservationUpdateResultDTO;
 import common.dto.ServerEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBar;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Dialog;
@@ -30,7 +31,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * "My Reservations" screen: look up a visitor's reservations by id and manage
@@ -48,6 +48,7 @@ import java.util.Optional;
  */
 public class ReservationListController extends BaseController {
 
+    @FXML private VBox      screenRoot;
     @FXML private TextField visitorField;
     @FXML private Button    loadBtn;
     @FXML private Label     resultLabel;
@@ -214,10 +215,6 @@ public class ReservationListController extends BaseController {
         HBox actions = new HBox(8, confirmBtn, cancelBtn, editBtn);
         actions.setAlignment(Pos.CENTER_LEFT);
 
-        // TODO: make the row clickable to open a read-only detail view (GET_RESERVATION
-        // by id) showing the full reservation — time, price, confirmation code, guide,
-        // waitlist position. Right now a visitor can list rows but can't drill into one.
-        //
         // A flexible spacer takes the row's slack so the actions keep their natural
         // width on the right; when space is tight the spacer collapses first (and
         // then the info cells), never the buttons. The header row carries a matching
@@ -225,7 +222,89 @@ public class ReservationListController extends BaseController {
         HBox row = new HBox(idLbl, dateLbl, partyLbl, typeLbl, statusTag, flexSpacer(), actions);
         row.getStyleClass().add("history-row");
         if (withDivider) row.getStyleClass().add("with-divider");
+
+        // Clicking a row opens a read-only detail of the full reservation. The
+        // action buttons keep their own clicks (Confirm/Cancel/Edit) — a click that
+        // lands on (or inside) a Button is ignored here so it doesn't also open the
+        // detail. Everything shown comes from the DTO already in hand, so no extra
+        // server round-trip and no edit controls.
+        row.setCursor(Cursor.HAND);
+        row.setOnMouseClicked(e -> {
+            if (!clickHitButton(e.getTarget())) showDetail(r);
+        });
         return row;
+    }
+
+    /** True if the click landed on a Button (or a node inside one), so the row's
+     *  click handler should defer to that button's own action instead of opening
+     *  the detail view. */
+    private boolean clickHitButton(Object target) {
+        Node n = (target instanceof Node) ? (Node) target : null;
+        while (n != null) {
+            if (n instanceof Button) return true;
+            n = n.getParent();
+        }
+        return false;
+    }
+
+    /**
+     * Opens a small read-only detail of one reservation: every field the row hints
+     * at, spelled out — date, time, party, type, status, price, payment, guide and
+     * confirmation code. View-only by design: a single Close button and no editable
+     * controls (rescheduling stays on the Edit action). All values come from the
+     * {@link ReservationDTO} already loaded, so opening a detail never calls the
+     * server.
+     *
+     * @param r the reservation whose row was clicked
+     */
+    private void showDetail(ReservationDTO r) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Reservation #" + r.getId());
+        dialog.setHeaderText("Reservation details (read-only)");
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(16);
+        grid.setVgap(8);
+
+        int row = 0;
+        addDetail(grid, row++, "Reservation",       "#" + r.getId());
+        addDetail(grid, row++, "Park",              "#" + r.getParkId());
+        addDetail(grid, row++, "Visitor",           String.valueOf(r.getVisitorId()));
+        addDetail(grid, row++, "Visit date",        orDash(r.getVisitDate()));
+        addDetail(grid, row++, "Visit time",        orDash(r.getVisitTime()));
+        addDetail(grid, row++, "Party size",        String.valueOf(r.getPartySize()));
+        addDetail(grid, row++, "Visit type",        r.getVisitType().name());
+        addDetail(grid, row++, "Status",            r.getStatus().name());
+        addDetail(grid, row++, "Price",             String.format("₪%.2f", r.getPriceCents() / 100.0));
+        addDetail(grid, row++, "Payment",           r.isPaidInAdvance() ? "Paid in advance" : "Due on arrival");
+        addDetail(grid, row++, "Guide",             r.getGuideId() == null ? "—" : String.valueOf(r.getGuideId()));
+        addDetail(grid, row++, "Confirmation code", r.getConfirmationCode() == null
+                ? "—" : String.valueOf(r.getConfirmationCode()));
+        addDetail(grid, row++, "Created",           orDash(r.getCreatedAt()));
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Match the app theme: reuse the scene's stylesheet on the dialog pane.
+        Scene scene = tableBox.getScene();
+        if (scene != null) dialog.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
+
+        dialog.showAndWait();
+    }
+
+    /** Adds one read-only "key: value" line to the detail grid. */
+    private void addDetail(GridPane grid, int row, String key, String value) {
+        Label k = new Label(key);
+        k.getStyleClass().add("key");
+        Label v = new Label(value);
+        v.getStyleClass().add("val");
+        grid.add(k, 0, row);
+        grid.add(v, 1, row);
+    }
+
+    /** Renders a blank/null field as an em dash so empty values read cleanly. */
+    private String orDash(String value) {
+        return (value == null || value.isBlank()) ? "—" : value;
     }
 
     /** Cancel is legal from PENDING, CONFIRMED or WAITING (mirrors the server rule). */
@@ -255,147 +334,335 @@ public class ReservationListController extends BaseController {
     }
 
     /**
-     * Opens the inline edit dialog for one reservation: a small modal prefilled
-     * with the current date (DatePicker), optional time and party size (Spinner).
-     * On Apply it sends {@code UPDATE_RESERVATION}; the server re-checks the status,
-     * group cap and capacity and recomputes the price. On failure the server's
-     * message is surfaced; on success any price change is settled (see
-     * {@link #showSettlement}) and the list is refreshed.
+     * Launches the on-screen edit flow for one reservation, replacing the old popup
+     * dialog: a three-step wizard — Edit Details → Review → Settlement — with a step
+     * indicator, rendered in place of the list. Behaviour is unchanged from the
+     * dialog: a date / optional-time / party edit, then {@code UPDATE_RESERVATION}
+     * (the server re-checks status, group cap and capacity and recomputes the
+     * price), the collect/refund/quote settlement, and a live list refresh — only
+     * the presentation is richer.
      *
-     * <p>This is user-initiated only. A pushed update never lands here — the push
-     * handler ({@link #onReservationEvent}) only re-reads the list — so applying an
-     * edit cannot loop back into another update.
+     * <p>User-initiated only. A pushed update never lands here — the push handler
+     * ({@link #onReservationEvent}) only re-reads the list — so applying an edit
+     * cannot loop back into another update.
      */
     private void edit(ReservationDTO r) {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Edit Reservation #" + r.getId());
-        dialog.setHeaderText("Reschedule date, time or party size.");
-
-        ButtonType applyType = new ButtonType("Apply", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(applyType, ButtonType.CANCEL);
-
-        DatePicker datePicker = new DatePicker();
-        try {
-            datePicker.setValue(LocalDate.parse(r.getVisitDate()));
-        } catch (Exception ignored) {
-            // leave the picker empty if the stored date can't be parsed
-        }
-
-        TextField timeField = new TextField(r.getVisitTime() == null ? "" : r.getVisitTime());
-        timeField.setPromptText("HH:mm (optional)");
-
-        Spinner<Integer> partySpinner = new Spinner<>();
-        partySpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(
-                1, 100, Math.max(1, r.getPartySize())));
-        partySpinner.setEditable(true);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.add(new Label("Date"),  0, 0);
-        grid.add(datePicker,         1, 0);
-        grid.add(new Label("Time"),  0, 1);
-        grid.add(timeField,          1, 1);
-        grid.add(new Label("Party"), 0, 2);
-        grid.add(partySpinner,       1, 2);
-        dialog.getDialogPane().setContent(grid);
-
-        // Match the app theme: reuse the scene's stylesheet on the dialog pane.
-        Scene scene = tableBox.getScene();
-        if (scene != null) dialog.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
-
-        Optional<ButtonType> choice = dialog.showAndWait();
-        if (choice.isEmpty() || choice.get() != applyType) {
-            return;
-        }
-
-        // Validate: a date is required.
-        if (datePicker.getValue() == null) {
-            Widgets.showToast(resultLabel, false, "Please choose a visit date");
-            return;
-        }
-        String visitDate = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);
-
-        // Optional time: blank → null; otherwise must parse to HH:mm[:ss].
-        String visitTime = null;
-        String timeRaw = timeField.getText() == null ? "" : timeField.getText().trim();
-        if (!timeRaw.isEmpty()) {
-            try {
-                visitTime = LocalTime.parse(timeRaw).format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            } catch (Exception ex) {
-                Widgets.showToast(resultLabel, false, "Enter time as HH:mm (e.g. 09:30) or leave blank");
-                return;
-            }
-        }
-
-        // Commit any text typed into the editable spinner before reading it.
-        try {
-            int typed = Integer.parseInt(partySpinner.getEditor().getText().trim());
-            if (typed >= 1 && typed <= 100) partySpinner.getValueFactory().setValue(typed);
-        } catch (NumberFormatException ignored) {
-            // keep the spinner's last committed value
-        }
-        int partySize = partySpinner.getValue();
-        if (partySize < 1) {
-            Widgets.showToast(resultLabel, false, "Party size must be at least 1");
-            return;
-        }
-
-        network.updateReservation(r.getId(), visitDate, visitTime, partySize).thenAccept(res -> {
-            if (!res.isSuccess()) {
-                // Capacity / status rejection — surface the server's message.
-                Widgets.showToast(resultLabel, false, res.getMessage());
-                return;
-            }
-            Widgets.showToast(resultLabel, true, res.getMessage());
-            // Settle any price change (collect / refund / quote at the gate). A
-            // zero delta (e.g. only the date changed) settles quietly.
-            if (res.getData() instanceof ReservationUpdateResultDTO result) {
-                showSettlement(result);
-            }
-            reload();
-        });
+        new EditFlow(r).start();
     }
 
     /**
-     * Shows the (simulated) settlement for a price change after an edit. No real
-     * gateway is involved — this only tells the operator what to do:
-     * <ul>
-     *   <li>prepaid, price up → collect the difference;</li>
-     *   <li>prepaid, price down → refund the difference;</li>
-     *   <li>pay-on-arrival → quote the new total due at the gate.</li>
-     * </ul>
-     * A zero delta (only the date/time changed) is settled quietly — no dialog.
+     * Builds the (simulated) settlement line for a price change after an edit. No
+     * real gateway is involved — it only tells the operator what to do: prepaid +
+     * price up → collect the difference; prepaid + price down → refund; pay-on-
+     * arrival → quote the new total due at the gate. Returns {@code null} when the
+     * price didn't change (e.g. only the date moved) so the caller can say so.
      *
      * @param result the server's update result carrying the old and new price
+     * @return the settlement message, or {@code null} for a zero delta
      */
-    private void showSettlement(ReservationUpdateResultDTO result) {
+    private String settlementMessage(ReservationUpdateResultDTO result) {
         int delta = result.getDeltaCents();
         if (delta == 0) {
-            return; // nothing to settle (e.g. only the date changed)
+            return null; // nothing to settle (e.g. only the date changed)
         }
-
         ReservationDTO r = result.getReservation();
         double newTotal = result.getNewPriceCents() / 100.0;
         double diff     = Math.abs(delta) / 100.0;
-
-        String msg;
         if (!r.isPaidInAdvance()) {
-            msg = String.format("New total ₪%.2f, due at the gate.", newTotal);
+            return String.format("New total ₪%.2f, due at the gate.", newTotal);
         } else if (delta > 0) {
-            msg = String.format("Price increased to ₪%.2f. Collect ₪%.2f difference. (Simulation)",
-                    newTotal, diff);
+            return String.format("Price increased to ₪%.2f. Collect ₪%.2f difference. (Simulation)", newTotal, diff);
         } else {
-            msg = String.format("Price decreased to ₪%.2f. Refund ₪%.2f. (Simulation)",
-                    newTotal, diff);
+            return String.format("Price decreased to ₪%.2f. Refund ₪%.2f. (Simulation)", newTotal, diff);
+        }
+    }
+
+    /**
+     * Builds the step indicator for the edit wizard, mirroring the old Update-Order
+     * wizard: a row of numbered circles + captions joined by connector lines, with
+     * completed steps ticked and the active one highlighted. Styled by the
+     * {@code step-*} classes in client.css.
+     *
+     * @param active the zero-based index of the current step
+     * @param labels the per-step captions (their count drives the number of dots)
+     */
+    private HBox buildStepIndicator(int active, String[] labels) {
+        HBox row = new HBox();
+        row.getStyleClass().add("step-row");
+        for (int i = 0; i < labels.length; i++) {
+            Label num = new Label(i < active ? "✓" : String.valueOf(i + 1));
+            num.getStyleClass().add("step-num");
+
+            VBox circle = new VBox(num);
+            circle.getStyleClass().add("step-circle");
+            circle.setAlignment(Pos.CENTER);
+            if (i < active)       circle.getStyleClass().add("done");
+            else if (i == active) circle.getStyleClass().add("active");
+
+            Label lbl = new Label(labels[i]);
+            lbl.getStyleClass().add("step-label");
+
+            HBox piece = new HBox(8, circle, lbl);
+            piece.getStyleClass().add("step-piece");
+            if (i == active) piece.getStyleClass().add("active");
+            piece.setAlignment(Pos.CENTER_LEFT);
+            row.getChildren().add(piece);
+
+            if (i < labels.length - 1) {
+                Region line = new Region();
+                line.getStyleClass().add("step-line");
+                if (i < active) line.getStyleClass().add("done");
+                row.getChildren().add(line);
+            }
+        }
+        return row;
+    }
+
+    /**
+     * The on-screen reschedule wizard for a single reservation. It takes over the
+     * screen (saving the list cards and restoring them on exit) and walks the user
+     * through Edit Details → Review → Settlement with a step indicator. On confirm
+     * it sends the same {@code UPDATE_RESERVATION} the old dialog did, shows the
+     * settlement inline, and live-refreshes the list. State for the in-progress edit
+     * lives on the instance so it survives the Back/Next step swaps.
+     */
+    private final class EditFlow {
+        private static final String[] STEPS = {"Edit Details", "Review", "Settlement"};
+
+        private final ReservationDTO original;
+        private final List<Node> savedView;   // the list cards, restored on exit
+        private final VBox card;              // the wizard card swapped in
+
+        // Step-1 inputs — created once so their values survive the step swaps.
+        private final DatePicker     datePicker    = new DatePicker();
+        private final CheckBox       timeCheck     = new CheckBox("Set a time");
+        private final Spinner<Integer> hourSpinner   = new Spinner<>();
+        private final Spinner<Integer> minuteSpinner = new Spinner<>();
+        private final Spinner<Integer> partySpinner  = new Spinner<>();
+        private final Label          errorLbl      = new Label();
+
+        // Captured on Review and sent on Confirm; result fills the Settlement step.
+        private String visitDate;
+        private String visitTime;
+        private int    partySize;
+        private ReservationUpdateResultDTO result;
+
+        EditFlow(ReservationDTO r) {
+            this.original   = r;
+            this.savedView  = new ArrayList<>(screenRoot.getChildren());
+            this.card       = new VBox();
+            card.getStyleClass().add("card");
+            card.setSpacing(16);
+            buildInputs();
         }
 
-        Alert info = new Alert(Alert.AlertType.INFORMATION, msg, ButtonType.OK);
-        info.setTitle("Settlement");
-        info.setHeaderText("Settlement (Simulation)");
-        Scene scene = tableBox.getScene();
-        if (scene != null) info.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
-        info.showAndWait();
+        /** Prefills + configures the step-1 controls from the reservation. */
+        private void buildInputs() {
+            datePicker.getStyleClass().add("date-picker");
+            datePicker.setMaxWidth(Double.MAX_VALUE);
+            try {
+                datePicker.setValue(LocalDate.parse(original.getVisitDate()));
+            } catch (Exception ignored) { /* leave empty if unparseable */ }
+
+            hourSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 9));
+            minuteSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 55, 0, 5));
+            hourSpinner.getValueFactory().setWrapAround(true);
+            minuteSpinner.getValueFactory().setWrapAround(true);
+            hourSpinner.disableProperty().bind(timeCheck.selectedProperty().not());
+            minuteSpinner.disableProperty().bind(timeCheck.selectedProperty().not());
+            hourSpinner.getStyleClass().add("spinner");
+            minuteSpinner.getStyleClass().add("spinner");
+            // Prefill from the stored time if any; otherwise leave "no preference".
+            if (original.getVisitTime() != null && !original.getVisitTime().isBlank()) {
+                try {
+                    LocalTime t = LocalTime.parse(original.getVisitTime());
+                    hourSpinner.getValueFactory().setValue(t.getHour());
+                    minuteSpinner.getValueFactory().setValue(t.getMinute() - (t.getMinute() % 5));
+                    timeCheck.setSelected(true);
+                } catch (Exception ignored) { /* keep unchecked on parse trouble */ }
+            }
+
+            partySpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(
+                    1, 100, Math.max(1, original.getPartySize())));
+            partySpinner.setEditable(true);
+            partySpinner.getStyleClass().add("spinner");
+            partySpinner.setMaxWidth(Double.MAX_VALUE);
+
+            errorLbl.getStyleClass().add("login-error");
+            errorLbl.setWrapText(true);
+        }
+
+        /** Swaps the wizard in for the list and shows the first step. */
+        void start() {
+            screenRoot.getChildren().setAll(card);
+            showStep(0);
+        }
+
+        private void showStep(int idx) {
+            hideError();
+            Label title = new Label("EDIT RESERVATION #" + original.getId());
+            title.getStyleClass().add("section-label");
+            card.getChildren().setAll(
+                    title, buildStepIndicator(idx, STEPS), bodyFor(idx), errorLbl, footerFor(idx));
+        }
+
+        private Node bodyFor(int idx) {
+            switch (idx) {
+                case 1:  return reviewBody();
+                case 2:  return settlementBody();
+                default: return detailsBody();
+            }
+        }
+
+        private Node detailsBody() {
+            HBox timeRow = new HBox(10, timeCheck, hourSpinner, new Label(":"), minuteSpinner);
+            timeRow.setAlignment(Pos.CENTER_LEFT);
+            return new VBox(8,
+                    fieldLabel("Visit Date"),            datePicker,
+                    fieldLabel("Visit Time (optional)"), timeRow,
+                    fieldLabel("Party Size"),            partySpinner);
+        }
+
+        private Node reviewBody() {
+            GridPane g = new GridPane();
+            g.setHgap(14);
+            g.setVgap(8);
+            reviewRow(g, 0, "Date",  original.getVisitDate(),                 visitDate);
+            reviewRow(g, 1, "Time",  orDash(original.getVisitTime()),         visitTime == null ? "—" : visitTime);
+            reviewRow(g, 2, "Party", String.valueOf(original.getPartySize()), String.valueOf(partySize));
+            return new VBox(10, hintLabel("Review your changes, then confirm to apply them."), g);
+        }
+
+        private void reviewRow(GridPane g, int row, String key, String oldVal, String newVal) {
+            Label k = new Label(key);     k.getStyleClass().add("key");
+            Label o = new Label(oldVal);  o.getStyleClass().add("val");
+            Label arrow = new Label("→");
+            Label n = new Label(newVal);  n.getStyleClass().add("val");
+            g.add(k, 0, row);
+            g.add(o, 1, row);
+            g.add(arrow, 2, row);
+            g.add(n, 3, row);
+        }
+
+        private Node settlementBody() {
+            Label ok = new Label("✓ Reservation #" + original.getId() + " updated.");
+            ok.getStyleClass().add("payment-title");
+            String settle = (result == null) ? null : settlementMessage(result);
+            Label detail = new Label(settle == null ? "No price change." : settle);
+            detail.getStyleClass().add("hint-text");
+            detail.setWrapText(true);
+            return new VBox(10, ok, detail);
+        }
+
+        private Node footerFor(int idx) {
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+            HBox footer = new HBox(10);
+            footer.setAlignment(Pos.CENTER_LEFT);
+            if (idx == 0) {
+                Button cancel = secondary("Cancel");
+                cancel.setOnAction(e -> finish());
+                Button next = primary("Review →");
+                next.setOnAction(e -> { if (validateAndCapture()) showStep(1); });
+                footer.getChildren().addAll(cancel, spacer, next);
+            } else if (idx == 1) {
+                Button back = secondary("← Back");
+                back.setOnAction(e -> showStep(0));
+                Button confirm = primary("Confirm changes");
+                confirm.setOnAction(e -> submit());
+                footer.getChildren().addAll(back, spacer, confirm);
+            } else {
+                Button done = primary("Done");
+                done.setOnAction(e -> finish());
+                footer.getChildren().addAll(spacer, done);
+            }
+            return footer;
+        }
+
+        /** Validates step 1 and captures the edited values; same rules as the old
+         *  dialog (date required, party ≥ 1, time optional → null). */
+        private boolean validateAndCapture() {
+            if (datePicker.getValue() == null) {
+                showError("Please choose a visit date");
+                return false;
+            }
+            visitDate = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);
+
+            // Commit any text typed into the editable party spinner before reading it.
+            try {
+                int typed = Integer.parseInt(partySpinner.getEditor().getText().trim());
+                if (typed >= 1 && typed <= 100) partySpinner.getValueFactory().setValue(typed);
+            } catch (NumberFormatException ignored) { /* keep last committed value */ }
+            partySize = partySpinner.getValue();
+            if (partySize < 1) {
+                showError("Party size must be at least 1");
+                return false;
+            }
+
+            // Optional time from the clock-style picker, formatted to match the wire
+            // format; unticked → null (no preference), exactly like the old field.
+            visitTime = timeCheck.isSelected()
+                    ? String.format("%02d:%02d:00", hourSpinner.getValue(), minuteSpinner.getValue())
+                    : null;
+            return true;
+        }
+
+        /** Sends UPDATE_RESERVATION; on success advances to Settlement and refreshes
+         *  the list, on failure surfaces the server message and stays on Review. */
+        private void submit() {
+            network.updateReservation(original.getId(), visitDate, visitTime, partySize).thenAccept(res -> {
+                if (!res.isSuccess()) {
+                    showError(res.getMessage()); // capacity / status rejection — stay on Review
+                    return;
+                }
+                if (res.getData() instanceof ReservationUpdateResultDTO r) {
+                    result = r;
+                }
+                showStep(2);
+                reload(); // live refresh of the (hidden) list; shown again on finish
+            });
+        }
+
+        /** Restores the list view, replacing the wizard. */
+        private void finish() {
+            screenRoot.getChildren().setAll(savedView);
+        }
+
+        private Label fieldLabel(String text) {
+            Label l = new Label(text);
+            l.getStyleClass().add("field-label");
+            return l;
+        }
+
+        private Label hintLabel(String text) {
+            Label l = new Label(text);
+            l.getStyleClass().add("hint-text");
+            l.setWrapText(true);
+            return l;
+        }
+
+        private Button primary(String text) {
+            Button b = new Button(text);
+            b.getStyleClass().add("btn-primary");
+            return b;
+        }
+
+        private Button secondary(String text) {
+            Button b = new Button(text);
+            b.getStyleClass().add("btn-secondary");
+            return b;
+        }
+
+        private void showError(String msg) {
+            errorLbl.setText(msg);
+            errorLbl.setVisible(true);
+            errorLbl.setManaged(true);
+        }
+
+        private void hideError() {
+            errorLbl.setVisible(false);
+            errorLbl.setManaged(false);
+        }
     }
 
     private void reload() {
