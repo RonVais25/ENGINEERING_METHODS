@@ -2,15 +2,18 @@ package client.view;
 
 import client.app.Session;
 import client.service.NetworkService;
+import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
 import common.dto.ReservationUpdateResultDTO;
 import common.dto.ServerEvent;
+import common.dto.ServerResponse;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ButtonType;
@@ -30,7 +33,10 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * "My Reservations" screen: look up a visitor's reservations by id and manage
@@ -59,6 +65,11 @@ public class ReservationListController extends BaseController {
     // the same list after a successful confirm/cancel. -1 means "nothing loaded".
     private long currentVisitorId = -1;
 
+    // Park id -> name, fetched once on init via LIST_PARKS so rows and the detail
+    // show the park's name rather than a bare numeric id; empty until it resolves
+    // (rows then fall back to "Park #<id>").
+    private Map<Integer, String> parkNames = new HashMap<>();
+
     private final Session session;
 
     public ReservationListController(NetworkService network, Session session) {
@@ -70,14 +81,40 @@ public class ReservationListController extends BaseController {
     private void initialize() {
         visitorField.setOnAction(e -> onLoad());
 
-        // A logged-in visitor only sees their own reservations: prefill + lock
-        // the id field and load it straight away. Staff leave it editable so they
-        // can look up any visitor's list.
+        // A logged-in visitor only sees their own reservations: prefill + lock the
+        // id field. Staff leave it editable so they can look up any visitor's list.
         if (session.isVisitor()) {
             visitorField.setText(String.valueOf(session.getActorId()));
             visitorField.setEditable(false);
-            loadFor(session.getActorId());
         }
+
+        // Resolve park id -> name once (the same LIST_PARKS lookup the Dashboard
+        // uses) so rows and the detail show the park's name instead of a bare id.
+        // Best-effort: on failure parkNames stays empty and the UI falls back to
+        // "Park #<id>". The visitor auto-load runs after the names resolve so the
+        // first paint already carries them — the future always completes (even when
+        // disconnected), so the auto-load is never skipped.
+        network.listParks().thenAccept(res -> {
+            parkNames = parkNamesFrom(res);
+            if (session.isVisitor()) loadFor(session.getActorId());
+        });
+    }
+
+    /** Builds the park id -> name lookup from a LIST_PARKS response (defensive,
+     *  never throws); mirrors the Dashboard's {@code parkNamesFrom}. */
+    private Map<Integer, String> parkNamesFrom(ServerResponse res) {
+        Map<Integer, String> names = new HashMap<>();
+        if (res.isSuccess() && res.getData() instanceof List<?> raw) {
+            for (Object o : raw) {
+                if (o instanceof ParkDTO p) names.put(p.getId(), p.getName());
+            }
+        }
+        return names;
+    }
+
+    /** The park's name, or a "Park #<id>" fallback when the names aren't loaded. */
+    private String parkName(int parkId) {
+        return parkNames.getOrDefault(parkId, "Park #" + parkId);
     }
 
     @FXML
@@ -159,12 +196,19 @@ public class ReservationListController extends BaseController {
     private HBox headerRow() {
         HBox row = new HBox();
         row.getStyleClass().add("history-header-row");
+        // Widths are kept tight (they sum to roughly the original 5-column budget)
+        // so the data row — which also carries three pinned action buttons — fits
+        // the default window width without squeezing the cells into ellipsized
+        // stubs. The header has no buttons, so if the data row squeezed, the two
+        // would drift out of alignment.
         row.getChildren().addAll(
-                headerCell("ID",      60),
-                headerCell("DATE",   110),
-                headerCell("PARTY",   70),
-                headerCell("TYPE",   110),
-                headerCell("STATUS", 110),
+                headerCell("ID",     30),
+                headerCell("PARK",   92),
+                headerCell("DATE",   78),
+                headerCell("PARTY",  38),
+                headerCell("TYPE",   76),
+                headerCell("CODE",   42),
+                headerCell("STATUS", 94),
                 flexSpacer(),
                 headerCell("ACTIONS", 0));
         return row;
@@ -179,14 +223,17 @@ public class ReservationListController extends BaseController {
     }
 
     private HBox dataRow(ReservationDTO r, boolean withDivider) {
-        Label idLbl    = cell("#" + r.getId(),                "num", 60);
-        Label dateLbl  = cell(r.getVisitDate(),               null, 110);
-        Label partyLbl = cell(String.valueOf(r.getPartySize()), null, 70);
-        Label typeLbl  = cell(r.getVisitType().name(),        null, 110);
+        Label idLbl    = cell("#" + r.getId(),                  "num", 30);
+        Label parkLbl  = cell(parkName(r.getParkId()),          null, 92);
+        Label dateLbl  = cell(r.getVisitDate(),                 null, 78);
+        Label partyLbl = cell(String.valueOf(r.getPartySize()), null, 38);
+        Label typeLbl  = cell(r.getVisitType().name(),          null, 76);
+        Label codeLbl  = cell(r.getConfirmationCode() == null
+                ? "—" : String.valueOf(r.getConfirmationCode()), null, 42);
 
         Label statusTag = new Label(r.getStatus().name());
         statusTag.getStyleClass().addAll("status-tag", r.getStatus().name().toLowerCase());
-        statusTag.setPrefWidth(110);
+        statusTag.setPrefWidth(94);
 
         Button confirmBtn = new Button("Confirm");
         confirmBtn.getStyleClass().add("btn-secondary");
@@ -219,7 +266,7 @@ public class ReservationListController extends BaseController {
         // width on the right; when space is tight the spacer collapses first (and
         // then the info cells), never the buttons. The header row carries a matching
         // spacer so the ACTIONS column header stays aligned over the buttons.
-        HBox row = new HBox(idLbl, dateLbl, partyLbl, typeLbl, statusTag, flexSpacer(), actions);
+        HBox row = new HBox(idLbl, parkLbl, dateLbl, partyLbl, typeLbl, codeLbl, statusTag, flexSpacer(), actions);
         row.getStyleClass().add("history-row");
         if (withDivider) row.getStyleClass().add("with-divider");
 
@@ -269,7 +316,7 @@ public class ReservationListController extends BaseController {
 
         int row = 0;
         addDetail(grid, row++, "Reservation",       "#" + r.getId());
-        addDetail(grid, row++, "Park",              "#" + r.getParkId());
+        addDetail(grid, row++, "Park",              parkName(r.getParkId()));
         addDetail(grid, row++, "Visitor",           String.valueOf(r.getVisitorId()));
         addDetail(grid, row++, "Visit date",        orDash(r.getVisitDate()));
         addDetail(grid, row++, "Visit time",        orDash(r.getVisitTime()));
@@ -320,6 +367,10 @@ public class ReservationListController extends BaseController {
     }
 
     private void confirm(int reservationId) {
+        if (!confirmAction("Confirm reservation #" + reservationId + "?",
+                "Are you sure you want to confirm this reservation?")) {
+            return;
+        }
         network.confirmReservation(reservationId).thenAccept(res -> {
             Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
             if (res.isSuccess()) reload();
@@ -327,10 +378,35 @@ public class ReservationListController extends BaseController {
     }
 
     private void cancel(int reservationId) {
+        if (!confirmAction("Cancel reservation #" + reservationId + "?",
+                "Are you sure you want to cancel this reservation? This cannot be undone.")) {
+            return;
+        }
         network.cancelReservation(reservationId).thenAccept(res -> {
             Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
             if (res.isSuccess()) reload();
         });
+    }
+
+    /**
+     * Shows a blocking Yes/No confirmation and returns {@code true} only if the
+     * user clicked Yes. Both Confirm and Cancel are guarded by this so a stray
+     * click never fires the op without the user agreeing first. Yes/No (rather than
+     * OK/Cancel) avoids a confusing "Cancel" button on the cancel-reservation prompt.
+     *
+     * @param header  the bold dialog header (the question)
+     * @param content the explanatory body line
+     * @return whether the user confirmed
+     */
+    private boolean confirmAction(String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, content, ButtonType.YES, ButtonType.NO);
+        alert.setTitle("Please confirm");
+        alert.setHeaderText(header);
+        // Match the app theme on the dialog, same as the read-only detail dialog.
+        Scene scene = tableBox.getScene();
+        if (scene != null) alert.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.YES;
     }
 
     /**

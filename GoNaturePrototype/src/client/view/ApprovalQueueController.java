@@ -8,6 +8,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
@@ -111,6 +112,12 @@ public class ApprovalQueueController extends BaseController {
         Button rejectBtn = new Button("Reject");
         rejectBtn.getStyleClass().add("btn-secondary");
         rejectBtn.setOnAction(e -> decide(r.getId(), false));
+
+        // Pin each button to its preferred (label) width so a tight row never
+        // shrinks "Approve" / "Reject" into ellipsized stubs.
+        for (Button b : new Button[] { approveBtn, rejectBtn }) {
+            b.setMinWidth(Region.USE_PREF_SIZE);
+        }
 
         HBox actions = new HBox(8, approveBtn, rejectBtn);
         actions.setAlignment(Pos.CENTER_LEFT);
