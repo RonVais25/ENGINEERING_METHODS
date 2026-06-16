@@ -7,6 +7,8 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
@@ -18,53 +20,85 @@
 
     <VBox styleClass="screen-padded" alignment="TOP_CENTER">
 
-        <VBox styleClass="card" maxWidth="520" spacing="16">
+        <VBox styleClass="card" maxWidth="560" spacing="14">
 
             <Label text="NEW RESERVATION" styleClass="section-label"/>
 
-            <Label text="Park" styleClass="field-label"/>
-            <ComboBox fx:id="parkCombo" maxWidth="Infinity" styleClass="input-field"/>
-
-            <Label text="Visitor ID" styleClass="field-label"/>
-            <TextField fx:id="visitorField" promptText="National ID (e.g. 200000001)"
-                       styleClass="input-field"/>
-
-            <!-- Contact: email and phone are both required (email is the booking's
-                 notification target). Both prefill from a logged-in visitor's record. -->
-            <Label text="Email" styleClass="field-label"/>
-            <TextField fx:id="emailField" promptText="name@example.com (required)"
-                       styleClass="input-field"/>
-
-            <Label text="Phone" styleClass="field-label"/>
-            <TextField fx:id="phoneField" promptText="e.g. 050-1234567 (at least 10 digits)"
-                       styleClass="input-field"/>
-
-            <Label text="Visit Date" styleClass="field-label"/>
-            <DatePicker fx:id="datePicker" maxWidth="Infinity"
-                        promptText="dd / mm / yyyy" styleClass="date-picker"/>
-
-            <!-- Clock-style time picker: an hour:minute Spinner pair. Optional —
-                 the "Set a time" toggle gates it; left unchecked it sends no
-                 preferred time (null visitTime), exactly like the old blank field. -->
-            <Label text="Visit Time (optional)" styleClass="field-label"/>
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <CheckBox fx:id="timeEnabledCheck" text="Set a time" styleClass="check-field"/>
-                <Spinner fx:id="hourSpinner"   styleClass="spinner"/>
-                <Label text=":" styleClass="field-label"/>
-                <Spinner fx:id="minuteSpinner" styleClass="spinner"/>
+            <!-- Row 1: Park + Visitor ID (50 / 50) -->
+            <HBox spacing="16" alignment="TOP_LEFT">
+                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
+                    <Label text="Park" styleClass="field-label"/>
+                    <ComboBox fx:id="parkCombo" maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
+                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
+                    <Label text="Visitor ID" styleClass="field-label"/>
+                    <TextField fx:id="visitorField" promptText="National ID (e.g. 200000001)"
+                               maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
             </HBox>
 
-            <Label text="Party Size" styleClass="field-label"/>
-            <Spinner fx:id="partySpinner" editable="true" maxWidth="Infinity" styleClass="spinner"/>
+            <!-- Row 2: Email + Phone (50 / 50). Both required (email is the booking's
+                 notification target); both prefill from a logged-in visitor's record. -->
+            <HBox spacing="16" alignment="TOP_LEFT">
+                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
+                    <Label text="Email" styleClass="field-label"/>
+                    <TextField fx:id="emailField" promptText="name@example.com (required)"
+                               maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
+                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
+                    <Label text="Phone" styleClass="field-label"/>
+                    <TextField fx:id="phoneField" promptText="e.g. 050-1234567 (at least 10 digits)"
+                               maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
+            </HBox>
 
-            <Label text="Visit Type" styleClass="field-label"/>
-            <ComboBox fx:id="typeCombo" maxWidth="Infinity" styleClass="input-field"/>
+            <!-- Row 3: Visit Date + Visit Time (50 / 50). The time control is a compact
+                 12-hour picker (hour : minute + AM/PM) gated by "set time" — left
+                 unticked it sends no preferred time (null visitTime), exactly like the
+                 old blank field. The controller converts the 12-hour selection to the
+                 24-hour HH:mm:ss wire format the server/DB expect. -->
+            <HBox spacing="16" alignment="TOP_LEFT">
+                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
+                    <Label text="Visit Date" styleClass="field-label"/>
+                    <DatePicker fx:id="datePicker" maxWidth="Infinity"
+                                promptText="dd / mm / yyyy" styleClass="date-picker"/>
+                </VBox>
+                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <Label text="Visit Time" styleClass="field-label"/>
+                        <CheckBox fx:id="timeEnabledCheck" text="set time" styleClass="check-field"/>
+                    </HBox>
+                    <HBox spacing="5" alignment="CENTER_LEFT" styleClass="time-row">
+                        <Spinner fx:id="hourSpinner"   prefWidth="58" styleClass="spinner time-spinner"/>
+                        <Label text=":" styleClass="time-colon"/>
+                        <Spinner fx:id="minuteSpinner" prefWidth="58" styleClass="spinner time-spinner"/>
+                        <Spinner fx:id="ampmSpinner"   prefWidth="66" styleClass="spinner time-spinner"/>
+                    </HBox>
+                </VBox>
+            </HBox>
 
-            <!-- Guide ID: only shown (and required) for GROUP visits. -->
-            <Label fx:id="guideLabel" text="Guide ID (groups, max 15)" styleClass="field-label"
-                   visible="false" managed="false"/>
-            <TextField fx:id="guideField" promptText="Registered guide's national ID (e.g. 200000003)"
-                       styleClass="input-field" visible="false" managed="false"/>
+            <!-- Row 4: Visit Type + Party Size (70 / 30) -->
+            <GridPane hgap="16">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="70"/>
+                    <ColumnConstraints percentWidth="30"/>
+                </columnConstraints>
+                <VBox spacing="6" GridPane.columnIndex="0">
+                    <Label text="Visit Type" styleClass="field-label"/>
+                    <ComboBox fx:id="typeCombo" maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
+                <VBox spacing="6" GridPane.columnIndex="1">
+                    <Label text="Party Size" styleClass="field-label"/>
+                    <Spinner fx:id="partySpinner" editable="true" maxWidth="Infinity" styleClass="spinner"/>
+                </VBox>
+            </GridPane>
+
+            <!-- Conditional guide field: only shown (and required) for GROUP visits. -->
+            <VBox fx:id="guideRow" spacing="6" visible="false" managed="false">
+                <Label text="Guide ID (groups, max 15)" styleClass="field-label"/>
+                <TextField fx:id="guideField" promptText="Registered guide's national ID (e.g. 200000003)"
+                           maxWidth="Infinity" styleClass="input-field"/>
+            </VBox>
 
             <!-- Paying up front deepens the group discount; the server records it
                  on the reservation (paid_in_advance) and reflects it in the price. -->

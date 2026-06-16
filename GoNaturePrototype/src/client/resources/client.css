@@ -190,6 +190,22 @@
 .spinner .increment-arrow,
 .spinner .decrement-arrow { -fx-background-color: -g500; }
 
+/* Compact time picker (Book Visit, Row 3): three small adjacent spinners
+   (hour : minute + AM/PM). Tighter than the default .spinner so the trio fits
+   neatly in the right half of the row. */
+.time-spinner { -fx-max-width: -1; }
+.time-spinner .text-field {
+    -fx-font-size: 13;
+    -fx-padding: 9 4 9 8;
+    -fx-alignment: center-left;
+}
+.time-colon {
+    -fx-font-size: 16;
+    -fx-font-weight: bold;
+    -fx-text-fill: -g500;
+    -fx-padding: 0 1 0 1;
+}
+
 /* ---------- Buttons -------------------------------------------------------- */
 .btn-primary {
     -fx-font-size: 14;
