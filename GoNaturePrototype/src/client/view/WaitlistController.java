@@ -12,7 +12,10 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -27,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * "My Waiting List" screen (visitor-facing): the logged-in visitor's WAITING
@@ -228,10 +232,36 @@ public class WaitlistController extends BaseController {
     }
 
     private void leave(int reservationId) {
+        if (!confirmAction("Leave the waiting list for reservation #" + reservationId + "?",
+                "Are you sure you want to leave this waiting list? You'll lose your place in the queue.")) {
+            return;
+        }
         network.leaveWaitlist(reservationId).thenAccept(res -> {
             Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
             if (res.isSuccess()) load();
         });
+    }
+
+    /**
+     * Shows a blocking Yes/No confirmation and returns {@code true} only if the
+     * user clicked Yes. Both the Leave and the offer-row Decline buttons fire
+     * {@code LEAVE_WAITLIST} through {@link #leave}, so guarding it here means a
+     * stray click never drops the visitor from the queue without their agreeing
+     * first. Mirrors {@code ReservationListController}'s Confirm/Cancel prompt.
+     *
+     * @param header  the bold dialog header (the question)
+     * @param content the explanatory body line
+     * @return whether the user confirmed
+     */
+    private boolean confirmAction(String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, content, ButtonType.YES, ButtonType.NO);
+        alert.setTitle("Please confirm");
+        alert.setHeaderText(header);
+        // Match the app theme on the dialog, same as the other confirm prompts.
+        Scene scene = tableBox.getScene();
+        if (scene != null) alert.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.YES;
     }
 
     /* ---------- row building ----------------------------------------------- */

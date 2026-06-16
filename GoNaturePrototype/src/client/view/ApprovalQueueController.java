@@ -103,7 +103,12 @@ public class ApprovalQueueController extends BaseController {
         Label parkLbl   = cell(r.getParkName(),                          140);
         Label fieldLbl  = cell(labelFor(r.getField()),                   180);
         Label changeLbl = cell(r.getOldValue() + " → " + r.getNewValue(), 120);
-        Label byLbl     = cell("User #" + r.getRequestedBy(),            120);
+        // Show the requester's full name; fall back to the id only if it's missing
+        // (full_name is a nullable column), mirroring the "Park #id" park fallback.
+        String requester = (r.getRequesterName() == null || r.getRequesterName().isBlank())
+                ? "User #" + r.getRequestedBy()
+                : r.getRequesterName();
+        Label byLbl     = cell(requester,                                120);
 
         Button approveBtn = new Button("Approve");
         approveBtn.getStyleClass().add("btn-secondary");
