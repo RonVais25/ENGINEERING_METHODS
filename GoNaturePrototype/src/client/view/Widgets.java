@@ -51,7 +51,11 @@ public final class Widgets {
     }
 
     /* ---------- Activity log --------------------------------------------- */
-
+    /**
+     * Creates an empty activity log container.
+     *
+     * @return activity log VBox
+     */
     public static VBox buildLogBox() {
         VBox box = new VBox(4);
         Label empty = new Label("No activity yet…");
@@ -59,14 +63,27 @@ public final class Widgets {
         box.getChildren().add(empty);
         return box;
     }
-
+    
+    /**
+     * Wraps the activity log in a scrollable pane.
+     *
+     * @param logBox activity log container
+     * @return scroll pane containing the log
+     */
     public static ScrollPane wrapLog(VBox logBox) {
         ScrollPane scroll = new ScrollPane(logBox);
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("log-scroll");
         return scroll;
     }
-
+    
+    /**
+     * Adds a new entry to the activity log.
+     *
+     * @param logBox activity log container
+     * @param ok indicates whether the action succeeded
+     * @param msg log message
+     */
     public static void addLog(VBox logBox, boolean ok, String msg) {
         if (!logBox.getChildren().isEmpty()
             && logBox.getChildren().get(0) instanceof Label l

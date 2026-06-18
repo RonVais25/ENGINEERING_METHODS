@@ -1,5 +1,8 @@
 package common.dto;
-
+/**
+ * Defines all request types that can be sent between
+ * client and server.
+ */
 public enum RequestType {
     // infrastructure
     PING,

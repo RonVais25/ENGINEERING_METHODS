@@ -33,12 +33,25 @@ import static common.dto.RequestType.LIST_NOTIFICATIONS;
 public class NotificationController implements DomainController {
 
     private final NotificationDAO dao = new NotificationDAO();
-
+    /**
+     * Returns the notification-related request types
+     * handled by this controller.
+     *
+     * @return supported notification request types
+     */
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(LIST_NOTIFICATIONS, ACK_NOTIFICATION);
     }
-
+    
+    /**
+     * Processes notification requests for the
+     * currently logged-in actor.
+     *
+     * @param request client request to process
+     * @param session current client session
+     * @return server response containing the result
+     */
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 
