@@ -33,8 +33,10 @@ public class WaitlistGrabExpiryJob implements SchedulerJob {
     }
 
     @Override
-    public void runOnce() {
-        int expired = reservations.expireOverdueOffers();
+    public void runOnce(boolean force) {
+        // Forced (manual "run now"): expire any currently-active grab offer now,
+        // skipping the grab-window wait; non-forced keeps the window.
+        int expired = reservations.expireOverdueOffers(force);
         if (expired > 0) {
             log.accept("[scheduler] " + NAME + ": expired " + expired
                     + " grab offer(s) — forfeited reservation(s) cancelled, queue advanced");

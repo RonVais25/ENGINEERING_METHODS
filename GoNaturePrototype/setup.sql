@@ -282,7 +282,12 @@ INSERT INTO reservation
 -- ids 27..29: WAITING -> each has a waiting_list_entry; id 27 has an active grab.
 (2, 200000004, CURDATE(),                   '11:00:00', 10, 'GROUP',      'WAITING',   TRUE,  200000011, 50000, FALSE, NULL, NULL),
 (1, 200000002, CURDATE() + INTERVAL  2 DAY, '09:00:00',  1, 'INDIVIDUAL', 'WAITING',   FALSE, NULL,      5000,  FALSE, NULL, NULL),
-(3, 200000009, CURDATE() + INTERVAL  6 DAY, '13:00:00',  3, 'FAMILY',     'WAITING',   FALSE, NULL,      13000, FALSE, NULL, NULL);
+(3, 200000009, CURDATE() + INTERVAL  6 DAY, '13:00:00',  3, 'FAMILY',     'WAITING',   FALSE, NULL,      13000, FALSE, NULL, NULL),
+-- id 30: CONFIRMED for TODAY with NO visit row -> the no-show "run now" target.
+--   The timed NoShowJob is strict (visit_date < today) and leaves it alone, so a
+--   same-day no-show normally only resolves after midnight; a manual forced run
+--   (visit_date <= today) marks it NO_SHOW instantly for the live defense.
+(2, 200000007, CURDATE(),                   '15:00:00',  1, 'INDIVIDUAL', 'CONFIRMED', FALSE, NULL,      5000,  TRUE,  2007, NULL);
 
 -- 7) Waiting list: one entry per WAITING reservation (27/28/29). Entry for
 --    reservation 27 carries an ACTIVE grab offer (expires ~1h from now); the

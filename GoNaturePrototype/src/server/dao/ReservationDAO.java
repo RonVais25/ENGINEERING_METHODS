@@ -241,12 +241,30 @@ public class ReservationDAO {
      * arrive) and for which no {@code visit} row was ever recorded — i.e. the party
      * never entered the park. Ordered by date for a stable sweep.
      *
+     * <p>Equivalent to {@link #findNoShowCandidates(boolean) findNoShowCandidates(false)}.
+     *
      * @return the no-show candidates (possibly empty); never {@code null}
      */
     public List<ReservationDTO> findNoShowCandidates() {
+        return findNoShowCandidates(false);
+    }
+
+    /**
+     * Force-aware variant of {@link #findNoShowCandidates()}. With {@code force}
+     * the strictly-before-today bound is relaxed to {@code visit_date <= CURDATE()}
+     * so a CONFIRMED booking for <em>today</em> with no entry is also marked — this
+     * is the manual "run now" path, letting the live defense produce a no-show on a
+     * same-day seeded reservation without waiting for the date to roll over.
+     *
+     * @param force {@code true} to include today's date; {@code false} for the
+     *              normal strictly-past sweep
+     * @return the no-show candidates (possibly empty); never {@code null}
+     */
+    public List<ReservationDTO> findNoShowCandidates(boolean force) {
+        String dateBound = force ? "r.visit_date <= CURDATE() " : "r.visit_date < CURDATE() ";
         String sql = "SELECT r.* FROM reservation r " +
                 "WHERE r.status = 'CONFIRMED' " +
-                "  AND r.visit_date < CURDATE() " +
+                "  AND " + dateBound +
                 "  AND NOT EXISTS (SELECT 1 FROM visit v WHERE v.reservation_id = r.id) " +
                 "ORDER BY r.visit_date ASC, r.id ASC";
         List<ReservationDTO> result = new ArrayList<>();
@@ -274,22 +292,46 @@ public class ReservationDAO {
      * is what stops the reminder being re-sent on every poll. Past visits are
      * excluded — a reminder to confirm a visit that has already happened is moot.
      *
+     * <p>Equivalent to
+     * {@link #findReminderCandidates(int, boolean) findReminderCandidates(leadHours, false)}.
+     *
      * @param leadHours how far ahead of the visit a reminder should fire
      * @return the reservations due a reminder (possibly empty); never {@code null}
      */
     public List<ReservationDTO> findReminderCandidates(int leadHours) {
+        return findReminderCandidates(leadHours, false);
+    }
+
+    /**
+     * Force-aware variant of {@link #findReminderCandidates(int)}. With
+     * {@code force} the upper {@code leadHours} bound is dropped, so every upcoming
+     * un-reminded PENDING reservation is returned regardless of how far out it is —
+     * the manual "run now" path, which lets the live defense fire a reminder
+     * immediately without a 24h-out booking. The {@code >= NOW()} (upcoming) and
+     * {@code reminder_sent_at IS NULL} (not-yet-reminded) guards are kept either
+     * way: a reminder for a past visit is moot, and the null guard is what stops a
+     * re-send on the next poll.
+     *
+     * @param leadHours how far ahead of the visit a reminder should fire (ignored when {@code force})
+     * @param force     {@code true} to drop the lead-hours window; {@code false} for the normal sweep
+     * @return the reservations due a reminder (possibly empty); never {@code null}
+     */
+    public List<ReservationDTO> findReminderCandidates(int leadHours, boolean force) {
         String sql = "SELECT r.* FROM reservation r " +
                 "WHERE r.status = 'PENDING' " +
                 "  AND r.reminder_sent_at IS NULL " +
                 "  AND TIMESTAMP(r.visit_date, COALESCE(r.visit_time, '00:00:00')) >= NOW() " +
-                "  AND TIMESTAMP(r.visit_date, COALESCE(r.visit_time, '00:00:00')) <= NOW() + INTERVAL ? HOUR " +
+                (force ? "" :
+                "  AND TIMESTAMP(r.visit_date, COALESCE(r.visit_time, '00:00:00')) <= NOW() + INTERVAL ? HOUR ") +
                 "ORDER BY r.visit_date ASC, r.id ASC";
         List<ReservationDTO> result = new ArrayList<>();
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, leadHours);
+            if (!force) {
+                stmt.setInt(1, leadHours);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(map(rs));
@@ -334,21 +376,45 @@ public class ReservationDAO {
      * filter is what makes confirming in time safe — once a visitor confirms
      * (PENDING→CONFIRMED) the row drops out of this result and is never cancelled.
      *
+     * <p>Equivalent to
+     * {@link #findConfirmTimeoutCandidates(int, boolean) findConfirmTimeoutCandidates(timeoutMinutes, false)}.
+     *
      * @param timeoutMinutes the confirmation window length, in minutes
      * @return the reservations to auto-cancel (possibly empty); never {@code null}
      */
     public List<ReservationDTO> findConfirmTimeoutCandidates(int timeoutMinutes) {
+        return findConfirmTimeoutCandidates(timeoutMinutes, false);
+    }
+
+    /**
+     * Force-aware variant of {@link #findConfirmTimeoutCandidates(int)}. With
+     * {@code force} both the {@code reminder_sent_at IS NOT NULL} guard and the
+     * timeout-window predicate are dropped, so <em>every</em> still-PENDING
+     * reservation is returned for cancellation now — the manual "run now" path,
+     * which lets the live defense produce an auto-cancel immediately without first
+     * sending a reminder or waiting out the confirmation window. The
+     * {@code status = 'PENDING'} filter is always kept, so a reservation a visitor
+     * already confirmed is never cancelled.
+     *
+     * @param timeoutMinutes the confirmation window length, in minutes (ignored when {@code force})
+     * @param force          {@code true} to cancel every PENDING now; {@code false} for the normal window sweep
+     * @return the reservations to auto-cancel (possibly empty); never {@code null}
+     */
+    public List<ReservationDTO> findConfirmTimeoutCandidates(int timeoutMinutes, boolean force) {
         String sql = "SELECT r.* FROM reservation r " +
                 "WHERE r.status = 'PENDING' " +
+                (force ? "" :
                 "  AND r.reminder_sent_at IS NOT NULL " +
-                "  AND r.reminder_sent_at + INTERVAL ? MINUTE < NOW() " +
+                "  AND r.reminder_sent_at + INTERVAL ? MINUTE < NOW() ") +
                 "ORDER BY r.visit_date ASC, r.id ASC";
         List<ReservationDTO> result = new ArrayList<>();
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, timeoutMinutes);
+            if (!force) {
+                stmt.setInt(1, timeoutMinutes);
+            }
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     result.add(map(rs));

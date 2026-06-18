@@ -37,8 +37,10 @@ public class ConfirmTimeoutJob implements SchedulerJob {
     }
 
     @Override
-    public void runOnce() {
-        int cancelled = reservations.expireUnconfirmedReservations();
+    public void runOnce(boolean force) {
+        // Forced (manual "run now"): cancel every still-PENDING reservation now,
+        // skipping the reminder/confirm-timeout window; non-forced keeps it.
+        int cancelled = reservations.expireUnconfirmedReservations(force);
         if (cancelled > 0) {
             log.accept("[scheduler] " + NAME + ": auto-cancelled " + cancelled
                     + " unconfirmed reservation(s) — visitor notified, slot offered to waitlist");

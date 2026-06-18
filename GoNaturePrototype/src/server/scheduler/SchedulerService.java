@@ -24,9 +24,13 @@ import java.util.function.Consumer;
  * and would never run again; containing the throw keeps every job alive across a
  * one-off failure (a transient DB blip, say).
  *
- * <p><strong>Manual triggers.</strong> {@link #runNow(String)} and
- * {@link #runAllNow()} submit an off-cycle run to the same executor — the server
- * console wires its "run now" buttons to these for the live defense.
+ * <p><strong>Manual triggers run in force mode.</strong> {@link #runNow(String)}
+ * and {@link #runAllNow()} submit an off-cycle run to the same executor — the
+ * server console wires its "run now" buttons to these for the live defense. Those
+ * manual runs call the job in <em>force</em> mode ({@link SchedulerJob#runOnce(boolean)}
+ * with {@code true}), so the job acts on every eligible row immediately rather
+ * than only those past its real time threshold. The scheduled {@link #start()}
+ * runs stay non-forced and respect the configured 24h/2h/1h windows.
  */
 public class SchedulerService {
 
@@ -75,7 +79,8 @@ public class SchedulerService {
         }
         started = true;
         for (SchedulerJob job : jobs.values()) {
-            executor.scheduleAtFixedRate(() -> safeRun(job), pollSeconds, pollSeconds, TimeUnit.SECONDS);
+            // Scheduled runs are non-forced: they respect each job's real time threshold.
+            executor.scheduleAtFixedRate(() -> safeRun(job, false), pollSeconds, pollSeconds, TimeUnit.SECONDS);
         }
         log.accept("[scheduler] started — " + jobs.size() + " job(s), polling every "
                 + pollSeconds + "s");
@@ -84,7 +89,8 @@ public class SchedulerService {
     /**
      * Triggers one off-cycle run of the named job, off the caller's thread (so an
      * FX button handler does not block). A no-op with a log line if the name is
-     * unknown.
+     * unknown. The run is in <em>force</em> mode (see the class javadoc): a manual
+     * trigger drops the job's time threshold so its effect lands immediately.
      *
      * @param jobName the job's {@link SchedulerJob#name()}
      */
@@ -95,8 +101,8 @@ public class SchedulerService {
             return;
         }
         executor.submit(() -> {
-            log.accept("[scheduler] run-now: " + jobName);
-            safeRun(job);
+            log.accept("[scheduler] run-now (forced): " + jobName);
+            safeRun(job, true);
         });
     }
 
@@ -120,10 +126,13 @@ public class SchedulerService {
     /**
      * Runs a job, containing any exception so the executor (and the job's recurring
      * schedule) survives a one-off failure.
+     *
+     * @param force {@code true} for a manual forced run (drop the time threshold),
+     *              {@code false} for a normal scheduled sweep
      */
-    private void safeRun(SchedulerJob job) {
+    private void safeRun(SchedulerJob job, boolean force) {
         try {
-            job.runOnce();
+            job.runOnce(force);
         } catch (Exception e) {
             log.accept("[scheduler] job '" + job.name() + "' failed: " + e.getMessage());
             e.printStackTrace();
