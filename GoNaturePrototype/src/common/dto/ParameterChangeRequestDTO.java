@@ -23,6 +23,8 @@ public class ParameterChangeRequestDTO implements Serializable {
     private String parkName;
     /** Identifier of the park manager who requested the change ({@code user.id}). */
     private int requestedBy;
+    /** Full name of the requesting park manager, joined in from {@code user} for display. */
+    private String requesterName;
     /** Which park parameter the change targets. */
     private ParamField field;
     /** The park's value for that field when the request was made. */
@@ -45,6 +47,7 @@ public class ParameterChangeRequestDTO implements Serializable {
      * @param parkId      identifier of the target park
      * @param parkName    display name of the target park (joined in for convenience)
      * @param requestedBy id of the park manager who requested the change
+     * @param requesterName full name of the requesting park manager (joined in for display)
      * @param field       which park parameter the change targets
      * @param oldValue    the park's value for that field when the request was made
      * @param newValue    the requested new value
@@ -54,13 +57,14 @@ public class ParameterChangeRequestDTO implements Serializable {
      * @param decidedAt   decision timestamp (string form), or {@code null} while PENDING
      */
     public ParameterChangeRequestDTO(int id, int parkId, String parkName, int requestedBy,
-                                     ParamField field, int oldValue, int newValue,
+                                     String requesterName, ParamField field, int oldValue, int newValue,
                                      ChangeStatus status, Integer decidedBy,
                                      String createdAt, String decidedAt) {
         this.id = id;
         this.parkId = parkId;
         this.parkName = parkName;
         this.requestedBy = requestedBy;
+        this.requesterName = requesterName;
         this.field = field;
         this.oldValue = oldValue;
         this.newValue = newValue;
@@ -88,6 +92,11 @@ public class ParameterChangeRequestDTO implements Serializable {
     /** @return the id of the park manager who requested the change */
     public int getRequestedBy() {
         return requestedBy;
+    }
+
+    /** @return the full name of the requesting park manager (joined in for display) */
+    public String getRequesterName() {
+        return requesterName;
     }
 
     /** @return which park parameter the change targets */

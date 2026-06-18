@@ -39,8 +39,10 @@ public class NoShowJob implements SchedulerJob {
     }
 
     @Override
-    public void runOnce() {
-        List<ReservationDTO> candidates = reservationDao.findNoShowCandidates();
+    public void runOnce(boolean force) {
+        // Forced (manual "run now"): include today's past-due CONFIRMED bookings,
+        // not just strictly-before-today; non-forced keeps the strict past check.
+        List<ReservationDTO> candidates = reservationDao.findNoShowCandidates(force);
         int marked = 0;
         for (ReservationDTO r : candidates) {
             if (reservationDao.updateStatus(r.getId(), ReservationStatus.NO_SHOW)) {

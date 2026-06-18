@@ -57,11 +57,12 @@ public class ReservationCreateController extends BaseController {
     @FXML private TextField            phoneField;
     @FXML private DatePicker           datePicker;
     @FXML private CheckBox             timeEnabledCheck;
-    @FXML private Spinner<Integer>     hourSpinner;
-    @FXML private Spinner<Integer>     minuteSpinner;
+    @FXML private ComboBox<Integer>    hourCombo;
+    @FXML private ComboBox<String>     minuteCombo;
+    @FXML private ComboBox<String>     ampmCombo;
     @FXML private Spinner<Integer>     partySpinner;
     @FXML private ComboBox<VisitType>  typeCombo;
-    @FXML private Label                guideLabel;
+    @FXML private VBox                 guideRow;
     @FXML private TextField            guideField;
     @FXML private CheckBox             prePayCheck;
     @FXML private Button               bookBtn;
@@ -85,18 +86,21 @@ public class ReservationCreateController extends BaseController {
         partySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 2));
 
-        // Clock-style optional visit time: hour 0–23 and minute in 5-minute steps,
-        // both wrapping. The pair is disabled until "Set a time" is ticked; left
-        // unticked the booking sends no preferred time (null visitTime), preserving
-        // the old blank-field semantics.
-        hourSpinner.setValueFactory(
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 9));
-        minuteSpinner.setValueFactory(
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 55, 0, 5));
-        hourSpinner.getValueFactory().setWrapAround(true);
-        minuteSpinner.getValueFactory().setWrapAround(true);
-        hourSpinner.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
-        minuteSpinner.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        // 12-hour clock picker as three plain dropdowns: hour 1–12, minute in
+        // quarter-hour steps and a clearly readable AM/PM selector. The trio is
+        // disabled until "set time" is ticked; left unticked the booking sends no
+        // preferred time (null visitTime), preserving the old blank-field semantics.
+        // The 12-hour selection is converted to the 24-hour HH:mm:ss wire format in
+        // formatVisitTime().
+        hourCombo.getItems().setAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+        minuteCombo.getItems().setAll("00", "15", "30", "45");
+        ampmCombo.getItems().setAll("AM", "PM");
+        hourCombo.setValue(9);
+        minuteCombo.setValue("00");
+        ampmCombo.setValue("AM");
+        hourCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        minuteCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        ampmCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
 
         typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
         typeCombo.getSelectionModel().selectFirst();
@@ -122,10 +126,31 @@ public class ReservationCreateController extends BaseController {
     }
 
     private void showGuideField(boolean show) {
-        guideLabel.setVisible(show);
-        guideLabel.setManaged(show);
-        guideField.setVisible(show);
-        guideField.setManaged(show);
+        guideRow.setVisible(show);
+        guideRow.setManaged(show);
+    }
+
+    /**
+     * Converts the compact 12-hour picker (hour 1–12, minute, AM/PM) into the
+     * 24-hour {@code HH:mm:ss} string the server/DB expect for {@code visit_time}
+     * — byte-identical to what the old picker sent. The 12-hour mapping is:
+     * 12&nbsp;AM&nbsp;→&nbsp;00, 12&nbsp;PM&nbsp;→&nbsp;12, any other PM hour&nbsp;+&nbsp;12;
+     * the minute is zero-padded (e.g. 2:30&nbsp;PM&nbsp;→&nbsp;{@code "14:30:00"}).
+     *
+     * @return the visit time formatted {@code HH:mm:ss}
+     */
+    private String formatVisitTime() {
+        int     hour12 = hourCombo.getValue();
+        boolean pm     = "PM".equals(ampmCombo.getValue());
+        int     hour24;
+        if (hour12 == 12) {
+            hour24 = pm ? 12 : 0;
+        } else {
+            hour24 = pm ? hour12 + 12 : hour12;
+        }
+        // minuteCombo values are already zero-padded ("00".."45"), so the result
+        // is byte-identical to the old picker's HH:mm:ss wire format.
+        return String.format("%02d:%s:00", hour24, minuteCombo.getValue());
     }
 
     /**
@@ -192,12 +217,12 @@ public class ReservationCreateController extends BaseController {
             return;
         }
 
-        // Optional visit time from the clock-style picker: only sent when "Set a
-        // time" is ticked, formatted HH:mm:ss to match the existing wire format;
-        // otherwise null (no preference), exactly like the old blank field.
+        // Optional visit time from the clock-style picker: only sent when "set time"
+        // is ticked, converted to the 24-hour HH:mm:ss wire format; otherwise null
+        // (no preference), exactly like the old blank field.
         String visitTime = null;
         if (timeEnabledCheck.isSelected()) {
-            visitTime = String.format("%02d:%02d:00", hourSpinner.getValue(), minuteSpinner.getValue());
+            visitTime = formatVisitTime();
         }
 
         // Commit any text typed into the editable spinner before reading it.

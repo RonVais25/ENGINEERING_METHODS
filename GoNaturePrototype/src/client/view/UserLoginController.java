@@ -126,16 +126,25 @@ public class UserLoginController {
      *  {@code username}; visitors carry a {@code visitorId} (the other is null). */
     private record Quick(String label, String username, Long visitorId) {}
 
-    /** The seeded accounts from {@code setup.sql}, one quick button each. */
+    /**
+     * The seeded accounts from {@code setup.sql}, one quick button each — every
+     * staff role and all three parks, plus a subscriber and a plain visitor. Staff
+     * carry a username (logged in with {@link #DEV_PASSWORD}); the two visitor rows
+     * carry a national id. Managers/employees are labelled by their park so the
+     * park-scoped screens (approvals, occupancy, park params) are easy to reach.
+     */
     private List<Quick> quickAccounts() {
         return List.of(
-                new Quick("Dept Mgr",    "dept_mgr",    null),
-                new Quick("Galilee Mgr", "galilee_mgr", null),
-                new Quick("Carmel Mgr",  "carmel_mgr",  null),
-                new Quick("Service Rep", "service_rep", null),
-                new Quick("Park Emp",    "park_emp",    null),
-                new Quick("Subscriber",  null, 200000001L),
-                new Quick("Visitor",     null, 200000002L));
+                new Quick("Dept Mgr",    "dept_mgr",    null),   // DEPT_MANAGER
+                new Quick("Galilee Mgr", "galilee_mgr", null),   // PARK_MANAGER  · park 1
+                new Quick("Carmel Mgr",  "carmel_mgr",  null),   // PARK_MANAGER  · park 2
+                new Quick("Negev Mgr",   "negev_mgr",   null),   // PARK_MANAGER  · park 3
+                new Quick("Service Rep", "service_rep", null),   // SERVICE_REP
+                new Quick("Galilee Emp", "park_emp",    null),   // PARK_EMPLOYEE · park 1
+                new Quick("Carmel Emp",  "park_emp2",   null),   // PARK_EMPLOYEE · park 2
+                new Quick("Negev Emp",   "park_emp3",   null),   // PARK_EMPLOYEE · park 3
+                new Quick("Subscriber",  null, 200000001L),      // Vera Visitor (subscriber)
+                new Quick("Visitor",     null, 200000002L));     // Victor Visit (plain visitor)
     }
 
     private void buildQuickLoginButtons() {

@@ -58,6 +58,10 @@ public class AuthController implements DomainController {
                 if (u == null) {
                     return new ServerResponse(false, "Invalid username or password.");
                 }
+                // Quick-login on the same connection: release whatever lock this
+                // session already holds before taking the new one (see
+                // releasePriorSessionLock), so the prior actor's lock cannot orphan.
+                releasePriorSessionLock(session);
                 if (!dao.lock(u.getId(), "USER")) {
                     return new ServerResponse(false, "This user is already logged in elsewhere.");
                 }
@@ -72,6 +76,10 @@ public class AuthController implements DomainController {
                 if (v == null) {
                     return new ServerResponse(false, "Visitor ID not found.");
                 }
+                // Quick-login on the same connection: release whatever lock this
+                // session already holds before taking the new one (see
+                // releasePriorSessionLock), so the prior actor's lock cannot orphan.
+                releasePriorSessionLock(session);
                 if (!dao.lock(v.getId(), "VISITOR")) {
                     return new ServerResponse(false, "This visitor is already logged in elsewhere.");
                 }
@@ -140,6 +148,29 @@ public class AuthController implements DomainController {
 
             default:
                 return new ServerResponse(false, "Unsupported auth operation: " + request.getType());
+        }
+    }
+
+    /**
+     * Releases the single-login lock this connection currently holds, if any,
+     * and clears its logged-in state — called at the start of a new login so a
+     * quick-login that switches actors on the same socket (e.g. A then B then A)
+     * does not orphan the prior actor's {@code active_session} row. An orphaned
+     * lock would make re-logging that actor falsely report "already logged in
+     * elsewhere".
+     *
+     * <p>It releases only the lock recorded on <em>this</em> session; it never
+     * clears a lock merely because an incoming login names that actor. A genuine
+     * second login of the same actor from a different connection therefore still
+     * holds its own lock and is correctly rejected by {@link AuthDAO#lock}.
+     *
+     * @param session the per-connection session whose prior lock (if any) is released
+     */
+    private void releasePriorSessionLock(ClientSession session) {
+        Long prevActor = session.getLoggedInActorId();
+        if (prevActor != null) {
+            dao.unlock(prevActor, session.getLoggedInKind());
+            session.setLoggedIn(null, null);
         }
     }
 

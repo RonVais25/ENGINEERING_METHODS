@@ -360,6 +360,20 @@ public class NetworkService {
     }
 
     /**
+     * Records a casual walk-in's exit by its ticket number (PARK_EMPLOYEE only).
+     * The ticket number is the visit id handed to the employee at admission — the
+     * only handle for exiting an anonymous casual party (it has no confirmation
+     * code or visitor id). The server closes the open visit at the employee's park.
+     *
+     * @param visitId the ticket number shown at casual admission
+     */
+    public CompletableFuture<ServerResponse> exitVisitByTicket(int visitId) {
+        ClientRequest req = new ClientRequest(RequestType.EXIT_VISIT);
+        req.put("visitId", visitId);
+        return send(req);
+    }
+
+    /**
      * Records a casual walk-in at the employee's park (PARK_EMPLOYEE only). The
      * server enforces the physical-capacity gate (rejecting with "park full" when
      * it would exceed {@code maxCapacity - gapSize}) and prices the visit; the

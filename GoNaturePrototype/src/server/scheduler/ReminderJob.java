@@ -44,10 +44,12 @@ public class ReminderJob implements SchedulerJob {
     }
 
     @Override
-    public void runOnce() {
+    public void runOnce(boolean force) {
         int leadHours = SchedulerConfig.getReminderLeadHours();
         int confirmMinutes = SchedulerConfig.getConfirmTimeoutMinutes();
-        List<ReservationDTO> due = reservationDao.findReminderCandidates(leadHours);
+        // Forced (manual "run now"): remind every upcoming un-reminded PENDING
+        // reservation regardless of the lead-hours window; non-forced keeps it.
+        List<ReservationDTO> due = reservationDao.findReminderCandidates(leadHours, force);
         int sent = 0;
         for (ReservationDTO r : due) {
             notifications.send(r.getVisitorId(), null, "SIM_EMAIL",

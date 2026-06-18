@@ -29,13 +29,17 @@ public class ParameterChangeDAO {
 
     /**
      * Columns selected by {@link #listPending} and {@link #getById}, joining the
-     * park name in for display. Order matches {@link #map}.
+     * park name and the requester's full name in for display. Order matches
+     * {@link #map}. {@code requested_by} is a NOT NULL FK to {@code user.id}, so
+     * the user join is a plain (inner) join — it never drops a request row.
      */
     private static final String SELECT_WITH_PARK =
-            "SELECT r.id, r.park_id, p.name AS park_name, r.requested_by, r.field, " +
+            "SELECT r.id, r.park_id, p.name AS park_name, r.requested_by, " +
+            "u.full_name AS requester_name, r.field, " +
             "r.old_value, r.new_value, r.status, r.decided_by, r.created_at, r.decided_at " +
             "FROM parameter_change_request r " +
-            "JOIN park p ON p.id = r.park_id ";
+            "JOIN park p ON p.id = r.park_id " +
+            "JOIN `user` u ON u.id = r.requested_by ";
 
     /**
      * Inserts a new change request in the {@code PENDING} state, stamping
@@ -186,6 +190,7 @@ public class ParameterChangeDAO {
                 rs.getInt("park_id"),
                 rs.getString("park_name"),
                 rs.getInt("requested_by"),
+                rs.getString("requester_name"),
                 ParamField.valueOf(rs.getString("field")),
                 rs.getInt("old_value"),
                 rs.getInt("new_value"),

@@ -656,10 +656,26 @@ public class ReservationController implements DomainController {
      * ({@link server.scheduler.WaitlistGrabExpiryJob}); also exercisable manually
      * from the server console.
      *
+     * <p>Equivalent to {@link #expireOverdueOffers(boolean) expireOverdueOffers(false)}.
+     *
      * @return the number of lapsed offers processed (0 when none were due)
      */
     public int expireOverdueOffers() {
-        List<WaitlistEntryDTO> expired = waitlistDao.findExpiredOffers();
+        return expireOverdueOffers(false);
+    }
+
+    /**
+     * Force-aware variant of {@link #expireOverdueOffers()}. With {@code force}
+     * every currently-active grab offer is treated as expired (see
+     * {@link WaitlistDAO#findExpiredOffers(boolean)}) — the manual "run now" path,
+     * which expires an outstanding offer and advances the queue immediately rather
+     * than waiting for the grab window to lapse.
+     *
+     * @param force {@code true} to expire any active offer now; {@code false} for the normal lapsed sweep
+     * @return the number of offers processed (0 when none were eligible)
+     */
+    public int expireOverdueOffers(boolean force) {
+        List<WaitlistEntryDTO> expired = waitlistDao.findExpiredOffers(force);
         for (WaitlistEntryDTO entry : expired) {
             waitlistDao.removeEntry(entry.getId());
             // Forfeit-fix: the offeree let the window lapse. Cancel its orphaned
@@ -688,11 +704,30 @@ public class ReservationController implements DomainController {
      * ({@link server.scheduler.ConfirmTimeoutJob}); also exercisable manually from
      * the server console.
      *
+     * <p>Equivalent to
+     * {@link #expireUnconfirmedReservations(boolean) expireUnconfirmedReservations(false)}.
+     *
      * @return the number of reservations auto-cancelled (0 when none were due)
      */
     public int expireUnconfirmedReservations() {
+        return expireUnconfirmedReservations(false);
+    }
+
+    /**
+     * Force-aware variant of {@link #expireUnconfirmedReservations()}. With
+     * {@code force} every still-PENDING reservation is cancelled now, skipping the
+     * reminder/confirm-timeout window (see
+     * {@link ReservationDAO#findConfirmTimeoutCandidates(int, boolean)}) — the
+     * manual "run now" path. Each cancellation still broadcasts the change, notifies
+     * the visitor, and offers the freed slot to the waiting list, exactly as the
+     * timed sweep does.
+     *
+     * @param force {@code true} to cancel every PENDING now; {@code false} for the normal window sweep
+     * @return the number of reservations auto-cancelled (0 when none were eligible)
+     */
+    public int expireUnconfirmedReservations(boolean force) {
         List<ReservationDTO> candidates =
-                dao.findConfirmTimeoutCandidates(SchedulerConfig.getConfirmTimeoutMinutes());
+                dao.findConfirmTimeoutCandidates(SchedulerConfig.getConfirmTimeoutMinutes(), force);
         int cancelled = 0;
         for (ReservationDTO candidate : candidates) {
             if (!dao.updateStatus(candidate.getId(), ReservationStatus.CANCELLED)) {
