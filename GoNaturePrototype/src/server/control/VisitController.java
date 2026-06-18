@@ -117,16 +117,27 @@ public class VisitController implements DomainController {
             }
 
             case EXIT_VISIT: {
-                // Exit by confirmation code (reservation visit) or by visitor id.
+                // Exit by ticket number (casual walk-in), confirmation code, or
+                // visitor id. The ticket path is the only way to exit an anonymous
+                // casual party — it has no reservation/confirmation code and no
+                // visitor id to look up by, so it is identified by its visit id.
                 VisitDTO open;
+                Object rawTicket  = request.get("visitId");
                 Object rawCode    = request.get("confirmationCode");
                 Object rawVisitor = request.get("visitorId");
-                if (rawCode != null) {
+                if (rawTicket != null) {
+                    // findById returns a visit regardless of open/closed state, so
+                    // the still-inside check below guards an already-used ticket.
+                    open = visitDao.findById(((Number) rawTicket).intValue());
+                    if (open != null && open.getExitedAt() != null) {
+                        return new ServerResponse(false, "Ticket already used — that visit has already exited.");
+                    }
+                } else if (rawCode != null) {
                     open = visitDao.findOpenByConfirmation(((Number) rawCode).intValue());
                 } else if (rawVisitor != null) {
                     open = visitDao.findOpenByVisitor(((Number) rawVisitor).longValue());
                 } else {
-                    return new ServerResponse(false, "A confirmation code or visitor id is required.");
+                    return new ServerResponse(false, "A ticket number, confirmation code, or visitor id is required.");
                 }
                 if (open == null) {
                     return new ServerResponse(false, "No open visit found to exit.");
@@ -195,9 +206,13 @@ public class VisitController implements DomainController {
                 if (visitId < 0) {
                     return new ServerResponse(false, "Could not record the casual visit.");
                 }
+                // The visit id doubles as the walk-in's ticket number: it is the
+                // only handle for exiting an anonymous casual party later. It rides
+                // back on the VisitDTO (getId), and is echoed in the message too.
                 VisitDTO visit = visitDao.findById(visitId);
                 return new ServerResponse(true,
-                        "Casual visit recorded (price: " + price + " cents).", visit);
+                        "Casual visit recorded — ticket #" + visitId
+                        + " (price: " + price + " cents).", visit);
             }
 
             case CURRENT_OCCUPANCY: {

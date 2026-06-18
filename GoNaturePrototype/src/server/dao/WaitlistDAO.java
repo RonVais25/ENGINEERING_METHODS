@@ -250,12 +250,29 @@ public class WaitlistDAO {
      * must be removed so the grab can advance; see
      * {@link server.control.ReservationController#expireOverdueOffers()}.
      *
+     * <p>Equivalent to {@link #findExpiredOffers(boolean) findExpiredOffers(false)}.
+     *
      * @return the lapsed-offer entries (possibly empty); never {@code null}
      */
     public List<WaitlistEntryDTO> findExpiredOffers() {
+        return findExpiredOffers(false);
+    }
+
+    /**
+     * Force-aware variant of {@link #findExpiredOffers()}. With {@code force} the
+     * {@code grab_expires_at < NOW()} check is dropped, so every entry that
+     * currently holds an offer ({@code grab_offered_at IS NOT NULL}) is returned —
+     * the manual "run now" path, which lets the live defense expire an
+     * outstanding grab immediately without waiting for its window to lapse.
+     *
+     * @param force {@code true} to treat any active offer as expired now;
+     *              {@code false} for the normal lapsed-window sweep
+     * @return the entries to expire (possibly empty); never {@code null}
+     */
+    public List<WaitlistEntryDTO> findExpiredOffers(boolean force) {
         String sql = SELECT_BASE +
                 "WHERE w.grab_offered_at IS NOT NULL " +
-                "  AND w.grab_expires_at < NOW() " +
+                (force ? "" : "  AND w.grab_expires_at < NOW() ") +
                 "ORDER BY w.queued_at ASC, w.id ASC";
         List<WaitlistEntryDTO> result = new ArrayList<>();
 

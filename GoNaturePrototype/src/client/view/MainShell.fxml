@@ -1,80 +1,85 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.Cursor?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.SVGPath?>
 
-<!-- Root: sidebar on the left, main column (topbar + content) on the right. -->
-<HBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
-      fx:controller="client.view.MainShellController"
-      styleClass="app-root">
+<!-- Root: a BorderPane so the sidebar is pinned on the left and never scrolls,
+     while only the center column (topbar + content) holds the scrollable screen.
+     The per-screen ScrollPane lives inside contentArea, so scrolling a tall
+     screen moves the content alone — the logo, nav and user/login chrome stay put. -->
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.MainShellController"
+            styleClass="app-root">
 
-    <!-- Sidebar -->
-    <VBox styleClass="sidebar">
+    <!-- Sidebar (pinned) -->
+    <left>
+        <VBox styleClass="sidebar">
 
-        <!-- Logo -->
-        <HBox styleClass="sidebar-logo" alignment="CENTER_LEFT" spacing="10">
-            <StackPane styleClass="sidebar-logo-tile">
-                <SVGPath content="M11 2C6.5 2 3 6 3 10.5c0 3 2 6.5 8 9.5 6-3 8-6.5 8-9.5C19 6 15.5 2 11 2z"
-                         fill="WHITE" scaleX="0.8" scaleY="0.8"/>
-            </StackPane>
-            <VBox spacing="1">
-                <Label text="GoNature"     styleClass="sidebar-app-name"/>
-                <Label text="PARK SYSTEM"  styleClass="sidebar-app-sub"/>
-            </VBox>
-        </HBox>
-
-        <Label text="MENU" styleClass="sidebar-menu-label"/>
-
-        <!-- Nav buttons are added programmatically by MainShellController -->
-        <VBox fx:id="navBox" styleClass="sidebar-nav"/>
-
-        <Region VBox.vgrow="ALWAYS"/>
-
-        <!-- Connection pill -->
-        <HBox styleClass="conn-wrapper">
-            <HBox styleClass="conn-pill" alignment="CENTER_LEFT" spacing="8" HBox.hgrow="ALWAYS">
-                <Region fx:id="connDot" styleClass="conn-dot"/>
+            <!-- Logo -->
+            <HBox styleClass="sidebar-logo" alignment="CENTER_LEFT" spacing="10">
+                <StackPane styleClass="sidebar-logo-tile">
+                    <SVGPath content="M11 2C6.5 2 3 6 3 10.5c0 3 2 6.5 8 9.5 6-3 8-6.5 8-9.5C19 6 15.5 2 11 2z"
+                             fill="WHITE" scaleX="0.8" scaleY="0.8"/>
+                </StackPane>
                 <VBox spacing="1">
-                    <Label fx:id="connHostLbl"   styleClass="conn-host"   text="localhost:5555"/>
-                    <Label fx:id="connStatusLbl" styleClass="conn-status" text="Connected"/>
+                    <Label text="GoNature"     styleClass="sidebar-app-name"/>
+                    <Label text="PARK SYSTEM"  styleClass="sidebar-app-sub"/>
                 </VBox>
             </HBox>
-        </HBox>
 
-        <!-- User row -->
-        <HBox styleClass="user-row" alignment="CENTER_LEFT" spacing="10">
-            <StackPane styleClass="user-avatar">
-                <Label fx:id="userInitialsLbl" styleClass="user-initials"/>
-            </StackPane>
-            <VBox spacing="1" HBox.hgrow="ALWAYS">
-                <Label fx:id="userNameLbl" styleClass="user-name"/>
-                <Label fx:id="userIdLbl"   styleClass="user-id"/>
-            </VBox>
-            <Button fx:id="logoutBtn" text="Log out" onAction="#onLogout" styleClass="logout-btn"/>
-        </HBox>
-    </VBox>
+            <Label text="MENU" styleClass="sidebar-menu-label"/>
 
-    <!-- Main column -->
-    <VBox HBox.hgrow="ALWAYS">
+            <!-- Nav buttons are added programmatically by MainShellController -->
+            <VBox fx:id="navBox" styleClass="sidebar-nav"/>
 
-        <!-- Topbar -->
-        <HBox styleClass="topbar">
-            <VBox spacing="2">
-                <Label fx:id="topbarTitle"    styleClass="topbar-title"    text="Dashboard"/>
-                <Label fx:id="topbarSubtitle" styleClass="topbar-subtitle" text="Welcome back"/>
-            </VBox>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Label text="v2.0" styleClass="topbar-version"/>
-        </HBox>
+            <Region VBox.vgrow="ALWAYS"/>
 
-        <!-- Content swap point -->
-        <StackPane fx:id="contentArea" styleClass="content-area" VBox.vgrow="ALWAYS"/>
-    </VBox>
-</HBox>
+            <!-- Connection pill -->
+            <HBox styleClass="conn-wrapper">
+                <HBox styleClass="conn-pill" alignment="CENTER_LEFT" spacing="8" HBox.hgrow="ALWAYS">
+                    <Region fx:id="connDot" styleClass="conn-dot"/>
+                    <VBox spacing="1">
+                        <Label fx:id="connHostLbl"   styleClass="conn-host"   text="localhost:5555"/>
+                        <Label fx:id="connStatusLbl" styleClass="conn-status" text="Connected"/>
+                    </VBox>
+                </HBox>
+            </HBox>
+
+            <!-- User row -->
+            <HBox styleClass="user-row" alignment="CENTER_LEFT" spacing="10">
+                <StackPane styleClass="user-avatar">
+                    <Label fx:id="userInitialsLbl" styleClass="user-initials"/>
+                </StackPane>
+                <VBox spacing="1" HBox.hgrow="ALWAYS">
+                    <Label fx:id="userNameLbl" styleClass="user-name"/>
+                    <Label fx:id="userIdLbl"   styleClass="user-id"/>
+                </VBox>
+                <Button fx:id="logoutBtn" text="Log out" onAction="#onLogout" styleClass="logout-btn"/>
+            </HBox>
+        </VBox>
+    </left>
+
+    <!-- Main column (topbar + scrollable content) -->
+    <center>
+        <VBox>
+
+            <!-- Topbar -->
+            <HBox styleClass="topbar">
+                <VBox spacing="2">
+                    <Label fx:id="topbarTitle"    styleClass="topbar-title"    text="Dashboard"/>
+                    <Label fx:id="topbarSubtitle" styleClass="topbar-subtitle" text="Welcome back"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label text="v2.0" styleClass="topbar-version"/>
+            </HBox>
+
+            <!-- Content swap point -->
+            <StackPane fx:id="contentArea" styleClass="content-area" VBox.vgrow="ALWAYS"/>
+        </VBox>
+    </center>
+</BorderPane>

@@ -5,17 +5,21 @@ import client.service.NetworkService;
 import common.dto.CancellationsReportDTO;
 import common.dto.CancellationsReportRow;
 import common.dto.ParkDTO;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,31 +28,38 @@ import java.util.List;
  * "All parks" for the whole region — and clicks Generate to run
  * {@code REPORT_CANCELLATIONS}.
  *
- * <p>This is the tabular report: one row per day showing how many reservations
- * were cancelled and how many were marked no-show, followed by a totals row and a
- * summary of the range totals and the average per day. Every figure is read
- * straight off the server's {@link CancellationsReportDTO} — nothing is
- * aggregated client-side. The manual row layout mirrors
- * {@link ApprovalQueueController} for visual consistency.
+ * <p>The centrepiece is a {@link BarChart}: one category per active day along the
+ * x-axis, with two grouped bars — "Cancelled" and "No-show" — carrying the day's
+ * counts on the y-axis. A small summary line beneath it repeats the range totals
+ * and the average per day. Every figure is read straight off the server's
+ * {@link CancellationsReportDTO} — nothing is aggregated client-side. The chart
+ * mirrors {@link VisitsReportController} for visual consistency.
  *
  * <p>Extends {@link BaseController} for navigation-lifecycle parity; it holds no
  * push subscriptions.
  */
 public class CancellationsReportController extends BaseController {
 
+    /** Series (legend) names, also the fixed bar order within each date group. */
+    private static final String SERIES_CANCELLED = "Cancelled";
+    private static final String SERIES_NO_SHOW   = "No-show";
+
     /** Park dropdown entry: carries the id (null for "All parks") but renders the name. */
     private record ParkOption(Integer id, String name) {
         @Override public String toString() { return name; }
     }
 
-    @FXML private DatePicker           fromPicker;
-    @FXML private DatePicker           toPicker;
-    @FXML private ComboBox<ParkOption> parkCombo;
-    @FXML private Button               generateBtn;
-    @FXML private Label                resultLabel;
-    @FXML private Label                cardHeaderLabel;
-    @FXML private VBox                 tableBox;
-    @FXML private HBox                 summaryBox;
+    @FXML private DatePicker               fromPicker;
+    @FXML private DatePicker               toPicker;
+    @FXML private ComboBox<ParkOption>     parkCombo;
+    @FXML private Button                   generateBtn;
+    @FXML private Label                    resultLabel;
+    @FXML private Label                    cardHeaderLabel;
+    @FXML private BarChart<String, Number> chart;
+    @FXML private CategoryAxis             xAxis;
+    @FXML private NumberAxis               yAxis;
+    @FXML private VBox                     placeholderBox;
+    @FXML private Label                    summaryLabel;
 
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
@@ -59,10 +70,10 @@ public class CancellationsReportController extends BaseController {
 
     @FXML
     private void initialize() {
-        // TODO: fix the dept-manager reports screen layout to fit the content area better.
+        // Sensible default window: the last month up to today; the manager adjusts.
         toPicker.setValue(LocalDate.now());
         fromPicker.setValue(LocalDate.now().minusMonths(1));
-        tableBox.getChildren().setAll(headerRow());
+        yAxis.setForceZeroInRange(true);
         loadParks();
     }
 
@@ -119,98 +130,55 @@ public class CancellationsReportController extends BaseController {
         });
     }
 
-    /** Paints the per-day table, the totals row and the summary tiles from the DTO. */
+    /**
+     * Paints the per-day chart and the range-summary line from the server's report.
+     * The x-axis categories are the report's dates (oldest first); each date carries
+     * a "Cancelled" and a "No-show" bar. An empty range shows a placeholder instead
+     * of a bare chart. Every figure comes straight off the {@link CancellationsReportDTO}.
+     */
     private void render(CancellationsReportDTO report) {
         List<CancellationsReportRow> rows = report.getRows();
         cardHeaderLabel.setText("CANCELLATIONS & NO-SHOWS (" + rows.size()
                 + (rows.size() == 1 ? " day)" : " days)"));
 
-        tableBox.getChildren().setAll(headerRow());
         if (rows.isEmpty()) {
-            Label none = new Label("No cancellations or no-shows in this range.");
-            none.getStyleClass().addAll("history-cell", "muted");
-            HBox row = new HBox(none);
-            row.getStyleClass().add("history-row");
-            tableBox.getChildren().add(row);
-        } else {
-            for (int i = 0; i < rows.size(); i++) {
-                tableBox.getChildren().add(dataRow(rows.get(i), true));
-            }
-            tableBox.getChildren().add(totalsRow(report));
+            chart.getData().clear();
+            showPlaceholder(true);
+            return;
         }
 
-        renderSummary(report);
+        // X-axis categories = the report's dates, in order (plain loop, no streams).
+        List<String> dates = new ArrayList<>(rows.size());
+        for (CancellationsReportRow r : rows) {
+            dates.add(r.getDate());
+        }
+        chart.getData().clear();
+        xAxis.setCategories(FXCollections.observableArrayList(dates));
+
+        XYChart.Series<String, Number> cancelled = new XYChart.Series<>();
+        cancelled.setName(SERIES_CANCELLED);
+        XYChart.Series<String, Number> noShow = new XYChart.Series<>();
+        noShow.setName(SERIES_NO_SHOW);
+        for (CancellationsReportRow r : rows) {
+            cancelled.getData().add(new XYChart.Data<>(r.getDate(), r.getCancelled()));
+            noShow.getData().add(new XYChart.Data<>(r.getDate(), r.getNoShow()));
+        }
+        chart.getData().add(cancelled);
+        chart.getData().add(noShow);
+
+        summaryLabel.setText("Total cancelled: " + report.getTotalCancelled()
+                + "      ·      Total no-show: " + report.getTotalNoShow()
+                + "      ·      Average per day: " + String.format("%.2f", report.getAvgPerDay()));
+        showPlaceholder(false);
     }
 
-    /** The three summary tiles: total cancelled, total no-show, average per day. */
-    private void renderSummary(CancellationsReportDTO report) {
-        summaryBox.getChildren().setAll(
-                summaryTile("Total cancelled", String.valueOf(report.getTotalCancelled())),
-                summaryTile("Total no-show",   String.valueOf(report.getTotalNoShow())),
-                summaryTile("Average per day",  String.format("%.2f", report.getAvgPerDay())));
-    }
-
-    /* ---------- Row + tile builders (mirroring ApprovalQueueController) ----- */
-
-    private HBox headerRow() {
-        HBox row = new HBox();
-        row.getStyleClass().add("history-header-row");
-        row.getChildren().addAll(
-                headerCell("DATE",      200),
-                headerCell("CANCELLED", 160),
-                headerCell("NO-SHOW",   160));
-        return row;
-    }
-
-    private HBox dataRow(CancellationsReportRow r, boolean withDivider) {
-        HBox row = new HBox(
-                cell(r.getDate(),                    200),
-                cell(String.valueOf(r.getCancelled()), 160),
-                cell(String.valueOf(r.getNoShow()),    160));
-        row.getStyleClass().add("history-row");
-        if (withDivider) row.getStyleClass().add("with-divider");
-        return row;
-    }
-
-    private HBox totalsRow(CancellationsReportDTO report) {
-        HBox row = new HBox(
-                totalCell("TOTAL",                            200),
-                totalCell(String.valueOf(report.getTotalCancelled()), 160),
-                totalCell(String.valueOf(report.getTotalNoShow()),    160));
-        row.getStyleClass().addAll("history-row", "total-row");
-        return row;
-    }
-
-    private VBox summaryTile(String label, String value) {
-        Label l = new Label(label);
-        l.getStyleClass().add("stat-tile-label");
-        Label v = new Label(value);
-        v.getStyleClass().add("stat-tile-value");
-        VBox tile = new VBox(2, l, v);
-        tile.getStyleClass().add("stat-tile");
-        HBox.setHgrow(tile, Priority.ALWAYS);
-        tile.setMaxWidth(Double.MAX_VALUE);
-        return tile;
-    }
-
-    private Label headerCell(String text, double w) {
-        Label l = new Label(text);
-        l.getStyleClass().add("history-header-cell");
-        l.setPrefWidth(w);
-        return l;
-    }
-
-    private Label cell(String text, double w) {
-        Label l = new Label(text);
-        l.getStyleClass().add("history-cell");
-        l.setPrefWidth(w);
-        return l;
-    }
-
-    private Label totalCell(String text, double w) {
-        Label l = new Label(text);
-        l.getStyleClass().addAll("history-cell", "total");
-        l.setPrefWidth(w);
-        return l;
+    /** Swaps between the chart (with its summary line) and the empty-range placeholder. */
+    private void showPlaceholder(boolean empty) {
+        chart.setVisible(!empty);
+        chart.setManaged(!empty);
+        summaryLabel.setVisible(!empty);
+        summaryLabel.setManaged(!empty);
+        placeholderBox.setVisible(empty);
+        placeholderBox.setManaged(empty);
     }
 }

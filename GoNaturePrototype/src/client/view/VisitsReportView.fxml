@@ -16,7 +16,7 @@
      with per-category average-stay summary tiles. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.VisitsReportController"
-            fitToWidth="true" styleClass="scroll-pane">
+            fitToWidth="true" fitToHeight="true" styleClass="scroll-pane">
 
     <VBox styleClass="screen-padded" spacing="12">
 
@@ -26,18 +26,21 @@
             <HBox spacing="14" alignment="BOTTOM_LEFT">
                 <VBox spacing="6">
                     <Label text="From" styleClass="field-label"/>
-                    <DatePicker fx:id="fromPicker" promptText="dd / mm / yyyy" styleClass="date-picker"/>
+                    <DatePicker fx:id="fromPicker" promptText="dd / mm / yyyy" styleClass="date-picker" prefHeight="42"/>
                 </VBox>
                 <VBox spacing="6">
                     <Label text="To" styleClass="field-label"/>
-                    <DatePicker fx:id="toPicker" promptText="dd / mm / yyyy" styleClass="date-picker"/>
+                    <DatePicker fx:id="toPicker" promptText="dd / mm / yyyy" styleClass="date-picker" prefHeight="42"/>
                 </VBox>
                 <VBox spacing="6">
                     <Label text="Park" styleClass="field-label"/>
-                    <ComboBox fx:id="parkCombo" prefWidth="180" styleClass="input-field"/>
+                    <ComboBox fx:id="parkCombo" prefWidth="180" prefHeight="42" styleClass="input-field"/>
                 </VBox>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="generateBtn" text="Generate" onAction="#onGenerate" styleClass="btn-primary"/>
+                <!-- minWidth=-Infinity (USE_PREF_SIZE): never let the action button shrink
+                     below its label into "Ge.." when the filter row gets tight. -->
+                <Button fx:id="generateBtn" text="Generate" onAction="#onGenerate"
+                        styleClass="btn-primary" minWidth="-Infinity"/>
             </HBox>
             <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
         </VBox>

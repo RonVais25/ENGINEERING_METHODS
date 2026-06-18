@@ -14,7 +14,7 @@ import java.sql.SQLIntegrityConstraintViolationException;
  * Data access object for authentication: staff/visitor credential lookups and
  * the single-login lock backed by the {@code active_session} table.
  *
- * <p>Follows the same conventions as {@link OrderDAO}: each method opens a
+ * <p>Follows the project's standard DAO conventions: each method opens a
  * short-lived {@link java.sql.Connection} from {@link server.db.DBConnection},
  * runs parameterized statements, and maps rows to DTOs. SQL exceptions are
  * logged and surfaced as a {@code null}/{@code false} return rather than being
@@ -111,7 +111,7 @@ public class AuthDAO {
      * @return the matching {@link VisitorDTO}, or {@code null} if no row matches or the query fails
      */
     public VisitorDTO findVisitorById(long id) {
-        String sql = "SELECT id, full_name, is_subscriber FROM visitor WHERE id = ?";
+        String sql = "SELECT id, full_name, phone, email, is_subscriber FROM visitor WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -122,6 +122,8 @@ public class AuthDAO {
                     return new VisitorDTO(
                             rs.getLong("id"),
                             rs.getString("full_name"),
+                            rs.getString("phone"),
+                            rs.getString("email"),
                             rs.getBoolean("is_subscriber")
                     );
                 }

@@ -19,9 +19,12 @@
     -g100: #e5f3e8;
     -g50:  #f2f9f3;
     -red:  #c94040;
+    -red-bg:   #fef2f2;
     -dot-ok:   #64c864;
     -gold-fg:  #8a6a1a;
     -gold-bg:  #f5e8c0;
+    -blue-fg:  #1e5fa8;
+    -blue-bg:  #e3eefb;
 
     -fx-font-family: "System";
 }
@@ -187,6 +190,24 @@
 .spinner .increment-arrow,
 .spinner .decrement-arrow { -fx-background-color: -g500; }
 
+/* Time picker (Book Visit / reschedule, Row 3): three plain dropdowns
+   (Hour : Minute + AM/PM) that share the row's right half evenly. Trim the
+   heavy .input-field horizontal padding so the short values sit comfortably
+   alongside the dropdown arrow without crowding. */
+.time-combo {
+    -fx-padding: 4 6 4 8;
+}
+.time-combo .list-cell {
+    -fx-font-size: 14;
+    -fx-padding: 5 2 5 2;
+}
+.time-colon {
+    -fx-font-size: 16;
+    -fx-font-weight: bold;
+    -fx-text-fill: -g500;
+    -fx-padding: 0 1 0 1;
+}
+
 /* ---------- Buttons -------------------------------------------------------- */
 .btn-primary {
     -fx-font-size: 14;
@@ -268,13 +289,16 @@
     -fx-background-radius: 100;
     -fx-padding: 3 10 3 10;
 }
-.status-tag.confirmed { -fx-text-fill: -g600; -fx-background-color: -g100; }
+/* Each status gets a visually distinct pill. WAITING is blue (not gold) so it
+ * never reads as PENDING; NO_SHOW is a solid red (not the soft-red CANCELLED
+ * wash) so the two negative states stay tellable apart at a glance. */
+.status-tag.confirmed { -fx-text-fill: -g600;    -fx-background-color: -g100; }
 .status-tag.pending   { -fx-text-fill: -gold-fg; -fx-background-color: -gold-bg; }
 .status-tag.completed { -fx-text-fill: white;    -fx-background-color: -g500; }
-.status-tag.cancelled { -fx-text-fill: -red;     -fx-background-color: #fef2f2; }
-.status-tag.waiting   { -fx-text-fill: -gold-fg; -fx-background-color: -gold-bg; }
-.status-tag.no_show   { -fx-text-fill: -red;     -fx-background-color: #fef2f2; }
-.status-tag.on-dark   { -fx-text-fill: white;  -fx-background-color: rgba(255,255,255,0.15); }
+.status-tag.cancelled { -fx-text-fill: -red;     -fx-background-color: -red-bg; }
+.status-tag.waiting   { -fx-text-fill: -blue-fg; -fx-background-color: -blue-bg; }
+.status-tag.no_show   { -fx-text-fill: white;    -fx-background-color: -red; }
+.status-tag.on-dark   { -fx-text-fill: white;    -fx-background-color: rgba(255,255,255,0.15); }
 
 /* ---------- Toast --------------------------------------------------------- */
 .toast {
@@ -301,6 +325,27 @@
 .stat-card-label { -fx-font-size: 11; -fx-text-fill: -g400; }
 .stat-card-value { -fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: -g500; }
 .stat-card-sub   { -fx-font-size: 12; -fx-text-fill: -g400; }
+
+/* Dashboard greeting (by name) + attention line. The alert is amber when
+ * something needs attention and switches to a calm green via the .calm modifier. */
+.dash-greeting     { -fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.dash-greeting-sub { -fx-font-size: 13; -fx-text-fill: -g400; }
+.dash-alert {
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+    -fx-text-fill: -gold-fg;
+    -fx-background-color: -gold-bg;
+    -fx-border-color: derive(-gold-fg, 55%);
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+    -fx-padding: 12 16 12 16;
+}
+.dash-alert.calm {
+    -fx-text-fill: -g600;
+    -fx-background-color: -g100;
+    -fx-border-color: -g200;
+}
 
 /* Dashboard recent order row */
 .recent-row         { -fx-padding: 10 4 10 4; -fx-cursor: hand; -fx-alignment: center-left; }
@@ -454,6 +499,10 @@
    it to the brand green and keep the plot clean (no vertical grid, soft baseline). */
 .report-chart { -fx-padding: 4 0 0 0; }
 .report-chart .default-color0.chart-bar { -fx-bar-fill: -g500; }
+/* Cancellations chart adds a second series ("No-show"); colour it red to set it
+   apart from the green "Cancelled" bars. The legend symbol shares .chart-bar, so
+   this recolours it too. The visits chart has no second series, so it's unaffected. */
+.report-chart .default-color1.chart-bar { -fx-bar-fill: -red; }
 .report-chart .chart-plot-background       { -fx-background-color: transparent; }
 .report-chart .chart-vertical-grid-lines   { -fx-stroke: transparent; }
 .report-chart .chart-horizontal-grid-lines { -fx-stroke: -g100; }

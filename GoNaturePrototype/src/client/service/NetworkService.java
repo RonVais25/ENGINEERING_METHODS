@@ -102,28 +102,6 @@ public class NetworkService {
         return future;
     }
 
-    public CompletableFuture<ServerResponse> getOrder(int orderNumber) {
-        ClientRequest req = new ClientRequest(RequestType.GET_ORDER);
-        req.put("orderNumber", orderNumber);
-        return send(req);
-    }
-
-    public CompletableFuture<ServerResponse> updateOrder(int orderNumber, String newDate, int newVisitors) {
-        ClientRequest req = new ClientRequest(RequestType.UPDATE_ORDER);
-        req.put("orderNumber", orderNumber);
-        req.put("newDate",     newDate);
-        req.put("newVisitors", newVisitors);
-        return send(req);
-    }
-
-    public CompletableFuture<ServerResponse> insertOrder(String orderDate, int numberOfVisitors, int subscriberId) {
-        ClientRequest req = new ClientRequest(RequestType.INSERT_ORDER);
-        req.put("orderDate",        orderDate);
-        req.put("numberOfVisitors", numberOfVisitors);
-        req.put("subscriberId",     subscriberId);
-        return send(req);
-    }
-
     /**
      * Creates a reservation. {@code visitTime} may be {@code null} (no preferred
      * time). The {@link VisitType} is sent as the enum itself — it lives in
@@ -138,11 +116,14 @@ public class NetworkService {
      * @param visitType     INDIVIDUAL, FAMILY, or GROUP
      * @param guideId       registered guide's id for GROUP visits, or {@code null} otherwise
      * @param paidInAdvance whether the visitor opts to pay up front (deepens the group discount)
+     * @param email         the visitor's contact email (required; the booking's notification target)
+     * @param phone         the visitor's contact phone (required)
      * @return future resolving (on the FX thread) with the server's response
      */
     public CompletableFuture<ServerResponse> createReservation(int parkId, long visitorId, String visitDate,
                                                                String visitTime, int partySize, VisitType visitType,
-                                                               Long guideId, boolean paidInAdvance) {
+                                                               Long guideId, boolean paidInAdvance,
+                                                               String email, String phone) {
         ClientRequest req = new ClientRequest(RequestType.CREATE_RESERVATION);
         req.put("parkId",        parkId);
         req.put("visitorId",     visitorId);
@@ -152,6 +133,8 @@ public class NetworkService {
         req.put("visitType",     visitType);
         req.put("guideId",       guideId);     // null for non-group bookings
         req.put("paidInAdvance", paidInAdvance);
+        req.put("email",         email);
+        req.put("phone",         phone);
         return send(req);
     }
 
@@ -176,6 +159,29 @@ public class NetworkService {
         return send(req);
     }
 
+    /**
+     * Reschedules a PENDING/CONFIRMED reservation (date / optional time / party
+     * size). The server re-checks the status, the group cap and capacity, then
+     * recomputes the price. On success the response {@code getData()} is a
+     * {@link common.dto.ReservationUpdateResultDTO} carrying the updated
+     * {@link common.dto.ReservationDTO} plus the old and new price so the caller can
+     * settle the difference.
+     *
+     * @param reservationId the reservation to reschedule
+     * @param visitDate     the new visit date, ISO {@code yyyy-MM-dd}
+     * @param visitTime     the new visit time {@code HH:mm:ss}, or {@code null}
+     * @param partySize     the new party size
+     */
+    public CompletableFuture<ServerResponse> updateReservation(int reservationId, String visitDate,
+                                                               String visitTime, int partySize) {
+        ClientRequest req = new ClientRequest(RequestType.UPDATE_RESERVATION);
+        req.put("reservationId", reservationId);
+        req.put("visitDate",     visitDate);
+        req.put("visitTime",     visitTime);   // nullable
+        req.put("partySize",     partySize);
+        return send(req);
+    }
+
     /* ---------- Waiting list ---------------------------------------------- */
 
     /**
@@ -192,10 +198,13 @@ public class NetworkService {
      * @param visitType     INDIVIDUAL, FAMILY, or GROUP
      * @param guideId       registered guide's id for GROUP visits, or {@code null} otherwise
      * @param paidInAdvance whether the visitor opts to pay up front
+     * @param email         the visitor's contact email (required; target for the grab-offer notification)
+     * @param phone         the visitor's contact phone (required)
      */
     public CompletableFuture<ServerResponse> joinWaitlist(int parkId, long visitorId, String visitDate,
                                                           String visitTime, int partySize, VisitType visitType,
-                                                          Long guideId, boolean paidInAdvance) {
+                                                          Long guideId, boolean paidInAdvance,
+                                                          String email, String phone) {
         ClientRequest req = new ClientRequest(RequestType.JOIN_WAITLIST);
         req.put("parkId",        parkId);
         req.put("visitorId",     visitorId);
@@ -205,6 +214,8 @@ public class NetworkService {
         req.put("visitType",     visitType);
         req.put("guideId",       guideId);     // null for non-group
         req.put("paidInAdvance", paidInAdvance);
+        req.put("email",         email);
+        req.put("phone",         phone);
         return send(req);
     }
 
@@ -345,6 +356,20 @@ public class NetworkService {
         ClientRequest req = new ClientRequest(RequestType.EXIT_VISIT);
         if (confirmationCode != null) req.put("confirmationCode", confirmationCode);
         if (visitorId != null)        req.put("visitorId",        visitorId);
+        return send(req);
+    }
+
+    /**
+     * Records a casual walk-in's exit by its ticket number (PARK_EMPLOYEE only).
+     * The ticket number is the visit id handed to the employee at admission — the
+     * only handle for exiting an anonymous casual party (it has no confirmation
+     * code or visitor id). The server closes the open visit at the employee's park.
+     *
+     * @param visitId the ticket number shown at casual admission
+     */
+    public CompletableFuture<ServerResponse> exitVisitByTicket(int visitId) {
+        ClientRequest req = new ClientRequest(RequestType.EXIT_VISIT);
+        req.put("visitId", visitId);
         return send(req);
     }
 

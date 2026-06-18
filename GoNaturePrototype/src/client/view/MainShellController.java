@@ -36,10 +36,9 @@ import java.util.function.Predicate;
  * each entry carrying a {@link Predicate} over the {@link Session} that decides
  * whether the current identity may see it. Only the screens that pass are
  * registered with the {@link Navigator} and given a button, so a hidden screen is
- * also unreachable (not just invisible). Visitors see the reservation screens;
- * staff additionally see the order tools; the {@code MANAGER_ONLY} predicate is
- * wired and ready for future manager screens (e.g. parameter approvals) to slot
- * into {@link #navItems()}.
+ * also unreachable (not just invisible). Visitors and staff share the reservation
+ * screens; role-specific predicates ({@code SERVICE_REP_ONLY},
+ * {@code PARK_EMPLOYEE_ONLY}, {@code DEPT_MANAGER_ONLY}, …) gate the staff tools.
  */
 public class MainShellController {
 
@@ -48,10 +47,7 @@ public class MainShellController {
 
     // Visibility predicates — drive gating off the live Session, never hardcoded.
     private static final Predicate<Session> EVERYONE     = s -> true;
-    private static final Predicate<Session> STAFF_ONLY   = Session::isStaff;
     private static final Predicate<Session> VISITOR_ONLY = Session::isVisitor;
-    private static final Predicate<Session> MANAGER_ONLY =
-            s -> s.isStaff() && (s.getRole() == Role.PARK_MANAGER || s.getRole() == Role.DEPT_MANAGER);
     private static final Predicate<Session> SERVICE_REP_ONLY =
             s -> s.isStaff() && s.getRole() == Role.SERVICE_REP;
     private static final Predicate<Session> PARK_MANAGER_ONLY =
@@ -61,8 +57,9 @@ public class MainShellController {
     private static final Predicate<Session> PARK_EMPLOYEE_ONLY =
             s -> s.isStaff() && s.getRole() == Role.PARK_EMPLOYEE;
 
-    // TODO: anchor the sidebar (logo + user/login chrome) so it stays fixed while
-    // the screen content area scrolls independently.
+    // Sidebar (logo + nav + user/login chrome) is pinned by the BorderPane in
+    // MainShell.fxml (left), so it stays fixed while only the center content
+    // scrolls; these fields are injected into that fixed sidebar.
     @FXML private VBox      navBox;
     @FXML private StackPane contentArea;
     @FXML private Label     topbarTitle;
@@ -137,18 +134,6 @@ public class MainShellController {
             // Notification center — every logged-in actor can review their messages.
             new NavItem(new Screen("notifications", "🔔", "Notifications", "/client/view/NotificationCenterView.fxml",
                         "Notifications", "Messages addressed to you"), EVERYONE),
-            // Order tools — staff only (legacy order desk).
-            // TODO: retire the legacy Order feature entirely once reservations
-            // cover every flow — delete these four screens + their controllers/
-            // FXML, the Order DTO/DAO/controller path, and Session.getSubscriberId().
-            new NavItem(new Screen("get", "⊕", "Get Order", "/client/view/GetOrderView.fxml",
-                        "Get Order", "Look up an existing order"), STAFF_ONLY),
-            new NavItem(new Screen("update", "✎", "Update Order", "/client/view/UpdateOrderView.fxml",
-                        "Update Order", "Modify order details"), STAFF_ONLY),
-            new NavItem(new Screen("new", "+", "New Booking", "/client/view/NewBookingView.fxml",
-                        "New Booking", "Reserve your next park visit"), STAFF_ONLY),
-            new NavItem(new Screen("history", "☰", "History", "/client/view/HistoryView.fxml",
-                        "History", "All your past orders"), STAFF_ONLY),
             // Member registration — service reps only.
             new NavItem(new Screen("regsub", "★", "Register Subscriber", "/client/view/SubscriberRegisterView.fxml",
                         "Register Subscriber", "Sign up a new subscriber (members earn a discount)"), SERVICE_REP_ONLY),

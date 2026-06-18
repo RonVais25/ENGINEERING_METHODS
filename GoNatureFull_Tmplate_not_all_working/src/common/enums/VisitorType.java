@@ -1,5 +1,0 @@
-package common.enums;
-
-public enum VisitorType {
-    INDIVIDUAL_PREBOOKED, FAMILY_PREBOOKED, WALK_IN, GROUP_PREBOOKED, GROUP_WALK_IN, SUBSCRIBER
-}

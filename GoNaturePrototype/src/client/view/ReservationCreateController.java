@@ -5,6 +5,7 @@ import client.service.NetworkService;
 import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
 import common.dto.VisitType;
+import common.dto.VisitorDTO;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -20,7 +21,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -53,11 +53,16 @@ public class ReservationCreateController extends BaseController {
 
     @FXML private ComboBox<ParkOption> parkCombo;
     @FXML private TextField            visitorField;
+    @FXML private TextField            emailField;
+    @FXML private TextField            phoneField;
     @FXML private DatePicker           datePicker;
-    @FXML private TextField            timeField;
+    @FXML private CheckBox             timeEnabledCheck;
+    @FXML private ComboBox<Integer>    hourCombo;
+    @FXML private ComboBox<String>     minuteCombo;
+    @FXML private ComboBox<String>     ampmCombo;
     @FXML private Spinner<Integer>     partySpinner;
     @FXML private ComboBox<VisitType>  typeCombo;
-    @FXML private Label                guideLabel;
+    @FXML private VBox                 guideRow;
     @FXML private TextField            guideField;
     @FXML private CheckBox             prePayCheck;
     @FXML private Button               bookBtn;
@@ -81,6 +86,22 @@ public class ReservationCreateController extends BaseController {
         partySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 2));
 
+        // 12-hour clock picker as three plain dropdowns: hour 1–12, minute in
+        // quarter-hour steps and a clearly readable AM/PM selector. The trio is
+        // disabled until "set time" is ticked; left unticked the booking sends no
+        // preferred time (null visitTime), preserving the old blank-field semantics.
+        // The 12-hour selection is converted to the 24-hour HH:mm:ss wire format in
+        // formatVisitTime().
+        hourCombo.getItems().setAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+        minuteCombo.getItems().setAll("00", "15", "30", "45");
+        ampmCombo.getItems().setAll("AM", "PM");
+        hourCombo.setValue(9);
+        minuteCombo.setValue("00");
+        ampmCombo.setValue("AM");
+        hourCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        minuteCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        ampmCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+
         typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
         typeCombo.getSelectionModel().selectFirst();
 
@@ -89,19 +110,47 @@ public class ReservationCreateController extends BaseController {
         typeCombo.valueProperty().addListener((obs, oldV, newV) -> showGuideField(newV == VisitType.GROUP));
         showGuideField(typeCombo.getValue() == VisitType.GROUP);
 
-        // A logged-in visitor books for themselves: prefill + lock the id field.
-        // Staff leave it blank/editable so they can book on behalf of any visitor.
+        // A logged-in visitor books for themselves: prefill + lock the id field, and
+        // prefill their on-file contact (left editable so they can update it). Staff
+        // leave the id blank/editable and the contact empty to enter/confirm per booking.
         if (session.isVisitor()) {
             visitorField.setText(String.valueOf(session.getActorId()));
             visitorField.setEditable(false);
+
+            VisitorDTO me = session.getVisitor();
+            if (me != null) {
+                if (me.getEmail() != null) emailField.setText(me.getEmail());
+                if (me.getPhone() != null) phoneField.setText(me.getPhone());
+            }
         }
     }
 
     private void showGuideField(boolean show) {
-        guideLabel.setVisible(show);
-        guideLabel.setManaged(show);
-        guideField.setVisible(show);
-        guideField.setManaged(show);
+        guideRow.setVisible(show);
+        guideRow.setManaged(show);
+    }
+
+    /**
+     * Converts the compact 12-hour picker (hour 1–12, minute, AM/PM) into the
+     * 24-hour {@code HH:mm:ss} string the server/DB expect for {@code visit_time}
+     * — byte-identical to what the old picker sent. The 12-hour mapping is:
+     * 12&nbsp;AM&nbsp;→&nbsp;00, 12&nbsp;PM&nbsp;→&nbsp;12, any other PM hour&nbsp;+&nbsp;12;
+     * the minute is zero-padded (e.g. 2:30&nbsp;PM&nbsp;→&nbsp;{@code "14:30:00"}).
+     *
+     * @return the visit time formatted {@code HH:mm:ss}
+     */
+    private String formatVisitTime() {
+        int     hour12 = hourCombo.getValue();
+        boolean pm     = "PM".equals(ampmCombo.getValue());
+        int     hour24;
+        if (hour12 == 12) {
+            hour24 = pm ? 12 : 0;
+        } else {
+            hour24 = pm ? hour12 + 12 : hour12;
+        }
+        // minuteCombo values are already zero-padded ("00".."45"), so the result
+        // is byte-identical to the old picker's HH:mm:ss wire format.
+        return String.format("%02d:%s:00", hour24, minuteCombo.getValue());
     }
 
     /**
@@ -149,24 +198,31 @@ public class ReservationCreateController extends BaseController {
             return;
         }
 
+        // Email + phone are both required: email is the booking's notification
+        // target, phone the fallback contact. The server re-validates both — these
+        // guards are convenience for fast inline feedback.
+        String email = emailField.getText() == null ? "" : emailField.getText().trim();
+        if (!isValidEmail(email)) {
+            Widgets.showToast(resultLabel, false, "A valid email is required (e.g. name@example.com)");
+            return;
+        }
+        String phone = phoneField.getText() == null ? "" : phoneField.getText().trim();
+        if (!isValidPhone(phone)) {
+            Widgets.showToast(resultLabel, false, "Enter a valid phone number (at least 10 digits)");
+            return;
+        }
+
         if (datePicker.getValue() == null) {
             Widgets.showToast(resultLabel, false, "Please select a visit date");
             return;
         }
 
-        // TODO: replace the free-text time field with a clock-style time picker
-        // (e.g. hour/minute spinners) for choosing the optional visit hour.
-        // Optional time: blank → null; otherwise must parse to HH:mm[:ss].
+        // Optional visit time from the clock-style picker: only sent when "set time"
+        // is ticked, converted to the 24-hour HH:mm:ss wire format; otherwise null
+        // (no preference), exactly like the old blank field.
         String visitTime = null;
-        String timeRaw = timeField.getText() == null ? "" : timeField.getText().trim();
-        if (!timeRaw.isEmpty()) {
-            try {
-                LocalTime t = LocalTime.parse(timeRaw);
-                visitTime = t.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            } catch (Exception ex) {
-                Widgets.showToast(resultLabel, false, "Enter time as HH:mm (e.g. 09:30) or leave blank");
-                return;
-            }
+        if (timeEnabledCheck.isSelected()) {
+            visitTime = formatVisitTime();
         }
 
         // Commit any text typed into the editable spinner before reading it.
@@ -216,7 +272,7 @@ public class ReservationCreateController extends BaseController {
         final String visitTimeFinal = visitTime;
         final Long   guideIdFinal   = guideId;
 
-        network.createReservation(park.id(), visitorId, visitDate, visitTimeFinal, partySize, visitType, guideIdFinal, paidInAdvance)
+        network.createReservation(park.id(), visitorId, visitDate, visitTimeFinal, partySize, visitType, guideIdFinal, paidInAdvance, email, phone)
                .thenAccept(res -> {
                     bookBtn.setText("+  Book Visit");
                     bookBtn.setDisable(false);
@@ -226,7 +282,7 @@ public class ReservationCreateController extends BaseController {
                         // surfaced as a toast.
                         if (isCapacityFailure(res.getMessage())) {
                             promptJoinWaitlist(park.id(), visitorId, visitDate, visitTimeFinal,
-                                    partySize, visitType, guideIdFinal, paidInAdvance);
+                                    partySize, visitType, guideIdFinal, paidInAdvance, email, phone);
                         } else {
                             Widgets.showToast(resultLabel, false, res.getMessage());
                         }
@@ -255,11 +311,45 @@ public class ReservationCreateController extends BaseController {
     }
 
     /**
+     * Basic client-side email check (non-blank, contains an {@code '@'} and a
+     * {@code '.'}) mirroring the server's {@code isValidEmail}. A convenience guard
+     * for fast inline feedback — the server re-validates, so it is the real gate.
+     *
+     * @param email the trimmed email entered in the form
+     * @return {@code true} if it looks well-formed enough to send
+     */
+    private boolean isValidEmail(String email) {
+        return email != null && email.contains("@") && email.contains(".");
+    }
+
+    /**
+     * Basic client-side phone check (at least ten digits, ignoring formatting)
+     * mirroring the server's {@code isValidPhone}. Convenience guard for fast inline
+     * feedback — the server re-validates, so it is the real gate.
+     *
+     * @param phone the trimmed phone entered in the form
+     * @return {@code true} if it contains at least ten digits
+     */
+    private boolean isValidPhone(String phone) {
+        if (phone == null) {
+            return false;
+        }
+        int digits = 0;
+        for (int i = 0; i < phone.length(); i++) {
+            if (Character.isDigit(phone.charAt(i))) {
+                digits++;
+            }
+        }
+        return digits >= 10;
+    }
+
+    /**
      * Asks the visitor whether to join the waiting list after a park-full rejection.
      * On confirm, re-sends the <em>same</em> booking inputs as {@code JOIN_WAITLIST}.
      */
     private void promptJoinWaitlist(int parkId, long visitorId, String visitDate, String visitTime,
-                                    int partySize, VisitType visitType, Long guideId, boolean paidInAdvance) {
+                                    int partySize, VisitType visitType, Long guideId, boolean paidInAdvance,
+                                    String email, String phone) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
                 "Park is full for that date — join the waiting list?",
                 ButtonType.YES, ButtonType.NO);
@@ -275,7 +365,7 @@ public class ReservationCreateController extends BaseController {
         }
 
         bookBtn.setDisable(true);
-        network.joinWaitlist(parkId, visitorId, visitDate, visitTime, partySize, visitType, guideId, paidInAdvance)
+        network.joinWaitlist(parkId, visitorId, visitDate, visitTime, partySize, visitType, guideId, paidInAdvance, email, phone)
                .thenAccept(res -> {
                     bookBtn.setDisable(false);
                     if (!res.isSuccess()) {

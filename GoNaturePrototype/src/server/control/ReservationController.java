@@ -11,6 +11,7 @@ import common.dto.ClientRequest;
 import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
+import common.dto.ReservationUpdateResultDTO;
 import common.dto.RequestType;
 import common.dto.ServerEvent;
 import common.dto.ServerResponse;
@@ -19,6 +20,7 @@ import common.dto.VisitType;
 import common.dto.VisitorDTO;
 import common.dto.WaitlistEntryDTO;
 import server.dao.AuthDAO;
+import server.dao.MemberDAO;
 import server.dao.ParkDAO;
 import server.dao.ReservationDAO;
 import server.dao.WaitlistDAO;
@@ -74,6 +76,8 @@ public class ReservationController implements DomainController {
 
     private final ReservationDAO dao = new ReservationDAO();
     private final AuthDAO authDao = new AuthDAO();
+    /** Upserts the booking visitor's contact so the FK holds and notifications have a target. */
+    private final MemberDAO memberDao = new MemberDAO();
     /** Stateless price calculator, shared across all client threads. */
     private final PricingService pricing = new PricingService();
     /** Stateless notification helper, shared across all client threads. */
@@ -137,6 +141,22 @@ public class ReservationController implements DomainController {
                 String    visitTime = (String) request.get("visitTime"); // nullable
                 int       partySize = (int) request.get("partySize");
                 VisitType visitType = (VisitType) request.get("visitType");
+                String    email     = (String) request.get("email");
+                String    phone     = (String) request.get("phone");
+
+                // Email + phone are both required to book: email is the visitor's
+                // notification target, phone the fallback contact. Validated here
+                // (not just on the client) so a crafted request can't book a
+                // contactless visitor.
+                if (!isValidEmail(email)) {
+                    return new ServerResponse(false, "A valid email is required to book.");
+                }
+                if (!isValidPhone(phone)) {
+                    return new ServerResponse(false, "A valid phone number is required to book (at least 10 digits).");
+                }
+                // Save contact + guarantee the visitor row exists before the insert,
+                // so the reservation's visitor_id FK holds even for a brand-new id.
+                memberDao.upsertContact(visitorId, email.trim(), phone.trim());
 
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
@@ -222,8 +242,8 @@ public class ReservationController implements DomainController {
                 if (!dao.updateStatus(id, ReservationStatus.CONFIRMED)) {
                     return new ServerResponse(false, "Confirm failed.");
                 }
-                // Re-fetch the persisted row (mirrors OrderController) so subscribers
-                // get exactly what was committed, then broadcast.
+                // Re-fetch the persisted row so subscribers get exactly what was
+                // committed, then broadcast.
                 ReservationDTO confirmed = dao.getById(id);
                 publishReservation(ServerEvent.updated("reservation", id, confirmed));
                 // Notify the visitor their booking is confirmed. Persisted + pushed
@@ -292,12 +312,27 @@ public class ReservationController implements DomainController {
                             "No capacity for that date (free: " + Math.max(effectiveFree, 0) + ").");
                 }
 
-                if (!dao.updateDateAndParty(id, visitDate, visitTime, partySize)) {
+                // Recompute the price for the new party size. A booking is always
+                // pre-ordered; the visit type, paid-in-advance flag and the visitor's
+                // member status all come from the existing reservation/visitor — not
+                // defaults — so the recomputed price matches how it was first priced.
+                // Persisting it in the same update is the fix for the stale-price
+                // defect (a party change used to leave price_cents untouched).
+                int oldPrice = existing.getPriceCents();
+                VisitorDTO visitor  = authDao.findVisitorById(existing.getVisitorId());
+                boolean    isMember = visitor != null && visitor.isSubscriber();
+                int newPrice = pricing.calculate(existing.getVisitType(), existing.isGroup(),
+                        partySize, true, existing.isPaidInAdvance(), isMember);
+
+                if (!dao.updateReschedule(id, visitDate, visitTime, partySize, newPrice)) {
                     return new ServerResponse(false, "Update failed.");
                 }
                 ReservationDTO updated = dao.getById(id);
                 publishReservation(ServerEvent.updated("reservation", id, updated));
-                return new ServerResponse(true, "Reservation updated.", updated);
+                // Return the fresh row plus old/new price so the client can settle the
+                // difference (collect / refund / quote at the gate).
+                return new ServerResponse(true, "Reservation updated.",
+                        new ReservationUpdateResultDTO(updated, oldPrice, newPrice));
             }
 
             case JOIN_WAITLIST: {
@@ -307,6 +342,19 @@ public class ReservationController implements DomainController {
                 String    visitTime = (String) request.get("visitTime"); // nullable
                 int       partySize = (int) request.get("partySize");
                 VisitType visitType = (VisitType) request.get("visitType");
+                String    email     = (String) request.get("email");
+                String    phone     = (String) request.get("phone");
+
+                // Same contact rule as a booking: email + phone are both required and
+                // the visitor row is upserted so the WAITING reservation's FK holds and
+                // the grab-offer notification has a target.
+                if (!isValidEmail(email)) {
+                    return new ServerResponse(false, "A valid email is required to book.");
+                }
+                if (!isValidPhone(phone)) {
+                    return new ServerResponse(false, "A valid phone number is required to book (at least 10 digits).");
+                }
+                memberDao.upsertContact(visitorId, email.trim(), phone.trim());
 
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
@@ -472,6 +520,47 @@ public class ReservationController implements DomainController {
      * @param target  the status the caller wants to apply
      * @return {@code true} if the transition is permitted
      */
+    /**
+     * Basic server-side email sanity check for the booking contact: non-blank and
+     * containing both an {@code '@'} and a {@code '.'}. Deliberately lenient (this
+     * is a teaching prototype, not an RFC validator) but enough to reject the empty
+     * or obviously malformed addresses the client guard also blocks, so a crafted
+     * request cannot slip a contactless booking past the server.
+     *
+     * @param email the candidate email from the request, possibly {@code null}
+     * @return {@code true} if the email looks well-formed enough to accept
+     */
+    private boolean isValidEmail(String email) {
+        if (email == null) {
+            return false;
+        }
+        String trimmed = email.trim();
+        return trimmed.contains("@") && trimmed.contains(".");
+    }
+
+    /**
+     * Basic server-side phone check for the booking contact: it must carry at least
+     * ten digits (a national mobile number's worth), ignoring any formatting such as
+     * dashes, spaces, parentheses or a leading {@code '+'}. Deliberately lenient on
+     * punctuation but strict enough to reject a stray {@code "3"} the client guard
+     * also blocks, mirroring {@link #isValidEmail}.
+     *
+     * @param phone the candidate phone from the request, possibly {@code null}
+     * @return {@code true} if it contains at least ten digits
+     */
+    private boolean isValidPhone(String phone) {
+        if (phone == null) {
+            return false;
+        }
+        int digits = 0;
+        for (int i = 0; i < phone.length(); i++) {
+            if (Character.isDigit(phone.charAt(i))) {
+                digits++;
+            }
+        }
+        return digits >= 10;
+    }
+
     private boolean isLegalTransition(ReservationStatus current, ReservationStatus target) {
         switch (current) {
             case PENDING:   return target == ReservationStatus.CONFIRMED
@@ -567,10 +656,26 @@ public class ReservationController implements DomainController {
      * ({@link server.scheduler.WaitlistGrabExpiryJob}); also exercisable manually
      * from the server console.
      *
+     * <p>Equivalent to {@link #expireOverdueOffers(boolean) expireOverdueOffers(false)}.
+     *
      * @return the number of lapsed offers processed (0 when none were due)
      */
     public int expireOverdueOffers() {
-        List<WaitlistEntryDTO> expired = waitlistDao.findExpiredOffers();
+        return expireOverdueOffers(false);
+    }
+
+    /**
+     * Force-aware variant of {@link #expireOverdueOffers()}. With {@code force}
+     * every currently-active grab offer is treated as expired (see
+     * {@link WaitlistDAO#findExpiredOffers(boolean)}) — the manual "run now" path,
+     * which expires an outstanding offer and advances the queue immediately rather
+     * than waiting for the grab window to lapse.
+     *
+     * @param force {@code true} to expire any active offer now; {@code false} for the normal lapsed sweep
+     * @return the number of offers processed (0 when none were eligible)
+     */
+    public int expireOverdueOffers(boolean force) {
+        List<WaitlistEntryDTO> expired = waitlistDao.findExpiredOffers(force);
         for (WaitlistEntryDTO entry : expired) {
             waitlistDao.removeEntry(entry.getId());
             // Forfeit-fix: the offeree let the window lapse. Cancel its orphaned
@@ -599,11 +704,30 @@ public class ReservationController implements DomainController {
      * ({@link server.scheduler.ConfirmTimeoutJob}); also exercisable manually from
      * the server console.
      *
+     * <p>Equivalent to
+     * {@link #expireUnconfirmedReservations(boolean) expireUnconfirmedReservations(false)}.
+     *
      * @return the number of reservations auto-cancelled (0 when none were due)
      */
     public int expireUnconfirmedReservations() {
+        return expireUnconfirmedReservations(false);
+    }
+
+    /**
+     * Force-aware variant of {@link #expireUnconfirmedReservations()}. With
+     * {@code force} every still-PENDING reservation is cancelled now, skipping the
+     * reminder/confirm-timeout window (see
+     * {@link ReservationDAO#findConfirmTimeoutCandidates(int, boolean)}) — the
+     * manual "run now" path. Each cancellation still broadcasts the change, notifies
+     * the visitor, and offers the freed slot to the waiting list, exactly as the
+     * timed sweep does.
+     *
+     * @param force {@code true} to cancel every PENDING now; {@code false} for the normal window sweep
+     * @return the number of reservations auto-cancelled (0 when none were eligible)
+     */
+    public int expireUnconfirmedReservations(boolean force) {
         List<ReservationDTO> candidates =
-                dao.findConfirmTimeoutCandidates(SchedulerConfig.getConfirmTimeoutMinutes());
+                dao.findConfirmTimeoutCandidates(SchedulerConfig.getConfirmTimeoutMinutes(), force);
         int cancelled = 0;
         for (ReservationDTO candidate : candidates) {
             if (!dao.updateStatus(candidate.getId(), ReservationStatus.CANCELLED)) {

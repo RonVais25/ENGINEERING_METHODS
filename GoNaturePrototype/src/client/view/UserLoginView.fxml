@@ -9,9 +9,11 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- User-login screen: shown on the main stage after the connection succeeds and
-     again after logout. A Staff / Visitor segmented toggle swaps the field set;
-     submit sends LOGIN_STAFF or LOGIN_VISITOR. Styled entirely via client.css. -->
+<!-- Combined connect + sign-in screen: shown on the main stage at startup and
+     again after logout. It collects the server host/port together with the
+     credentials in one step — submit PING-probes the server, then sends
+     LOGIN_STAFF or LOGIN_VISITOR. A Staff / Visitor segmented toggle swaps the
+     credential field set. Styled entirely via client.css. -->
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
            fx:controller="client.view.UserLoginController"
            styleClass="app-root" alignment="CENTER">
@@ -20,7 +22,20 @@
           maxWidth="360" maxHeight="-Infinity">
 
         <Label text="GoNature" styleClass="login-title"/>
-        <Label text="Sign in to continue" styleClass="hint-text"/>
+        <Label text="Connect and sign in to continue" styleClass="hint-text"/>
+
+        <!-- Server: host + port. Disabled once connected (a re-login after logout
+             reuses the live connection); the controller fills these in then. -->
+        <HBox spacing="10" maxWidth="Infinity">
+            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                <Label text="Server Host" styleClass="field-label"/>
+                <TextField fx:id="hostField" text="localhost" styleClass="input-field"/>
+            </VBox>
+            <VBox spacing="8" maxWidth="96">
+                <Label text="Port" styleClass="field-label"/>
+                <TextField fx:id="portField" text="5555" styleClass="input-field" prefWidth="90"/>
+            </VBox>
+        </HBox>
 
         <!-- Staff / Visitor segmented toggle -->
         <HBox styleClass="seg-group" maxWidth="Infinity">
@@ -51,9 +66,11 @@
                visible="false" managed="false"/>
 
         <!-- Dev-only one-click logins for the seeded accounts (pw: changeme).
-             Buttons are built in UserLoginController#buildQuickLoginButtons. -->
-        <Label text="Quick login · dev" styleClass="quick-label"/>
+             Hidden unless UserLoginController.DEBUG_QUICK_LOGIN is flipped on;
+             defaults to off so graders never see one-click role switching. -->
+        <Label fx:id="quickLoginLabel" text="Quick login · dev" styleClass="quick-label"
+               visible="false" managed="false"/>
         <FlowPane fx:id="quickLoginBox" styleClass="quick-row" hgap="6" vgap="6"
-                  maxWidth="Infinity"/>
+                  maxWidth="Infinity" visible="false" managed="false"/>
     </VBox>
 </StackPane>

@@ -12,9 +12,14 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
@@ -25,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * "My Waiting List" screen (visitor-facing): the logged-in visitor's WAITING
@@ -226,10 +232,36 @@ public class WaitlistController extends BaseController {
     }
 
     private void leave(int reservationId) {
+        if (!confirmAction("Leave the waiting list for reservation #" + reservationId + "?",
+                "Are you sure you want to leave this waiting list? You'll lose your place in the queue.")) {
+            return;
+        }
         network.leaveWaitlist(reservationId).thenAccept(res -> {
             Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
             if (res.isSuccess()) load();
         });
+    }
+
+    /**
+     * Shows a blocking Yes/No confirmation and returns {@code true} only if the
+     * user clicked Yes. Both the Leave and the offer-row Decline buttons fire
+     * {@code LEAVE_WAITLIST} through {@link #leave}, so guarding it here means a
+     * stray click never drops the visitor from the queue without their agreeing
+     * first. Mirrors {@code ReservationListController}'s Confirm/Cancel prompt.
+     *
+     * @param header  the bold dialog header (the question)
+     * @param content the explanatory body line
+     * @return whether the user confirmed
+     */
+    private boolean confirmAction(String header, String content) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, content, ButtonType.YES, ButtonType.NO);
+        alert.setTitle("Please confirm");
+        alert.setHeaderText(header);
+        // Match the app theme on the dialog, same as the other confirm prompts.
+        Scene scene = tableBox.getScene();
+        if (scene != null) alert.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.YES;
     }
 
     /* ---------- row building ----------------------------------------------- */
@@ -242,8 +274,17 @@ public class WaitlistController extends BaseController {
                 headerCell("DATE",    110),
                 headerCell("PARTY",    70),
                 headerCell("STATUS",  150),
+                flexSpacer(),
                 headerCell("ACTIONS",   0));
         return row;
+    }
+
+    /** A zero-width filler that absorbs the row's slack so fixed columns and the
+     *  action buttons keep their natural widths instead of being squeezed. */
+    private Region flexSpacer() {
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        return spacer;
     }
 
     private HBox dataRow(WaitlistEntryDTO e, boolean withDivider) {
@@ -260,16 +301,18 @@ public class WaitlistController extends BaseController {
 
             Button acceptBtn = new Button("Accept");
             acceptBtn.getStyleClass().add("btn-primary");
+            acceptBtn.setMinWidth(Region.USE_PREF_SIZE);
             acceptBtn.setOnAction(ev -> accept(e.getReservationId()));
 
             Button declineBtn = new Button("Decline");
             declineBtn.getStyleClass().add("btn-secondary");
+            declineBtn.setMinWidth(Region.USE_PREF_SIZE);
             declineBtn.setOnAction(ev -> leave(e.getReservationId()));
 
             HBox actions = new HBox(8, acceptBtn, declineBtn);
             actions.setAlignment(Pos.CENTER_LEFT);
 
-            row = new HBox(parkLbl, dateLbl, partyLbl, countdownLbl, actions);
+            row = new HBox(parkLbl, dateLbl, partyLbl, countdownLbl, flexSpacer(), actions);
             row.getStyleClass().addAll("history-row", "wl-offer");
 
             tickTargets.add(new TickTarget(LocalDateTime.parse(e.getGrabExpiresAt(), TS), countdownLbl, acceptBtn));
@@ -281,12 +324,13 @@ public class WaitlistController extends BaseController {
 
             Button leaveBtn = new Button("Leave");
             leaveBtn.getStyleClass().add("btn-secondary");
+            leaveBtn.setMinWidth(Region.USE_PREF_SIZE);
             leaveBtn.setOnAction(ev -> leave(e.getReservationId()));
 
             HBox actions = new HBox(8, leaveBtn);
             actions.setAlignment(Pos.CENTER_LEFT);
 
-            row = new HBox(parkLbl, dateLbl, partyLbl, statusTag, actions);
+            row = new HBox(parkLbl, dateLbl, partyLbl, statusTag, flexSpacer(), actions);
             row.getStyleClass().add("history-row");
         }
 
