@@ -6,7 +6,6 @@ import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
 import common.dto.VisitType;
 import common.dto.VisitorDTO;
-import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -58,9 +57,9 @@ public class ReservationCreateController extends BaseController {
     @FXML private TextField            phoneField;
     @FXML private DatePicker           datePicker;
     @FXML private CheckBox             timeEnabledCheck;
-    @FXML private Spinner<Integer>     hourSpinner;
-    @FXML private Spinner<Integer>     minuteSpinner;
-    @FXML private Spinner<String>      ampmSpinner;
+    @FXML private ComboBox<Integer>    hourCombo;
+    @FXML private ComboBox<String>     minuteCombo;
+    @FXML private ComboBox<String>     ampmCombo;
     @FXML private Spinner<Integer>     partySpinner;
     @FXML private ComboBox<VisitType>  typeCombo;
     @FXML private VBox                 guideRow;
@@ -87,24 +86,21 @@ public class ReservationCreateController extends BaseController {
         partySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 2));
 
-        // Compact 12-hour clock picker: hour 1–12, minute in 5-minute steps and an
-        // AM/PM toggle, all wrapping. The trio is disabled until "set time" is ticked;
-        // left unticked the booking sends no preferred time (null visitTime),
-        // preserving the old blank-field semantics. The 12-hour selection is converted
-        // to the 24-hour HH:mm:ss wire format in formatVisitTime().
-        hourSpinner.setValueFactory(
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 12, 9));
-        minuteSpinner.setValueFactory(
-                new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 55, 0, 5));
-        ampmSpinner.setValueFactory(
-                new SpinnerValueFactory.ListSpinnerValueFactory<>(
-                        FXCollections.observableArrayList("AM", "PM")));
-        hourSpinner.getValueFactory().setWrapAround(true);
-        minuteSpinner.getValueFactory().setWrapAround(true);
-        ampmSpinner.getValueFactory().setWrapAround(true);
-        hourSpinner.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
-        minuteSpinner.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
-        ampmSpinner.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        // 12-hour clock picker as three plain dropdowns: hour 1–12, minute in
+        // quarter-hour steps and a clearly readable AM/PM selector. The trio is
+        // disabled until "set time" is ticked; left unticked the booking sends no
+        // preferred time (null visitTime), preserving the old blank-field semantics.
+        // The 12-hour selection is converted to the 24-hour HH:mm:ss wire format in
+        // formatVisitTime().
+        hourCombo.getItems().setAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+        minuteCombo.getItems().setAll("00", "15", "30", "45");
+        ampmCombo.getItems().setAll("AM", "PM");
+        hourCombo.setValue(9);
+        minuteCombo.setValue("00");
+        ampmCombo.setValue("AM");
+        hourCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        minuteCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        ampmCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
 
         typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
         typeCombo.getSelectionModel().selectFirst();
@@ -144,15 +140,17 @@ public class ReservationCreateController extends BaseController {
      * @return the visit time formatted {@code HH:mm:ss}
      */
     private String formatVisitTime() {
-        int     hour12 = hourSpinner.getValue();
-        boolean pm     = "PM".equals(ampmSpinner.getValue());
+        int     hour12 = hourCombo.getValue();
+        boolean pm     = "PM".equals(ampmCombo.getValue());
         int     hour24;
         if (hour12 == 12) {
             hour24 = pm ? 12 : 0;
         } else {
             hour24 = pm ? hour12 + 12 : hour12;
         }
-        return String.format("%02d:%02d:00", hour24, minuteSpinner.getValue());
+        // minuteCombo values are already zero-padded ("00".."45"), so the result
+        // is byte-identical to the old picker's HH:mm:ss wire format.
+        return String.format("%02d:%s:00", hour24, minuteCombo.getValue());
     }
 
     /**

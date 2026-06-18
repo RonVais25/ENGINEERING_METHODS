@@ -17,6 +17,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
@@ -512,8 +513,9 @@ public class ReservationListController extends BaseController {
         // Step-1 inputs — created once so their values survive the step swaps.
         private final DatePicker     datePicker    = new DatePicker();
         private final CheckBox       timeCheck     = new CheckBox("Set a time");
-        private final Spinner<Integer> hourSpinner   = new Spinner<>();
-        private final Spinner<Integer> minuteSpinner = new Spinner<>();
+        private final ComboBox<Integer> hourCombo   = new ComboBox<>();
+        private final ComboBox<String>  minuteCombo = new ComboBox<>();
+        private final ComboBox<String>  ampmCombo   = new ComboBox<>();
         private final Spinner<Integer> partySpinner  = new Spinner<>();
         private final Label          errorLbl      = new Label();
 
@@ -540,20 +542,35 @@ public class ReservationListController extends BaseController {
                 datePicker.setValue(LocalDate.parse(original.getVisitDate()));
             } catch (Exception ignored) { /* leave empty if unparseable */ }
 
-            hourSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 23, 9));
-            minuteSpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 55, 0, 5));
-            hourSpinner.getValueFactory().setWrapAround(true);
-            minuteSpinner.getValueFactory().setWrapAround(true);
-            hourSpinner.disableProperty().bind(timeCheck.selectedProperty().not());
-            minuteSpinner.disableProperty().bind(timeCheck.selectedProperty().not());
-            hourSpinner.getStyleClass().add("spinner");
-            minuteSpinner.getStyleClass().add("spinner");
+            // 12-hour picker as three plain dropdowns, mirroring the Book Visit form:
+            // Hour 1–12, Minute in quarter-hour steps and a clearly readable AM/PM
+            // selector, all disabled until "Set a time" is ticked.
+            hourCombo.getItems().setAll(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+            minuteCombo.getItems().setAll("00", "15", "30", "45");
+            ampmCombo.getItems().setAll("AM", "PM");
+            hourCombo.setValue(9);
+            minuteCombo.setValue("00");
+            ampmCombo.setValue("AM");
+            hourCombo.disableProperty().bind(timeCheck.selectedProperty().not());
+            minuteCombo.disableProperty().bind(timeCheck.selectedProperty().not());
+            ampmCombo.disableProperty().bind(timeCheck.selectedProperty().not());
+            hourCombo.getStyleClass().addAll("input-field", "time-combo");
+            minuteCombo.getStyleClass().addAll("input-field", "time-combo");
+            ampmCombo.getStyleClass().addAll("input-field", "time-combo");
             // Prefill from the stored time if any; otherwise leave "no preference".
+            // The stored visit_time is 24-hour HH:mm[:ss]; map it back into the
+            // 12-hour dropdowns (00:xx → 12 AM, 12:xx → 12 PM, 13–23 → 1–11 PM),
+            // snapping the minute to the nearest quarter-hour the dropdown offers.
             if (original.getVisitTime() != null && !original.getVisitTime().isBlank()) {
                 try {
                     LocalTime t = LocalTime.parse(original.getVisitTime());
-                    hourSpinner.getValueFactory().setValue(t.getHour());
-                    minuteSpinner.getValueFactory().setValue(t.getMinute() - (t.getMinute() % 5));
+                    int h24 = t.getHour();
+                    int h12 = h24 % 12;
+                    if (h12 == 0) h12 = 12;
+                    int min = Math.min(45, ((t.getMinute() + 7) / 15) * 15);
+                    hourCombo.setValue(h12);
+                    minuteCombo.setValue(String.format("%02d", min));
+                    ampmCombo.setValue(h24 < 12 ? "AM" : "PM");
                     timeCheck.setSelected(true);
                 } catch (Exception ignored) { /* keep unchecked on parse trouble */ }
             }
@@ -591,7 +608,9 @@ public class ReservationListController extends BaseController {
         }
 
         private Node detailsBody() {
-            HBox timeRow = new HBox(10, timeCheck, hourSpinner, new Label(":"), minuteSpinner);
+            Label colon = new Label(":");
+            colon.getStyleClass().add("time-colon");
+            HBox timeRow = new HBox(8, timeCheck, hourCombo, colon, minuteCombo, ampmCombo);
             timeRow.setAlignment(Pos.CENTER_LEFT);
             return new VBox(8,
                     fieldLabel("Visit Date"),            datePicker,
@@ -675,12 +694,25 @@ public class ReservationListController extends BaseController {
                 return false;
             }
 
-            // Optional time from the clock-style picker, formatted to match the wire
+            // Optional time from the three dropdowns, converted to the 24-hour wire
             // format; unticked → null (no preference), exactly like the old field.
-            visitTime = timeCheck.isSelected()
-                    ? String.format("%02d:%02d:00", hourSpinner.getValue(), minuteSpinner.getValue())
-                    : null;
+            visitTime = timeCheck.isSelected() ? formatVisitTime() : null;
             return true;
+        }
+
+        /** Converts the 12-hour dropdowns (Hour 1–12, Minute, AM/PM) into the
+         *  24-hour {@code HH:mm:ss} string the server expects — byte-identical to
+         *  the Book Visit form: 12 AM → 00, 12 PM → 12, any other PM hour + 12. */
+        private String formatVisitTime() {
+            int     hour12 = hourCombo.getValue();
+            boolean pm     = "PM".equals(ampmCombo.getValue());
+            int     hour24;
+            if (hour12 == 12) {
+                hour24 = pm ? 12 : 0;
+            } else {
+                hour24 = pm ? hour12 + 12 : hour12;
+            }
+            return String.format("%02d:%s:00", hour24, minuteCombo.getValue());
         }
 
         /** Sends UPDATE_RESERVATION; on success advances to Settlement and refreshes

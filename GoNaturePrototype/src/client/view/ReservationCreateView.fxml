@@ -52,11 +52,13 @@
                 </VBox>
             </HBox>
 
-            <!-- Row 3: Visit Date + Visit Time (50 / 50). The time control is a compact
-                 12-hour picker (hour : minute + AM/PM) gated by "set time" — left
-                 unticked it sends no preferred time (null visitTime), exactly like the
-                 old blank field. The controller converts the 12-hour selection to the
-                 24-hour HH:mm:ss wire format the server/DB expect. -->
+            <!-- Row 3: Visit Date + Visit Time (50 / 50). The time control is a 12-hour
+                 picker built from three plain dropdowns (Hour : Minute + AM/PM) gated by
+                 "set time" — left unticked it sends no preferred time (null visitTime),
+                 exactly like the old blank field. The three combos share the row's right
+                 half evenly so AM/PM stays clearly readable. The controller converts the
+                 12-hour selection to the 24-hour HH:mm:ss wire format the server/DB
+                 expect. -->
             <HBox spacing="16" alignment="TOP_LEFT">
                 <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
                     <Label text="Visit Date" styleClass="field-label"/>
@@ -68,11 +70,14 @@
                         <Label text="Visit Time" styleClass="field-label"/>
                         <CheckBox fx:id="timeEnabledCheck" text="set time" styleClass="check-field"/>
                     </HBox>
-                    <HBox spacing="5" alignment="CENTER_LEFT" styleClass="time-row">
-                        <Spinner fx:id="hourSpinner"   prefWidth="58" styleClass="spinner time-spinner"/>
+                    <HBox spacing="6" alignment="CENTER_LEFT" styleClass="time-row">
+                        <ComboBox fx:id="hourCombo"   maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                                  styleClass="input-field time-combo"/>
                         <Label text=":" styleClass="time-colon"/>
-                        <Spinner fx:id="minuteSpinner" prefWidth="58" styleClass="spinner time-spinner"/>
-                        <Spinner fx:id="ampmSpinner"   prefWidth="66" styleClass="spinner time-spinner"/>
+                        <ComboBox fx:id="minuteCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                                  styleClass="input-field time-combo"/>
+                        <ComboBox fx:id="ampmCombo"   maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                                  styleClass="input-field time-combo"/>
                     </HBox>
                 </VBox>
             </HBox>
