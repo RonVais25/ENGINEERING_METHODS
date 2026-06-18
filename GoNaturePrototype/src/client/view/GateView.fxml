@@ -5,20 +5,23 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Park gate (PARK_EMPLOYEE only). Live occupancy header + entry / exit /
-     casual walk-in. ScrollPane root so the form scrolls when it doesn't fit,
-     matching the other screens. -->
+<!-- Park gate (PARK_EMPLOYEE only). An always-visible live-occupancy header sits
+     above an Entry / Exit segmented toggle: only one mode's cards are shown at a
+     time, so the screen fits without scrolling. Each mode pairs a reservation
+     action with its casual counterpart. ScrollPane root is kept as a safety net
+     (and for parity with the other screens) but should not need to scroll. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.GateController"
             fitToWidth="true" styleClass="scroll-pane">
 
     <VBox styleClass="screen-padded" alignment="TOP_CENTER" spacing="12">
 
-        <!-- Live occupancy header -->
+        <!-- Live occupancy header (always visible, both modes) -->
         <VBox styleClass="card" maxWidth="560" spacing="6">
             <HBox alignment="CENTER_LEFT">
                 <Label text="LIVE OCCUPANCY" styleClass="section-label"/>
@@ -30,62 +33,94 @@
             <Label fx:id="occupancySub" text="Loading…" styleClass="stat-card-sub"/>
         </VBox>
 
-        <!-- Entry by reservation -->
-        <VBox styleClass="card" maxWidth="560" spacing="14">
-            <Label text="ENTRY — BY RESERVATION" styleClass="section-label"/>
+        <!-- Entry / Exit mode toggle: one mode of cards shows at a time. -->
+        <HBox styleClass="seg-group" maxWidth="560">
+            <ToggleButton fx:id="entryTab" text="Entry" styleClass="seg-btn"
+                          maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+            <ToggleButton fx:id="exitTab"  text="Exit"  styleClass="seg-btn"
+                          maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+        </HBox>
 
-            <Label text="Confirmation Code" styleClass="field-label"/>
-            <TextField fx:id="entryCodeField" promptText="e.g. 1234" styleClass="input-field"/>
+        <!-- ENTRY mode: reservation entry + casual entry -->
+        <VBox fx:id="entryMode" maxWidth="560" spacing="12">
 
-            <Label text="Visitor ID" styleClass="field-label"/>
-            <TextField fx:id="entryVisitorField" promptText="National ID on the booking"
-                       styleClass="input-field"/>
+            <!-- Entry by reservation -->
+            <VBox styleClass="card" maxWidth="Infinity" spacing="14">
+                <Label text="ENTRY — BY RESERVATION" styleClass="section-label"/>
 
-            <Button fx:id="entryBtn" text="✓  Admit Visitor" onAction="#onEnter"
-                    styleClass="btn-primary" maxWidth="Infinity"/>
+                <Label text="Confirmation Code" styleClass="field-label"/>
+                <TextField fx:id="entryCodeField" promptText="e.g. 1234" styleClass="input-field"/>
 
-            <Label fx:id="entryResult" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+                <Label text="Visitor ID" styleClass="field-label"/>
+                <TextField fx:id="entryVisitorField" promptText="National ID on the booking"
+                           styleClass="input-field"/>
+
+                <Button fx:id="entryBtn" text="✓  Admit Visitor" onAction="#onEnter"
+                        styleClass="btn-primary" maxWidth="Infinity"/>
+
+                <Label fx:id="entryResult" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+            </VBox>
+
+            <!-- Casual walk-in admission -->
+            <VBox styleClass="card" maxWidth="Infinity" spacing="14">
+                <Label text="ENTRY — CASUAL WALK-IN" styleClass="section-label"/>
+
+                <Label text="Party Size" styleClass="field-label"/>
+                <Spinner fx:id="casualPartySpinner" editable="true" maxWidth="Infinity" styleClass="spinner"/>
+
+                <Label text="Visit Type" styleClass="field-label"/>
+                <ComboBox fx:id="casualTypeCombo" maxWidth="Infinity" styleClass="input-field"/>
+
+                <Label text="Visitor ID (optional)" styleClass="field-label"/>
+                <TextField fx:id="casualVisitorField" promptText="Leave blank for an anonymous walk-in"
+                           styleClass="input-field"/>
+
+                <Button fx:id="casualBtn" text="✦  Admit Walk-in" onAction="#onCasual"
+                        styleClass="btn-primary" maxWidth="Infinity"/>
+
+                <Label fx:id="casualResult" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+
+                <VBox fx:id="casualConfirmBox" styleClass="payment-card" spacing="8"
+                      visible="false" managed="false"/>
+            </VBox>
         </VBox>
 
-        <!-- Exit -->
-        <VBox styleClass="card" maxWidth="560" spacing="14">
-            <Label text="EXIT" styleClass="section-label"/>
-            <Label text="Enter the confirmation code, or the visitor ID." styleClass="hint-text"/>
+        <!-- EXIT mode: reservation exit + casual exit -->
+        <VBox fx:id="exitMode" maxWidth="560" spacing="12" visible="false" managed="false">
 
-            <Label text="Confirmation Code" styleClass="field-label"/>
-            <TextField fx:id="exitCodeField" promptText="e.g. 1234" styleClass="input-field"/>
+            <!-- Exit by reservation -->
+            <VBox styleClass="card" maxWidth="Infinity" spacing="14">
+                <Label text="EXIT — BY RESERVATION" styleClass="section-label"/>
+                <Label text="Enter the confirmation code, or the visitor ID." styleClass="hint-text"/>
 
-            <Label text="Visitor ID" styleClass="field-label"/>
-            <TextField fx:id="exitVisitorField" promptText="National ID (if no code)"
-                       styleClass="input-field"/>
+                <Label text="Confirmation Code" styleClass="field-label"/>
+                <TextField fx:id="exitCodeField" promptText="e.g. 1234" styleClass="input-field"/>
 
-            <Button fx:id="exitBtn" text="↩  Record Exit" onAction="#onExit"
-                    styleClass="btn-primary" maxWidth="Infinity"/>
+                <Label text="Visitor ID" styleClass="field-label"/>
+                <TextField fx:id="exitVisitorField" promptText="National ID (if no code)"
+                           styleClass="input-field"/>
 
-            <Label fx:id="exitResult" styleClass="toast" visible="false" managed="false" wrapText="true"/>
-        </VBox>
+                <Button fx:id="exitBtn" text="↩  Record Exit" onAction="#onExit"
+                        styleClass="btn-primary" maxWidth="Infinity"/>
 
-        <!-- Casual walk-in -->
-        <VBox styleClass="card" maxWidth="560" spacing="14">
-            <Label text="CASUAL WALK-IN" styleClass="section-label"/>
+                <Label fx:id="exitResult" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+            </VBox>
 
-            <Label text="Party Size" styleClass="field-label"/>
-            <Spinner fx:id="casualPartySpinner" editable="true" maxWidth="Infinity" styleClass="spinner"/>
+            <!-- Casual exit by ticket number (mirrors casual entry) -->
+            <VBox styleClass="card" maxWidth="Infinity" spacing="14">
+                <Label text="EXIT — CASUAL WALK-IN" styleClass="section-label"/>
+                <Label text="Enter the ticket number shown when the walk-in was admitted."
+                       styleClass="hint-text"/>
 
-            <Label text="Visit Type" styleClass="field-label"/>
-            <ComboBox fx:id="casualTypeCombo" maxWidth="Infinity" styleClass="input-field"/>
+                <Label text="Ticket Number" styleClass="field-label"/>
+                <TextField fx:id="casualExitTicketField" promptText="e.g. 42"
+                           styleClass="input-field"/>
 
-            <Label text="Visitor ID (optional)" styleClass="field-label"/>
-            <TextField fx:id="casualVisitorField" promptText="Leave blank for an anonymous walk-in"
-                       styleClass="input-field"/>
+                <Button fx:id="casualExitBtn" text="↩  Record Walk-in Exit" onAction="#onCasualExit"
+                        styleClass="btn-primary" maxWidth="Infinity"/>
 
-            <Button fx:id="casualBtn" text="✦  Admit Walk-in" onAction="#onCasual"
-                    styleClass="btn-primary" maxWidth="Infinity"/>
-
-            <Label fx:id="casualResult" styleClass="toast" visible="false" managed="false" wrapText="true"/>
-
-            <VBox fx:id="casualConfirmBox" styleClass="payment-card" spacing="8"
-                  visible="false" managed="false"/>
+                <Label fx:id="casualExitResult" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+            </VBox>
         </VBox>
     </VBox>
 </ScrollPane>
