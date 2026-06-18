@@ -497,6 +497,10 @@
    it to the brand green and keep the plot clean (no vertical grid, soft baseline). */
 .report-chart { -fx-padding: 4 0 0 0; }
 .report-chart .default-color0.chart-bar { -fx-bar-fill: -g500; }
+/* Cancellations chart adds a second series ("No-show"); colour it red to set it
+   apart from the green "Cancelled" bars. The legend symbol shares .chart-bar, so
+   this recolours it too. The visits chart has no second series, so it's unaffected. */
+.report-chart .default-color1.chart-bar { -fx-bar-fill: -red; }
 .report-chart .chart-plot-background       { -fx-background-color: transparent; }
 .report-chart .chart-vertical-grid-lines   { -fx-stroke: transparent; }
 .report-chart .chart-horizontal-grid-lines { -fx-stroke: -g100; }
