@@ -54,13 +54,25 @@ public class ParkController implements DomainController {
     private final ReservationDAO reservationDao = new ReservationDAO();
     /** Stateless notification helper, shared across all client threads. */
     private final NotificationService notificationService = new NotificationService();
-
+    
+    /**
+     * Returns the request types handled by this controller.
+     *
+     * @return supported park-related request types
+     */
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(GET_PARK, LIST_PARKS, REQUEST_PARAM_CHANGE, LIST_PENDING_CHANGES,
                 APPROVE_PARAM_CHANGE, REJECT_PARAM_CHANGE, CHECK_AVAILABILITY);
     }
-
+    
+    /**
+     * Processes park management and parameter-change requests.
+     *
+     * @param request client request to process
+     * @param session current client session
+     * @return server response containing the operation result
+     */
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 

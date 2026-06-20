@@ -90,14 +90,27 @@ public class ReservationController implements DomainController {
     /** Format for the {@code grab_expires_at} deadline strings handed to {@link WaitlistDAO}. */
     private static final DateTimeFormatter SQL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
+    
+    /**
+     * Returns the reservation-related request types
+     * handled by this controller.
+     *
+     * @return supported reservation request types
+     */
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(CREATE_RESERVATION, GET_RESERVATION, UPDATE_RESERVATION, CANCEL_RESERVATION,
                 LIST_RESERVATIONS, CONFIRM_RESERVATION, JOIN_WAITLIST, LEAVE_WAITLIST, ACCEPT_GRAB,
                 LIST_WAITLIST);
     }
-
+    
+    /**
+     * Processes reservation and waiting-list requests.
+     *
+     * @param request client request to process
+     * @param session current client session
+     * @return server response containing the operation result
+     */
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 
@@ -501,25 +514,7 @@ public class ReservationController implements DomainController {
         }
     }
 
-    /**
-     * The reservation state machine: whether a reservation may move from its
-     * {@code current} status to {@code target}. Single source of truth for the
-     * lifecycle ops (CONFIRM/CANCEL today, more later), enforced here on the
-     * server so a misbehaving or out-of-date client cannot drive an illegal
-     * transition by skipping its own disabled-button checks.
-     *
-     * <p>Legal transitions:
-     * <ul>
-     *   <li>{@code PENDING}   → CONFIRMED or CANCELLED</li>
-     *   <li>{@code CONFIRMED} → CANCELLED</li>
-     *   <li>{@code WAITING}   → CANCELLED</li>
-     *   <li>{@code CANCELLED}, {@code COMPLETED}, {@code NO_SHOW} → none (terminal)</li>
-     * </ul>
-     *
-     * @param current the reservation's present status
-     * @param target  the status the caller wants to apply
-     * @return {@code true} if the transition is permitted
-     */
+    
     /**
      * Basic server-side email sanity check for the booking contact: non-blank and
      * containing both an {@code '@'} and a {@code '.'}. Deliberately lenient (this
@@ -560,7 +555,26 @@ public class ReservationController implements DomainController {
         }
         return digits >= 10;
     }
-
+    
+    /**
+     * The reservation state machine: whether a reservation may move from its
+     * {@code current} status to {@code target}. Single source of truth for the
+     * lifecycle ops (CONFIRM/CANCEL today, more later), enforced here on the
+     * server so a misbehaving or out-of-date client cannot drive an illegal
+     * transition by skipping its own disabled-button checks.
+     *
+     * <p>Legal transitions:
+     * <ul>
+     *   <li>{@code PENDING}   → CONFIRMED or CANCELLED</li>
+     *   <li>{@code CONFIRMED} → CANCELLED</li>
+     *   <li>{@code WAITING}   → CANCELLED</li>
+     *   <li>{@code CANCELLED}, {@code COMPLETED}, {@code NO_SHOW} → none (terminal)</li>
+     * </ul>
+     *
+     * @param current the reservation's present status
+     * @param target  the status the caller wants to apply
+     * @return {@code true} if the transition is permitted
+     */
     private boolean isLegalTransition(ReservationStatus current, ReservationStatus target) {
         switch (current) {
             case PENDING:   return target == ReservationStatus.CONFIRMED

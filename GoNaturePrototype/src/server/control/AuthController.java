@@ -39,12 +39,22 @@ public class AuthController implements DomainController {
 
     private final AuthDAO dao = new AuthDAO();
     private final MemberDAO memberDao = new MemberDAO();
-
+    /**
+     * Returns the request types handled by this controller.
+     *
+     * @return supported authentication request types
+     */
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(LOGIN_STAFF, LOGIN_VISITOR, LOGOUT, REGISTER_SUBSCRIBER, REGISTER_GUIDE);
     }
-
+    /**
+     * Handles authentication and registration requests.
+     *
+     * @param request client request to process
+     * @param session current client session
+     * @return server response for the requested operation
+     */
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 

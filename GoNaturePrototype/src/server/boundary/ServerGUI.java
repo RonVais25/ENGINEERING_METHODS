@@ -99,6 +99,11 @@ public class ServerGUI extends Application implements ServerListener {
         stage.show();
     }
 
+    /**
+     * Launches the server GUI application.
+     *
+     * @param args command-line arguments
+     */
     public static void main(String[] args) { launch(args); }
 
     // ─── Topbar ───────────────────────────────────────────────────────────────
@@ -558,28 +563,69 @@ public class ServerGUI extends Application implements ServerListener {
         private final javafx.beans.property.SimpleStringProperty host;
         private final javafx.beans.property.SimpleStringProperty connectedAt;
         private final javafx.beans.property.SimpleStringProperty status;
-
+        
+        /**
+         * Creates a client table row.
+         *
+         * @param ip client IP address
+         * @param host client host name
+         * @param connectedAt connection time
+         * @param status current connection status
+         */
         public ClientRow(String ip, String host, String connectedAt, String status) {
             this.ip          = new javafx.beans.property.SimpleStringProperty(ip);
             this.host        = new javafx.beans.property.SimpleStringProperty(host);
             this.connectedAt = new javafx.beans.property.SimpleStringProperty(connectedAt);
             this.status      = new javafx.beans.property.SimpleStringProperty(status);
         }
-
+        
+        /**
+         * @return client IP address
+         */
         public String getIp()          { return ip.get(); }
+        /**
+         * @return client host name
+         */
         public String getHost()        { return host.get(); }
+        /**
+         * @return connection time
+         */
         public String getConnectedAt() { return connectedAt.get(); }
+        /**
+         * @return client status
+         */
         public String getStatus()      { return status.get(); }
 
         // Property getters — required so PropertyValueFactory subscribes to
         // changes. Without these, the table reads the value once and never
         // refreshes when setStatus()/setConnectedAt() fire.
+        /**
+         * @return IP property
+         */
         public javafx.beans.property.StringProperty ipProperty()          { return ip; }
+        /**
+         * @return host property
+         */
         public javafx.beans.property.StringProperty hostProperty()        { return host; }
+        /**
+         * @return connection time property
+         */
         public javafx.beans.property.StringProperty connectedAtProperty() { return connectedAt; }
-        public javafx.beans.property.StringProperty statusProperty()      { return status; }
-
+        /**
+         * @return status property
+         */
+        public javafx.beans.property.StringProperty statusProperty()      { return status; }        
+        /**
+         * Updates the client status.
+         *
+         * @param s new status
+         */
         public void setStatus(String s)      { status.set(s); }
+        /**
+         * Updates the connection time.
+         *
+         * @param t new connection time
+         */
         public void setConnectedAt(String t) { connectedAt.set(t); }
     }
 }

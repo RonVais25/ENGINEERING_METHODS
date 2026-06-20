@@ -36,12 +36,24 @@ public class ReportController implements DomainController {
 
     private final ReportDAO reportDao = new ReportDAO();
     private final AuthDAO authDao = new AuthDAO();
-
+    
+    /**
+     * Returns the report-related request types handled by this controller.
+     *
+     * @return supported report request types
+     */
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(REPORT_VISITS_BY_TYPE, REPORT_CANCELLATIONS);
     }
-
+    
+    /**
+     * Processes report requests for a department manager.
+     *
+     * @param request client request containing report filters
+     * @param session current client session
+     * @return server response containing the requested report
+     */
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 

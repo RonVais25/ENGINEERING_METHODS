@@ -52,12 +52,24 @@ public class VisitController implements DomainController {
     private final AuthDAO authDao = new AuthDAO();
     /** Stateless price calculator, shared across all client threads. */
     private final PricingService pricing = new PricingService();
-
+    
+    /**
+     * Returns the visit-related request types handled by this controller.
+     *
+     * @return supported visit request types
+     */
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(ENTER_VISIT, EXIT_VISIT, CASUAL_VISIT, CURRENT_OCCUPANCY);
     }
 
+    /**
+     * Processes visit and occupancy requests.
+     *
+     * @param request client request to process
+     * @param session current client session
+     * @return server response containing the operation result
+     */
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 
