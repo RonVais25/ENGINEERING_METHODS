@@ -16,6 +16,9 @@ import java.time.format.DateTimeFormatter;
  * fragments) because their content is highly dynamic and built from data.
  */
 public final class Widgets {
+/**
+ * Creates a new widgets instance.
+ */
 
     private Widgets() {}
 
@@ -59,6 +62,11 @@ public final class Widgets {
         box.getChildren().add(empty);
         return box;
     }
+/**
+ * Performs the wrap log operation.
+ * @param logBox value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     public static ScrollPane wrapLog(VBox logBox) {
         ScrollPane scroll = new ScrollPane(logBox);
@@ -66,6 +74,12 @@ public final class Widgets {
         scroll.getStyleClass().add("log-scroll");
         return scroll;
     }
+/**
+ * Performs the add log operation.
+ * @param logBox value supplied to the operation
+ * @param ok value supplied to the operation
+ * @param msg value supplied to the operation
+ */
 
     public static void addLog(VBox logBox, boolean ok, String msg) {
         if (!logBox.getChildren().isEmpty()

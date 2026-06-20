@@ -30,23 +30,36 @@ public class GoNatureClientApp extends Application {
 
     /** Classpath path to the single shared stylesheet. */
     public static final String CSS_PATH = "/client/resources/client.css";
+/** Stores the session value used by this component. */
 
     private final Session session = new Session();
+/** Stores the network value used by this component. */
     private final NetworkService network = new NetworkService(session);
 
     /** Primary stage, reused for the user-login screen and the main shell. */
     private Stage mainStage;
+/**
+ * Performs the start operation.
+ * @param mainStage value supplied to the operation
+ * @throws Exception if the operation cannot be completed
+ */
 
     @Override
     public void start(Stage mainStage) throws Exception {
         this.mainStage = mainStage;
         showUserLogin();
     }
+/**
+ * Performs the stop operation.
+ */
 
     @Override
     public void stop() {
         session.closeConnection();
     }
+/**
+ * Application entry point.
+ */
 
     public static void main(String[] args) { launch(args); }
 
@@ -95,12 +108,21 @@ public class GoNatureClientApp extends Application {
             ex.printStackTrace();
         }
     }
+/**
+ * Performs the resource operation.
+ * @param path value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private URL resource(String path) {
         URL url = getClass().getResource(path);
         if (url == null) throw new IllegalStateException("Missing classpath resource: " + path);
         return url;
     }
+/**
+ * Performs the stylesheet operation.
+ * @return the result produced by the operation
+ */
 
     private String stylesheet() {
         return getClass().getResource(CSS_PATH).toExternalForm();

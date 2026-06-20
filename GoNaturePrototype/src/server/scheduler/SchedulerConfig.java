@@ -26,11 +26,17 @@ import server.db.DotEnv;
  * startup) and cached, so a {@code .env} edit takes effect on the next restart.
  */
 public final class SchedulerConfig {
+/** Stores the reminder lead hours value used by this component. */
 
     private static final int REMINDER_LEAD_HOURS;
+/** Stores the confirm timeout minutes value used by this component. */
     private static final int CONFIRM_TIMEOUT_MINUTES;
+/** Stores the grab window minutes value used by this component. */
     private static final int GRAB_WINDOW_MINUTES;
+/** Stores the scheduler poll seconds value used by this component. */
     private static final int SCHEDULER_POLL_SECONDS;
+    /** Stores the no-show grace minutes value used by this component. */
+    private static final int NO_SHOW_GRACE_MINUTES;
 
     static {
         // Idempotent — a no-op if StartServer already loaded the file. Guards the
@@ -40,7 +46,11 @@ public final class SchedulerConfig {
         CONFIRM_TIMEOUT_MINUTES = readInt("CONFIRM_TIMEOUT_MINUTES", 120);
         GRAB_WINDOW_MINUTES     = readInt("GRAB_WINDOW_MINUTES", 60);
         SCHEDULER_POLL_SECONDS  = readInt("SCHEDULER_POLL_SECONDS", 30);
+        NO_SHOW_GRACE_MINUTES   = readInt("NO_SHOW_GRACE_MINUTES", 30);
     }
+/**
+ * Creates a new scheduler config instance.
+ */
 
     private SchedulerConfig() {
     }
@@ -58,6 +68,11 @@ public final class SchedulerConfig {
     /** How long an offered waiting-list grab stays claimable, in minutes. */
     public static int getGrabWindowMinutes() {
         return GRAB_WINDOW_MINUTES;
+    }
+
+    /** How many minutes after planned arrival a confirmed no-entry booking becomes no-show. */
+    public static int getNoShowGraceMinutes() {
+        return NO_SHOW_GRACE_MINUTES;
     }
 
     /** How often the scheduler re-runs every registered job, in seconds. */

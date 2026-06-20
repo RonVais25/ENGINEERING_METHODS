@@ -24,7 +24,7 @@ public class ParkDAO {
 
     /** The columns selected by every park query, in {@link #map} order. */
     private static final String COLUMNS =
-            "id, name, max_capacity, gap_size, default_stay_minutes, manager_id";
+            "id, name, max_capacity, gap_size, default_stay_minutes, special_discount_percent, manager_id";
 
     /**
      * Looks up a single park by its primary key.
@@ -140,6 +140,7 @@ public class ParkDAO {
             case MAX_CAPACITY:         return "max_capacity";
             case GAP_SIZE:             return "gap_size";
             case DEFAULT_STAY_MINUTES: return "default_stay_minutes";
+            case SPECIAL_DISCOUNT_PERCENT: return "special_discount_percent";
             default:
                 throw new IllegalArgumentException("Unknown park parameter field: " + field);
         }
@@ -161,6 +162,7 @@ public class ParkDAO {
                 rs.getInt("max_capacity"),
                 rs.getInt("gap_size"),
                 rs.getInt("default_stay_minutes"),
+                rs.getInt("special_discount_percent"),
                 managerId);
     }
 }

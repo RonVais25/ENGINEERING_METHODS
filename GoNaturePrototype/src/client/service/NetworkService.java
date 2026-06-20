@@ -24,16 +24,28 @@ import java.util.concurrent.CompletableFuture;
  * sidebar pill can reflect the current socket state.
  */
 public class NetworkService {
+/**
+ * Contract for connection listener behavior in the GoNature application.
+ */
 
     @FunctionalInterface
     public interface ConnectionListener {
         void onConnectionChanged(boolean reachable);
     }
+/** Stores the session value used by this component. */
 
     private final Session session;
+/** Stores the listeners value used by this component. */
     private final List<ConnectionListener> listeners = new ArrayList<>();
+/**
+ * Performs the network service operation.
+ * @param session value supplied to the operation
+ */
 
     public NetworkService(Session session) { this.session = session; }
+/**
+ * Performs the add connection listener operation.
+ */
 
     public void addConnectionListener(ConnectionListener l) { listeners.add(l); }
 
@@ -360,6 +372,19 @@ public class NetworkService {
     }
 
     /**
+     * Records exit by the booking visitor, closing the open visit for the whole
+     * reservation group. The server derives and verifies the visitor from the
+     * authenticated session.
+     *
+     * @param reservationId the reservation to close
+     */
+    public CompletableFuture<ServerResponse> visitorExitReservation(int reservationId) {
+        ClientRequest req = new ClientRequest(RequestType.VISITOR_EXIT_VISIT);
+        req.put("reservationId", reservationId);
+        return send(req);
+    }
+
+    /**
      * Records a casual walk-in's exit by its ticket number (PARK_EMPLOYEE only).
      * The ticket number is the visit id handed to the employee at admission — the
      * only handle for exiting an anonymous casual party (it has no confirmation
@@ -523,7 +548,19 @@ public class NetworkService {
     }
 
     /**
-     * Shared builder for the two report requests. A {@code null} park id travels as
+     * Runs the Usage report showing dates/parks that were not fully occupied.
+     * Response {@code getData()} is a {@link common.dto.UsageReportDTO}.
+     *
+     * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
+     * @param parkId a specific park id, or {@code null} for the whole region
+     */
+    public CompletableFuture<ServerResponse> usageReport(String from, String to, Integer parkId) {
+        return reportRequest(RequestType.REPORT_USAGE, from, to, parkId);
+    }
+
+    /**
+     * Shared builder for report requests. A {@code null} park id travels as
      * the {@code "ALL"} sentinel, which the server normalises (together with a
      * missing/blank value) to "whole region".
      */

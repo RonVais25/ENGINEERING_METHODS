@@ -26,8 +26,12 @@ import server.subscription.SubscriptionRegistry;
  * ops PING / SUBSCRIBE / UNSUBSCRIBE are not a domain and stay handled inline.
  */
 public class RequestRouter {
+/** Stores the controllers value used by this component. */
 
     private final Map<RequestType, DomainController> controllers = new HashMap<>();
+/**
+ * Creates a new request router instance.
+ */
 
     public RequestRouter() {
         // Every domain controller registered here. Each declares the ops it
@@ -54,6 +58,12 @@ public class RequestRouter {
             }
         }
     }
+/**
+ * Handles the supplied request and returns the appropriate server response.
+ * @param request value supplied to the operation
+ * @param session value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 

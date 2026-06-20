@@ -21,6 +21,7 @@ import java.io.Serializable;
  * inside a {@link VisitsReportDTO}; immutable and {@link Serializable}.
  */
 public class VisitsReportRow implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** Visitor category: {@code "INDIVIDUALS"} or {@code "GROUPS"}. */

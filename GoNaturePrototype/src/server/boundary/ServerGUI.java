@@ -41,41 +41,64 @@ import java.util.Map;
 public class ServerGUI extends Application implements ServerListener {
 
     // Design tokens — mirror the client palette
+/** Stores the g800 value used by this component. */
     private static final String G800 = "#1a3320";
+/** Stores the g700 value used by this component. */
     private static final String G700 = "#254d2e";
+/** Stores the g600 value used by this component. */
     private static final String G600 = "#2e6638";
+/** Stores the g500 value used by this component. */
     private static final String G500 = "#3d8c4a";
+/** Stores the g300 value used by this component. */
     private static final String G300 = "#80cb8b";
+/** Stores the g200 value used by this component. */
     private static final String G200 = "#c2e5c8";
+/** Stores the g100 value used by this component. */
     private static final String G100 = "#e5f3e8";
+/** Stores the g50 value used by this component. */
     private static final String G50  = "#f2f9f3";
+/** Stores the red value used by this component. */
     private static final String RED  = "#c94040";
+/** Stores the amber value used by this component. */
     private static final String AMBER = "#d4a847";
+/** Stores the server value used by this component. */
 
     private OrderServer server;
 
     // Header status
+/** Stores the status dot value used by this component. */
     private Circle statusDot;
+/** Stores the status label value used by this component. */
     private Label  statusLabel;
 
     // Controls
+/** Stores the port field value used by this component. */
     private TextField     portField;
+/** Stores the password field value used by this component. */
     private PasswordField passwordField;
+/** Stores the start btn value used by this component. */
     private Button        startBtn;
+/** Stores the stop btn value used by this component. */
     private Button        stopBtn;
 
     // Scheduler manual-trigger buttons (enabled only while the server runs).
+/** Stores the scheduler buttons value used by this component. */
     private final List<Button> schedulerButtons = new ArrayList<>();
 
     // Reachable-at info (populated on start)
+/** Stores the reachable box value used by this component. */
     private VBox  reachableBox;
+/** Stores the reachable title value used by this component. */
     private Label reachableTitle;
 
     // Clients table
+/** Stores the clients value used by this component. */
     private final ObservableList<ClientRow> clients = FXCollections.observableArrayList();
+/** Stores the client by ip value used by this component. */
     private final Map<String, ClientRow> clientByIp = new HashMap<>();
 
     // Log
+/** Stores the log box value used by this component. */
     private VBox logBox;
 
     /**
@@ -98,10 +121,17 @@ public class ServerGUI extends Application implements ServerListener {
         stage.setOnCloseRequest(e -> { if (server != null) server.stop(); });
         stage.show();
     }
+/**
+ * Application entry point.
+ */
 
     public static void main(String[] args) { launch(args); }
 
     // ─── Topbar ───────────────────────────────────────────────────────────────
+/**
+ * Performs the build topbar operation.
+ * @return the result produced by the operation
+ */
 
     private HBox buildTopbar() {
         StackPane iconTile = new StackPane();
@@ -144,6 +174,10 @@ public class ServerGUI extends Application implements ServerListener {
     }
 
     // ─── Body ─────────────────────────────────────────────────────────────────
+/**
+ * Performs the build body operation.
+ * @return the result produced by the operation
+ */
 
     private SplitPane buildBody() {
         VBox leftCol  = new VBox(16, buildControlCard(), buildSchedulerCard());
@@ -159,6 +193,10 @@ public class ServerGUI extends Application implements ServerListener {
         split.setStyle("-fx-background-color:" + G50 + ";");
         return split;
     }
+/**
+ * Performs the build card operation.
+ * @return the result produced by the operation
+ */
 
     private VBox buildCard() {
         VBox card = new VBox(12);
@@ -167,6 +205,10 @@ public class ServerGUI extends Application implements ServerListener {
                       " -fx-border-color:" + G200 + "; -fx-border-radius:14; -fx-border-width:1;");
         return card;
     }
+/**
+ * Performs the build control card operation.
+ * @return the result produced by the operation
+ */
 
     private VBox buildControlCard() {
         VBox card = buildCard();
@@ -277,12 +319,19 @@ public class ServerGUI extends Application implements ServerListener {
         schedulerButtons.add(btn);
         return btn;
     }
+/**
+ * Sets the scheduler buttons enabled.
+ * @param enabled value supplied to the operation
+ */
 
     private void setSchedulerButtonsEnabled(boolean enabled) {
         for (Button b : schedulerButtons) {
             b.setDisable(!enabled);
         }
     }
+/**
+ * Performs the populate reachable operation.
+ */
 
     private void populateReachable() {
         String port = portField.getText().trim();
@@ -305,6 +354,10 @@ public class ServerGUI extends Application implements ServerListener {
             reachableBox.getChildren().add(row);
         }
     }
+/**
+ * Returns the lan ipv4.
+ * @return the result produced by the operation
+ */
 
     private static List<String> getLanIPv4() {
         List<String> result = new ArrayList<>();
@@ -321,6 +374,10 @@ public class ServerGUI extends Application implements ServerListener {
         } catch (Exception ignored) {}
         return result;
     }
+/**
+ * Performs the build clients card operation.
+ * @return the result produced by the operation
+ */
 
     private VBox buildClientsCard() {
         VBox card = buildCard();
@@ -360,6 +417,10 @@ public class ServerGUI extends Application implements ServerListener {
         card.getChildren().addAll(title, table);
         return card;
     }
+/**
+ * Performs the build log card operation.
+ * @return the result produced by the operation
+ */
 
     private VBox buildLogCard() {
         VBox card = buildCard();
@@ -485,6 +546,11 @@ public class ServerGUI extends Application implements ServerListener {
     }
 
     // ─── Log helpers ──────────────────────────────────────────────────────────
+/**
+ * Performs the append log operation.
+ * @param ok value supplied to the operation
+ * @param message value supplied to the operation
+ */
 
     private void appendLog(boolean ok, String message) {
         if (!logBox.getChildren().isEmpty()) {
@@ -504,6 +570,12 @@ public class ServerGUI extends Application implements ServerListener {
     }
 
     // ─── Style helpers ────────────────────────────────────────────────────────
+/**
+ * Performs the build primary button operation.
+ * @param text value supplied to the operation
+ * @param icon value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Button buildPrimaryButton(String text, String icon) {
         Button btn = new Button(icon + "  " + text);
@@ -514,6 +586,11 @@ public class ServerGUI extends Application implements ServerListener {
         btn.setOnMouseExited(e  -> btn.setStyle(base + "-fx-background-color:" + G500 + ";"));
         return btn;
     }
+/**
+ * Performs the build secondary button operation.
+ * @param text value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Button buildSecondaryButton(String text) {
         Button btn = new Button(text);
@@ -537,10 +614,18 @@ public class ServerGUI extends Application implements ServerListener {
         btn.setOnMouseExited(e  -> btn.setStyle(base + "-fx-background-color:" + G100 + "; -fx-border-color:" + G200 + ";"));
         return btn;
     }
+/**
+ * Performs the field label style operation.
+ * @return the result produced by the operation
+ */
 
     private String fieldLabelStyle() {
         return "-fx-font-size:12; -fx-font-weight:bold; -fx-text-fill:" + G600 + ";";
     }
+/**
+ * Performs the input style operation.
+ * @return the result produced by the operation
+ */
 
     private String inputStyle() {
         return "-fx-font-size:14; -fx-background-color:" + G50 + "; -fx-border-color:" + G200 +

@@ -16,6 +16,7 @@ import java.io.Serializable;
  * so a SQL {@code NULL} maps to a Java {@code null} rather than a misleading zero.
  */
 public class ReservationDTO implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** Unique reservation identifier (primary key). */

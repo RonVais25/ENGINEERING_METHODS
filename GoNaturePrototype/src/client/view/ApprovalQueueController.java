@@ -29,6 +29,7 @@ import java.util.List;
  * push subscriptions.
  */
 public class ApprovalQueueController extends BaseController {
+/** Stores the refresh btn value used by this component. */
 
     @FXML private Button refreshBtn;
     @FXML private Label  resultLabel;
@@ -38,14 +39,25 @@ public class ApprovalQueueController extends BaseController {
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
     // the DEPT_MANAGER role), so the session is accepted but unused.
+/**
+ * Creates a new approval queue controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
     public ApprovalQueueController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
         load();
     }
+/**
+ * Performs the on refresh operation.
+ */
 
     @FXML
     private void onRefresh() {
@@ -68,6 +80,10 @@ public class ApprovalQueueController extends BaseController {
             populate(rows);
         });
     }
+/**
+ * Performs the populate operation.
+ * @param rows value supplied to the operation
+ */
 
     private void populate(List<ParameterChangeRequestDTO> rows) {
         cardHeaderLabel.setText("PENDING PARAMETER CHANGES (" + rows.size() + ")");
@@ -86,6 +102,10 @@ public class ApprovalQueueController extends BaseController {
             tableBox.getChildren().add(dataRow(rows.get(i), i < rows.size() - 1));
         }
     }
+/**
+ * Performs the header row operation.
+ * @return the result produced by the operation
+ */
 
     private HBox headerRow() {
         HBox row = new HBox();
@@ -98,6 +118,12 @@ public class ApprovalQueueController extends BaseController {
                 headerCell("ACTIONS",        0));
         return row;
     }
+/**
+ * Performs the data row operation.
+ * @param r value supplied to the operation
+ * @param withDivider value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private HBox dataRow(ParameterChangeRequestDTO r, boolean withDivider) {
         Label parkLbl   = cell(r.getParkName(),                          140);
@@ -143,6 +169,12 @@ public class ApprovalQueueController extends BaseController {
             if (res.isSuccess()) load();
         });
     }
+/**
+ * Performs the header cell operation.
+ * @param text value supplied to the operation
+ * @param w value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Label headerCell(String text, double w) {
         Label l = new Label(text);
@@ -150,6 +182,12 @@ public class ApprovalQueueController extends BaseController {
         if (w > 0) l.setPrefWidth(w);
         return l;
     }
+/**
+ * Performs the cell operation.
+ * @param text value supplied to the operation
+ * @param w value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Label cell(String text, double w) {
         Label l = new Label(text);
@@ -164,6 +202,7 @@ public class ApprovalQueueController extends BaseController {
             case MAX_CAPACITY:         return "Max Capacity";
             case GAP_SIZE:             return "Gap Size";
             case DEFAULT_STAY_MINUTES: return "Default Stay (minutes)";
+            case SPECIAL_DISCOUNT_PERCENT: return "Special Sale Discount (%)";
             default:                   return field.name();
         }
     }

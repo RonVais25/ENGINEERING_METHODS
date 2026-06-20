@@ -42,12 +42,14 @@ public class VisitsReportController extends BaseController {
 
     /** X-axis category labels (also the fixed bar order). */
     private static final String CAT_INDIVIDUALS = "Individuals";
+/** Stores the cat groups value used by this component. */
     private static final String CAT_GROUPS      = "Organized groups";
 
     /** Park dropdown entry: carries the id (null for "All parks") but renders the name. */
     private record ParkOption(Integer id, String name) {
         @Override public String toString() { return name; }
     }
+/** Stores the from picker value used by this component. */
 
     @FXML private DatePicker            fromPicker;
     @FXML private DatePicker            toPicker;
@@ -62,9 +64,17 @@ public class VisitsReportController extends BaseController {
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
     // the DEPT_MANAGER role), so the session is accepted but unused.
+/**
+ * Creates a new visits report controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
     public VisitsReportController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -100,6 +110,9 @@ public class VisitsReportController extends BaseController {
             parkCombo.getSelectionModel().selectFirst(); // default to "All parks"
         });
     }
+/**
+ * Performs the on generate operation.
+ */
 
     @FXML
     private void onGenerate() {

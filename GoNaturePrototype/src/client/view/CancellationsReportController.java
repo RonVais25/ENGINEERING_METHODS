@@ -42,12 +42,14 @@ public class CancellationsReportController extends BaseController {
 
     /** Series (legend) names, also the fixed bar order within each date group. */
     private static final String SERIES_CANCELLED = "Cancelled";
+/** Stores the series no show value used by this component. */
     private static final String SERIES_NO_SHOW   = "No-show";
 
     /** Park dropdown entry: carries the id (null for "All parks") but renders the name. */
     private record ParkOption(Integer id, String name) {
         @Override public String toString() { return name; }
     }
+/** Stores the from picker value used by this component. */
 
     @FXML private DatePicker               fromPicker;
     @FXML private DatePicker               toPicker;
@@ -64,9 +66,17 @@ public class CancellationsReportController extends BaseController {
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
     // the DEPT_MANAGER role), so the session is accepted but unused.
+/**
+ * Creates a new cancellations report controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
     public CancellationsReportController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -97,6 +107,9 @@ public class CancellationsReportController extends BaseController {
             parkCombo.getSelectionModel().selectFirst(); // default to "All parks"
         });
     }
+/**
+ * Performs the on generate operation.
+ */
 
     @FXML
     private void onGenerate() {

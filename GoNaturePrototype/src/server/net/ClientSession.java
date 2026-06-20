@@ -30,18 +30,25 @@ import java.util.concurrent.locks.ReentrantLock;
  * same lock guarantees each frame ships atomically.
  */
 public class ClientSession {
+/** Stores the socket value used by this component. */
 
     private final Socket socket;
+/** Stores the in value used by this component. */
     private final ObjectInputStream in;
+/** Stores the out value used by this component. */
     private final ObjectOutputStream out;
+/** Stores the subscriptions value used by this component. */
     private final Set<SubscriptionKey> subscriptions = new CopyOnWriteArraySet<>();
+/** Stores the write lock value used by this component. */
     private final ReentrantLock writeLock = new ReentrantLock();
 
     // Who is authenticated on this connection, and which single-login lock kind
     // ("USER"/"VISITOR") was taken. Both null while logged out. Set on login,
     // cleared on logout; read on disconnect so OrderServer can release a stale
     // active_session lock left by a crashed/closed client.
+/** Stores the logged in actor id value used by this component. */
     private Long loggedInActorId;
+/** Stores the logged in kind value used by this component. */
     private String loggedInKind;
 
     /**

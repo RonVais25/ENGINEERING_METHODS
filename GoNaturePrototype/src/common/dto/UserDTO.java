@@ -11,6 +11,7 @@ import java.io.Serializable;
  * field — credentials are never sent back to the client.
  */
 public class UserDTO implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** Unique user identifier (primary key). */

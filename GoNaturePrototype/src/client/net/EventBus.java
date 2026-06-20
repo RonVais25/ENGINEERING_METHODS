@@ -28,10 +28,17 @@ import java.util.function.Consumer;
  * {@link #getInstance()} without plumbing through {@code Session}.
  */
 public final class EventBus {
+/**
+ * Creates a new event bus instance.
+ */
 
     private static final EventBus INSTANCE = new EventBus();
+/** Stores the subscribers value used by this component. */
 
     private final ConcurrentHashMap<SubscriptionKey, List<Consumer<ServerEvent>>> subscribers = new ConcurrentHashMap<>();
+/**
+ * Creates a new event bus instance.
+ */
 
     private EventBus() {}
 

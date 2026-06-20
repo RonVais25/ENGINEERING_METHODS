@@ -25,6 +25,7 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Predicate;
 
 /**
@@ -43,10 +44,12 @@ import java.util.function.Predicate;
 public class MainShellController {
 
     /** One sidebar entry: the screen plus the rule deciding who may see it. */
-    private record NavItem(Screen screen, Predicate<Session> visibleWhen) {}
+    private record NavItem(String group, Screen screen, Predicate<Session> visibleWhen) {}
 
-    // Visibility predicates — drive gating off the live Session, never hardcoded.
-    private static final Predicate<Session> EVERYONE     = s -> true;
+    // Visibility predicates. These are intentionally strict: a staff user does
+    // not receive visitor booking screens, and a visitor does not receive staff
+    // operations. Server-side controllers still enforce the same permissions.
+    private static final Predicate<Session> EVERYONE = Session::isLoggedIn;
     private static final Predicate<Session> VISITOR_ONLY = Session::isVisitor;
     private static final Predicate<Session> SERVICE_REP_ONLY =
             s -> s.isStaff() && s.getRole() == Role.SERVICE_REP;
@@ -60,6 +63,7 @@ public class MainShellController {
     // Sidebar (logo + nav + user/login chrome) is pinned by the BorderPane in
     // MainShell.fxml (left), so it stays fixed while only the center content
     // scrolls; these fields are injected into that fixed sidebar.
+/** Stores the nav box value used by this component. */
     @FXML private VBox      navBox;
     @FXML private StackPane contentArea;
     @FXML private Label     topbarTitle;
@@ -73,23 +77,41 @@ public class MainShellController {
     @FXML private Button    logoutBtn;
 
     private final NetworkService network;
+/** Stores the session value used by this component. */
     private final Session        session;
+/** Stores the on logout value used by this component. */
     private final Runnable       onLogout;
+/**
+ * Creates a new main shell controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ * @param onLogout value supplied to the operation
+ */
 
     public MainShellController(NetworkService network, Session session, Runnable onLogout) {
         this.network  = network;
         this.session  = session;
         this.onLogout = onLogout;
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
         Navigator navigator = new Navigator(contentArea, network, session, this::onScreenChange);
 
-        // Register + build buttons only for screens this identity may see.
+        // Register + build grouped sidebar buttons only for screens this identity
+        // may see. Hidden screens are not registered, so they are also
+        // unreachable through quick links or accidental navigation calls.
         String firstId = null;
+        String activeGroup = null;
         for (NavItem item : navItems()) {
             if (!item.visibleWhen().test(session)) continue;
+            if (!item.group().equals(activeGroup)) {
+                navBox.getChildren().add(navSection(item.group()));
+                activeGroup = item.group();
+            }
             Screen s = item.screen();
             navigator.register(s);
             Button btn = Navigator.buildNavButton(s.icon(), s.label());
@@ -121,44 +143,60 @@ public class MainShellController {
      */
     private List<NavItem> navItems() {
         return List.of(
-            new NavItem(new Screen("dashboard", "⊞", "Dashboard", "/client/view/DashboardView.fxml",
-                        "Dashboard", "Welcome back"), EVERYONE),
-            // Reservations — available to staff and visitors alike.
-            new NavItem(new Screen("reserve", "✦", "Book Visit", "/client/view/ReservationCreateView.fxml",
-                        "Book Visit", "Reserve a park visit (reservations)"), EVERYONE),
-            new NavItem(new Screen("myres", "☑", "My Reservations", "/client/view/ReservationListView.fxml",
-                        "My Reservations", "View, confirm or cancel your reservations"), EVERYONE),
-            // Waiting list — visitor-facing: claim a freed slot when a park was full.
-            new NavItem(new Screen("waitlist", "⏳", "Waiting List", "/client/view/WaitlistView.fxml",
-                        "Waiting List", "Claim a freed slot when a park was full"), VISITOR_ONLY),
-            // Notification center — every logged-in actor can review their messages.
-            new NavItem(new Screen("notifications", "🔔", "Notifications", "/client/view/NotificationCenterView.fxml",
+            // Shared home and messaging. These are relevant for every logged-in actor.
+            new NavItem("Main", new Screen("dashboard", "⊞", "Dashboard", "/client/view/DashboardView.fxml",
+                        "Dashboard", "Role-based overview"), EVERYONE),
+            new NavItem("Main", new Screen("notifications", "🔔", "Notifications", "/client/view/NotificationCenterView.fxml",
                         "Notifications", "Messages addressed to you"), EVERYONE),
-            // Member registration — service reps only.
-            new NavItem(new Screen("regsub", "★", "Register Subscriber", "/client/view/SubscriberRegisterView.fxml",
-                        "Register Subscriber", "Sign up a new subscriber (members earn a discount)"), SERVICE_REP_ONLY),
-            new NavItem(new Screen("regguide", "✚", "Register Guide", "/client/view/GuideRegisterView.fxml",
+
+            // Visitor / subscriber workspace. Staff do not see these customer screens.
+            new NavItem("Visitor", new Screen("reserve", "✦", "Book Visit", "/client/view/ReservationCreateView.fxml",
+                        "Book Visit", "Reserve a park visit"), VISITOR_ONLY),
+            new NavItem("Visitor", new Screen("myres", "☑", "My Reservations", "/client/view/ReservationListView.fxml",
+                        "My Reservations", "View, confirm, cancel or exit your reservations"), VISITOR_ONLY),
+            new NavItem("Visitor", new Screen("waitlist", "⏳", "Waiting List", "/client/view/WaitlistView.fxml",
+                        "Waiting List", "Claim a freed slot when a park was full"), VISITOR_ONLY),
+
+            // Service representative workspace.
+            new NavItem("Service", new Screen("regsub", "★", "Register Subscriber", "/client/view/SubscriberRegisterView.fxml",
+                        "Register Subscriber", "Sign up a new family subscriber"), SERVICE_REP_ONLY),
+            new NavItem("Service", new Screen("regguide", "✚", "Register Guide", "/client/view/GuideRegisterView.fxml",
                         "Register Guide", "Register a visitor as a group guide"), SERVICE_REP_ONLY),
-            // Gate — front-line park employee's entry/exit/walk-in tool.
-            new NavItem(new Screen("gate", "⇄", "Gate", "/client/view/GateView.fxml",
-                        "Gate", "Park entry, exit & casual walk-ins"), PARK_EMPLOYEE_ONLY),
-            // Manager-only park screens — gated to a single role each so a hidden
-            // screen is also unreachable (not registered with the Navigator).
-            new NavItem(new Screen("parkparams", "⚙", "Park Settings",
+
+            // Park employee gate workspace.
+            new NavItem("Operations", new Screen("gate", "⇄", "Gate", "/client/view/GateView.fxml",
+                        "Gate", "Park entry, exit and casual walk-ins"), PARK_EMPLOYEE_ONLY),
+
+            // Management workspaces.
+            new NavItem("Management", new Screen("parkparams", "⚙", "Park Settings",
                         "/client/view/ParkParamsView.fxml",
-                        "Park Settings", "Request changes to your park's parameters"), PARK_MANAGER_ONLY),
-            new NavItem(new Screen("approvals", "✓", "Approvals",
+                        "Park Settings", "Request changes to your park parameters"), PARK_MANAGER_ONLY),
+            new NavItem("Management", new Screen("approvals", "✓", "Approvals",
                         "/client/view/ApprovalQueueView.fxml",
                         "Approvals", "Review pending parameter-change requests"), DEPT_MANAGER_ONLY),
-            // Department-manager reports — visits-by-type (chart) and cancellations (table).
-            new NavItem(new Screen("visitsreport", "📊", "Visits Report",
+
+            // Department manager reports.
+            new NavItem("Reports", new Screen("visitsreport", "📊", "Visits Report",
                         "/client/view/VisitsReportView.fxml",
                         "Visits Report", "Visits by type — individuals vs organized groups"), DEPT_MANAGER_ONLY),
-            new NavItem(new Screen("cancelreport", "📉", "Cancellations Report",
+            new NavItem("Reports", new Screen("cancelreport", "📉", "Cancellations Report",
                         "/client/view/CancellationsReportView.fxml",
-                        "Cancellations Report", "Cancellations & no-shows by day"), DEPT_MANAGER_ONLY)
+                        "Cancellations Report", "Cancellations and no-shows by day"), DEPT_MANAGER_ONLY),
+            new NavItem("Reports", new Screen("usagereport", "▣", "Usage Report",
+                        "/client/view/UsageReportView.fxml",
+                        "Usage Report", "When parks were not fully occupied"), DEPT_MANAGER_ONLY)
         );
     }
+
+    /** Builds a compact group label inside the sidebar menu. */
+    private Label navSection(String text) {
+        Label label = new Label(text.toUpperCase(Locale.ENGLISH));
+        label.getStyleClass().add("sidebar-section-label");
+        return label;
+    }
+/**
+ * Performs the on logout operation.
+ */
 
     @FXML
     private void onLogout() {
@@ -168,6 +206,9 @@ public class MainShellController {
         // failed/again-disconnected logout must not strand the user in the shell.
         network.logout().thenAccept(res -> finishLogout());
     }
+/**
+ * Performs the finish logout operation.
+ */
 
     private void finishLogout() {
         // Drop our notification subscription before the identity is cleared so the
@@ -295,16 +336,28 @@ public class MainShellController {
         }
         return sb.length() == 0 ? "?" : sb.toString();
     }
+/**
+ * Performs the on screen change operation.
+ * @param s value supplied to the operation
+ */
 
     private void onScreenChange(Screen s) {
         topbarTitle.setText(s.title());
         topbarSubtitle.setText(s.subtitle());
     }
+/**
+ * Performs the update conn status operation.
+ * @param ok value supplied to the operation
+ */
 
     private void updateConnStatus(boolean ok) {
         setConnDotOk(ok);
         connStatusLbl.setText(ok ? "Connected" : "Disconnected");
     }
+/**
+ * Sets the conn dot ok.
+ * @param ok value supplied to the operation
+ */
 
     private void setConnDotOk(boolean ok) {
         connDot.getStyleClass().removeAll("err");

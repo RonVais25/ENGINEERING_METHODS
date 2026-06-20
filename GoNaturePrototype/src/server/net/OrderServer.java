@@ -15,25 +15,40 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+/**
+ * Represents the order server component of the GoNature application.
+ */
 
 public class OrderServer {
+/** Stores the port value used by this component. */
 
     private final int port;
+/** Stores the listener value used by this component. */
     private final ServerListener listener;
+/** Stores the router value used by this component. */
     private final RequestRouter router = new RequestRouter();
+/** Stores the server socket value used by this component. */
 
     private ServerSocket serverSocket;
+/** Stores the running value used by this component. */
     private volatile boolean running;
 
     // Timed-job runner: started alongside the accept loop and shut down in stop()
     // so its threads live exactly as long as the server. Jobs log their one-line
     // summaries through the same ServerListener as the rest of the server.
+/** Stores the scheduler value used by this component. */
     private final SchedulerService scheduler;
 
     // Every accepted client socket is tracked so stop() can force-close them.
     // Without this, server.stop() only stops accept() — existing handleClient
     // threads keep running and the clients can still send requests.
+/** Stores the active clients value used by this component. */
     private final List<Socket> activeClients = Collections.synchronizedList(new ArrayList<>());
+/**
+ * Creates a new order server instance.
+ * @param port value supplied to the operation
+ * @param listener value supplied to the operation
+ */
 
     public OrderServer(int port, ServerListener listener) {
         this.port = port;
@@ -41,6 +56,9 @@ public class OrderServer {
         // Job summaries flow into the same activity log as connection events.
         this.scheduler = new SchedulerService(listener::onLog);
     }
+/**
+ * Performs the start operation.
+ */
 
     public void start() {
         Thread t = new Thread(this::runAcceptLoop, "OrderServer-accept");
@@ -61,6 +79,9 @@ public class OrderServer {
     public SchedulerService getScheduler() {
         return scheduler;
     }
+/**
+ * Performs the stop operation.
+ */
 
     public void stop() {
         running = false;
@@ -83,6 +104,9 @@ public class OrderServer {
             activeClients.clear();
         }
     }
+/**
+ * Performs the run accept loop operation.
+ */
 
     private void runAcceptLoop() {
         try {
@@ -115,6 +139,12 @@ public class OrderServer {
             listener.onStopped();
         }
     }
+/**
+ * Performs the handle client operation.
+ * @param socket value supplied to the operation
+ * @param ip value supplied to the operation
+ * @param host value supplied to the operation
+ */
 
     private void handleClient(Socket socket, String ip, String host) {
         // Persistent connection: read requests in a loop until the client

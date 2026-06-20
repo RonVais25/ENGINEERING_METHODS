@@ -56,6 +56,7 @@ public class WaitlistController extends BaseController {
 
     /** Parses the DB {@code DATETIME} strings the server sends ({@code yyyy-MM-dd HH:mm:ss}). */
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+/** Stores the refresh btn value used by this component. */
 
     @FXML private Button refreshBtn;
     @FXML private Label  resultLabel;
@@ -78,11 +79,19 @@ public class WaitlistController extends BaseController {
 
     /** Local-only piggyback on the shell's notification subscription (see class javadoc). */
     private EventBus.Subscription offerSub;
+/**
+ * Creates a new waitlist controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
 
     public WaitlistController(NetworkService network, Session session) {
         super(network);
         this.session = session;
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -93,6 +102,9 @@ public class WaitlistController extends BaseController {
         // call load() directly once names are cached; a race just shows "Park #id".
         loadParks();
     }
+/**
+ * Performs the on refresh operation.
+ */
 
     @FXML
     private void onRefresh() {
@@ -131,6 +143,10 @@ public class WaitlistController extends BaseController {
             resubscribe(rows);
         });
     }
+/**
+ * Performs the populate operation.
+ * @param rows value supplied to the operation
+ */
 
     private void populate(List<WaitlistEntryDTO> rows) {
         tickTargets.clear();
@@ -171,6 +187,10 @@ public class WaitlistController extends BaseController {
             subscribe("reservation", e.getReservationId(), ev -> onReservationEvent(ev));
         }
     }
+/**
+ * Performs the on reservation event operation.
+ * @param ev value supplied to the operation
+ */
 
     private void onReservationEvent(ServerEvent ev) {
         load();
@@ -186,6 +206,9 @@ public class WaitlistController extends BaseController {
         SubscriptionKey key = new SubscriptionKey("notification", visitorId);
         offerSub = EventBus.getInstance().subscribe(key, ev -> load());
     }
+/**
+ * Performs the on hide hook operation.
+ */
 
     @Override
     protected void onHideHook() {
@@ -217,6 +240,11 @@ public class WaitlistController extends BaseController {
             }
         }
     }
+/**
+ * Performs the format remaining operation.
+ * @param secs value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static String formatRemaining(long secs) {
         return String.format("%02d:%02d", secs / 60, secs % 60);
@@ -230,6 +258,10 @@ public class WaitlistController extends BaseController {
             if (res.isSuccess()) load();
         });
     }
+/**
+ * Performs the leave operation.
+ * @param reservationId value supplied to the operation
+ */
 
     private void leave(int reservationId) {
         if (!confirmAction("Leave the waiting list for reservation #" + reservationId + "?",
@@ -286,6 +318,12 @@ public class WaitlistController extends BaseController {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         return spacer;
     }
+/**
+ * Performs the data row operation.
+ * @param e value supplied to the operation
+ * @param withDivider value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private HBox dataRow(WaitlistEntryDTO e, boolean withDivider) {
         Label parkLbl  = cell(parkNames.getOrDefault(e.getParkId(), "Park #" + e.getParkId()), "num", 150);
@@ -342,6 +380,11 @@ public class WaitlistController extends BaseController {
     private boolean isOffered(WaitlistEntryDTO e) {
         return e.getGrabOfferedAt() != null && parseTs(e.getGrabExpiresAt()) != null;
     }
+/**
+ * Performs the parse ts operation.
+ * @param s value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static LocalDateTime parseTs(String s) {
         if (s == null) return null;
@@ -351,6 +394,12 @@ public class WaitlistController extends BaseController {
             return null;
         }
     }
+/**
+ * Performs the header cell operation.
+ * @param text value supplied to the operation
+ * @param w value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Label headerCell(String text, double w) {
         Label l = new Label(text);
@@ -358,6 +407,13 @@ public class WaitlistController extends BaseController {
         if (w > 0) l.setPrefWidth(w);
         return l;
     }
+/**
+ * Performs the cell operation.
+ * @param text value supplied to the operation
+ * @param modifier value supplied to the operation
+ * @param w value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Label cell(String text, String modifier, double w) {
         Label l = new Label(text);

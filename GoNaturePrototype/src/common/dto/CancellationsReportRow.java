@@ -16,6 +16,7 @@ import java.io.Serializable;
  * inside a {@link CancellationsReportDTO}; immutable and {@link Serializable}.
  */
 public class CancellationsReportRow implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** The calendar day the status changed, ISO {@code yyyy-MM-dd}. */

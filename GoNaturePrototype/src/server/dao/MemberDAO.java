@@ -155,6 +155,34 @@ public class MemberDAO {
         }
     }
 
+
+    /**
+     * Returns the registered family size for a subscriber, or zero when the visitor
+     * is not a subscriber.
+     *
+     * @param visitorId the visitor's national id
+     * @return family size for subscribers, otherwise 0
+     */
+    public int subscriberFamilySize(long visitorId) {
+        String sql = "SELECT family_size FROM subscriber WHERE visitor_id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, visitorId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("family_size");
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return 0;
+    }
+
     /**
      * Promotes a visitor to a subscriber: marks {@code visitor.is_subscriber}
      * {@code TRUE} and inserts the {@code subscriber} row with today's join date.

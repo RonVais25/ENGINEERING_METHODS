@@ -1,4 +1,7 @@
 package common.dto;
+/**
+ * Enumeration of request type values used by the GoNature application.
+ */
 
 public enum RequestType {
     // infrastructure
@@ -37,12 +40,14 @@ public enum RequestType {
     // visits
     ENTER_VISIT,
     EXIT_VISIT,
+    VISITOR_EXIT_VISIT,
     CASUAL_VISIT,
     CURRENT_OCCUPANCY,
 
     // reports
     REPORT_VISITS_BY_TYPE,
     REPORT_CANCELLATIONS,
+    REPORT_USAGE,
 
     // notifications
     LIST_NOTIFICATIONS,

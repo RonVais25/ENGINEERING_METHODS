@@ -25,6 +25,7 @@ import javafx.scene.control.TextField;
  * other screens; it does not subscribe to push events.
  */
 public class GuideRegisterController extends BaseController {
+/** Stores the id field value used by this component. */
 
     @FXML private TextField idField;
     @FXML private TextField nameField;
@@ -36,6 +37,9 @@ public class GuideRegisterController extends BaseController {
     public GuideRegisterController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Performs the on register operation.
+ */
 
     @FXML
     private void onRegister() {

@@ -31,13 +31,24 @@ import static common.dto.RequestType.LIST_NOTIFICATIONS;
  * the online recipient.
  */
 public class NotificationController implements DomainController {
+/** Stores the dao value used by this component. */
 
     private final NotificationDAO dao = new NotificationDAO();
+/**
+ * Performs the handled types operation.
+ * @return the result produced by the operation
+ */
 
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(LIST_NOTIFICATIONS, ACK_NOTIFICATION);
     }
+/**
+ * Handles the supplied request and returns the appropriate server response.
+ * @param request value supplied to the operation
+ * @param session value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {

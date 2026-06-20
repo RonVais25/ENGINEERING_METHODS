@@ -42,8 +42,10 @@ public class SchedulerService {
 
     /** How often each job re-runs, captured once from {@link SchedulerConfig}. */
     private final long pollSeconds;
+/** Stores the executor value used by this component. */
 
     private final ScheduledExecutorService executor;
+/** Stores the started value used by this component. */
 
     private volatile boolean started;
 
@@ -64,6 +66,10 @@ public class SchedulerService {
         register(new ReminderJob(log));
         register(new ConfirmTimeoutJob(log));
     }
+/**
+ * Performs the register operation.
+ * @param job value supplied to the operation
+ */
 
     private void register(SchedulerJob job) {
         jobs.put(job.name(), job);

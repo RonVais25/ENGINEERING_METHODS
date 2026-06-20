@@ -14,10 +14,16 @@ public class DBConnection {
             "?serverTimezone=Asia/Jerusalem" +
             "&useSSL=false" +
             "&allowPublicKeyRetrieval=true";
+/** Stores the user value used by this component. */
 
     private static final String USER = "root";
+/** Stores the password value used by this component. */
 
     private static String password = resolveInitialPassword();
+/**
+ * Performs the resolve initial password operation.
+ * @return the result produced by the operation
+ */
 
     private static String resolveInitialPassword() {
         String env = System.getenv("DB_PASSWORD");

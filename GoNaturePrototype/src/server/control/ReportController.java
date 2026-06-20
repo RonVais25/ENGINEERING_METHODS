@@ -9,12 +9,14 @@ import common.dto.Role;
 import common.dto.ServerResponse;
 import common.dto.UserDTO;
 import common.dto.VisitsReportDTO;
+import common.dto.UsageReportDTO;
 import server.dao.AuthDAO;
 import server.dao.ReportDAO;
 import server.net.ClientSession;
 
 import static common.dto.RequestType.REPORT_CANCELLATIONS;
 import static common.dto.RequestType.REPORT_VISITS_BY_TYPE;
+import static common.dto.RequestType.REPORT_USAGE;
 
 /**
  * Owns the reporting domain: the Visits-by-Type and Cancellations reports the
@@ -33,14 +35,26 @@ import static common.dto.RequestType.REPORT_VISITS_BY_TYPE;
  * treated as the whole region.
  */
 public class ReportController implements DomainController {
+/** Stores the report dao value used by this component. */
 
     private final ReportDAO reportDao = new ReportDAO();
+/** Stores the auth dao value used by this component. */
     private final AuthDAO authDao = new AuthDAO();
+/**
+ * Performs the handled types operation.
+ * @return the result produced by the operation
+ */
 
     @Override
     public Set<RequestType> handledTypes() {
-        return Set.of(REPORT_VISITS_BY_TYPE, REPORT_CANCELLATIONS);
+        return Set.of(REPORT_VISITS_BY_TYPE, REPORT_CANCELLATIONS, REPORT_USAGE);
     }
+/**
+ * Handles the supplied request and returns the appropriate server response.
+ * @param request value supplied to the operation
+ * @param session value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
@@ -75,6 +89,14 @@ public class ReportController implements DomainController {
                     return new ServerResponse(false, "Could not build the cancellations report.");
                 }
                 return new ServerResponse(true, "Cancellations report ready.", report);
+            }
+
+            case REPORT_USAGE: {
+                UsageReportDTO report = reportDao.usage(from, to, parkId);
+                if (report == null) {
+                    return new ServerResponse(false, "Could not build the usage report.");
+                }
+                return new ServerResponse(true, "Usage report ready.", report);
             }
 
             default:

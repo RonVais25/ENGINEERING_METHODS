@@ -33,6 +33,7 @@ import java.util.List;
  * since the server tracks subscriptions per connection, not per callback).
  */
 public class NotificationCenterController extends BaseController {
+/** Stores the refresh btn value used by this component. */
 
     @FXML private Button refreshBtn;
     @FXML private Label  resultLabel;
@@ -42,14 +43,25 @@ public class NotificationCenterController extends BaseController {
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server derives the
     // recipient from the session), so the session is accepted but unused.
+/**
+ * Creates a new notification center controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
     public NotificationCenterController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
         load();
     }
+/**
+ * Performs the on refresh operation.
+ */
 
     @FXML
     private void onRefresh() {
@@ -72,6 +84,10 @@ public class NotificationCenterController extends BaseController {
             populate(rows);
         });
     }
+/**
+ * Performs the populate operation.
+ * @param rows value supplied to the operation
+ */
 
     private void populate(List<NotificationDTO> rows) {
         int unread = 0;
@@ -94,6 +110,12 @@ public class NotificationCenterController extends BaseController {
             tableBox.getChildren().add(dataRow(rows.get(i), i < rows.size() - 1));
         }
     }
+/**
+ * Performs the data row operation.
+ * @param n value supplied to the operation
+ * @param withDivider value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private HBox dataRow(NotificationDTO n, boolean withDivider) {
         boolean unread = !n.isAcknowledged();

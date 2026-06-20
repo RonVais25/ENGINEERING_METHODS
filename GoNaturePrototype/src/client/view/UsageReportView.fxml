@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.UsageReportController"
+            fitToWidth="true" styleClass="scroll-pane">
+    <VBox styleClass="screen-padded" spacing="12">
+        <VBox styleClass="card" spacing="12">
+            <Label text="USAGE REPORT" styleClass="section-label"/>
+            <HBox spacing="12">
+                <VBox HBox.hgrow="ALWAYS" spacing="6">
+                    <Label text="From" styleClass="field-label"/>
+                    <DatePicker fx:id="fromPicker" maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
+                <VBox HBox.hgrow="ALWAYS" spacing="6">
+                    <Label text="To" styleClass="field-label"/>
+                    <DatePicker fx:id="toPicker" maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
+                <VBox HBox.hgrow="ALWAYS" spacing="6">
+                    <Label text="Park" styleClass="field-label"/>
+                    <ComboBox fx:id="parkCombo" maxWidth="Infinity" styleClass="input-field"/>
+                </VBox>
+            </HBox>
+            <Button fx:id="generateBtn" text="Generate" onAction="#onGenerate"
+                    styleClass="btn-primary" maxWidth="Infinity"/>
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <VBox styleClass="history-card" VBox.vgrow="ALWAYS">
+            <HBox styleClass="history-card-header">
+                <Label fx:id="cardHeaderLabel" text="USAGE REPORT" styleClass="section-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <VBox fx:id="tableBox" spacing="0"/>
+        </VBox>
+    </VBox>
+</ScrollPane>

@@ -17,6 +17,7 @@ import java.util.List;
  * {@link RequestType#REPORT_VISITS_BY_TYPE}; immutable and {@link Serializable}.
  */
 public class VisitsReportDTO implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** Echo of the inclusive range start, ISO {@code yyyy-MM-dd}. */

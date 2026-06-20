@@ -47,10 +47,11 @@ public class UserLoginController {
      * Dev escape hatch: when {@code true}, the seeded-account "Quick login" row is
      * built and shown. Keep this {@code false} for anything a grader will see.
      */
-    private static final boolean DEBUG_QUICK_LOGIN = true;
+    private static final boolean DEBUG_QUICK_LOGIN = false;
 
     /** Shared password of every seeded account in {@code setup.sql}. */
     private static final String DEV_PASSWORD = "changeme";
+/** Stores the host field value used by this component. */
 
     @FXML private TextField     hostField;
     @FXML private TextField     portField;
@@ -67,14 +68,25 @@ public class UserLoginController {
     @FXML private FlowPane      quickLoginBox;
 
     private final NetworkService network;
+/** Stores the session value used by this component. */
     private final Session        session;
+/** Stores the on success value used by this component. */
     private final Runnable       onSuccess;
+/**
+ * Creates a new user login controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ * @param onSuccess value supplied to the operation
+ */
 
     public UserLoginController(NetworkService network, Session session, Runnable onSuccess) {
         this.network   = network;
         this.session   = session;
         this.onSuccess = onSuccess;
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -146,6 +158,9 @@ public class UserLoginController {
                 new Quick("Subscriber",  null, 200000001L),      // Vera Visitor (subscriber)
                 new Quick("Visitor",     null, 200000002L));     // Victor Visit (plain visitor)
     }
+/**
+ * Performs the build quick login buttons operation.
+ */
 
     private void buildQuickLoginButtons() {
         for (Quick q : quickAccounts()) {
@@ -174,6 +189,10 @@ public class UserLoginController {
             ensureConnectedThen(this::submitVisitor);
         }
     }
+/**
+ * Performs the show staff operation.
+ * @param staff value supplied to the operation
+ */
 
     private void showStaff(boolean staff) {
         staffPane.setVisible(staff);
@@ -182,6 +201,9 @@ public class UserLoginController {
         visitorPane.setManaged(!staff);
         hideError();
     }
+/**
+ * Performs the on submit operation.
+ */
 
     @FXML
     private void onSubmit() {
@@ -240,6 +262,9 @@ public class UserLoginController {
             }
         });
     }
+/**
+ * Performs the submit staff operation.
+ */
 
     private void submitStaff() {
         String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
@@ -259,6 +284,9 @@ public class UserLoginController {
             }
         });
     }
+/**
+ * Performs the submit visitor operation.
+ */
 
     private void submitVisitor() {
         String raw = visitorIdField.getText() == null ? "" : visitorIdField.getText().trim();
@@ -280,17 +308,28 @@ public class UserLoginController {
             }
         });
     }
+/**
+ * Sets the busy.
+ * @param busy value supplied to the operation
+ */
 
     private void setBusy(boolean busy) {
         submitBtn.setDisable(busy);
         submitBtn.setText(busy ? "Signing in…" : "Sign In");
     }
+/**
+ * Performs the show error operation.
+ * @param msg value supplied to the operation
+ */
 
     private void showError(String msg) {
         errorLabel.setText(msg == null ? "Login failed" : msg);
         errorLabel.setVisible(true);
         errorLabel.setManaged(true);
     }
+/**
+ * Performs the hide error operation.
+ */
 
     private void hideError() {
         errorLabel.setVisible(false);

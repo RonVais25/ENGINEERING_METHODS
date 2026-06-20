@@ -32,6 +32,7 @@ import java.io.Serializable;
  * because it is stamped at delivery time, before the recipient has seen it.
  */
 public class NotificationDTO implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** Unique notification identifier (primary key). */

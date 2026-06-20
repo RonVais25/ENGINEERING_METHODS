@@ -46,20 +46,33 @@ import static common.dto.RequestType.REQUEST_PARAM_CHANGE;
  * state so a decision is never applied twice.
  */
 public class ParkController implements DomainController {
+/** Stores the park dao value used by this component. */
 
     private final ParkDAO parkDao = new ParkDAO();
+/** Stores the change dao value used by this component. */
     private final ParameterChangeDAO changeDao = new ParameterChangeDAO();
+/** Stores the auth dao value used by this component. */
     private final AuthDAO authDao = new AuthDAO();
     /** Read-only collaborator for {@link RequestType#CHECK_AVAILABILITY}. */
     private final ReservationDAO reservationDao = new ReservationDAO();
     /** Stateless notification helper, shared across all client threads. */
     private final NotificationService notificationService = new NotificationService();
+/**
+ * Performs the handled types operation.
+ * @return the result produced by the operation
+ */
 
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(GET_PARK, LIST_PARKS, REQUEST_PARAM_CHANGE, LIST_PENDING_CHANGES,
                 APPROVE_PARAM_CHANGE, REJECT_PARAM_CHANGE, CHECK_AVAILABILITY);
     }
+/**
+ * Handles the supplied request and returns the appropriate server response.
+ * @param request value supplied to the operation
+ * @param session value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
@@ -123,6 +136,12 @@ public class ParkController implements DomainController {
                     return new ServerResponse(false, "A new value is required.");
                 }
                 int newValue = ((Number) rawNew).intValue();
+                if (newValue < 0) {
+                    return new ServerResponse(false, "Parameter value cannot be negative.");
+                }
+                if (field == ParamField.SPECIAL_DISCOUNT_PERCENT && newValue > 90) {
+                    return new ServerResponse(false, "Special sale discount cannot exceed 90%.");
+                }
 
                 // Trust boundary: the target park is the manager's own, never a
                 // client-supplied id. Read the current value to record as old_value.
@@ -264,6 +283,7 @@ public class ParkController implements DomainController {
             case MAX_CAPACITY:         return park.getMaxCapacity();
             case GAP_SIZE:             return park.getGapSize();
             case DEFAULT_STAY_MINUTES: return park.getDefaultStayMinutes();
+            case SPECIAL_DISCOUNT_PERCENT: return park.getSpecialDiscountPercent();
             default:
                 throw new IllegalArgumentException("Unknown park parameter field: " + field);
         }

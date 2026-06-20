@@ -21,6 +21,7 @@ import java.io.Serializable;
  * since subscribers refresh from the new row and do not settle.
  */
 public class ReservationUpdateResultDTO implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** The reservation as persisted after the edit (carries the new price). */

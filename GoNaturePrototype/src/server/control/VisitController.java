@@ -15,6 +15,7 @@ import common.dto.VisitDTO;
 import common.dto.VisitType;
 import common.dto.VisitorDTO;
 import server.dao.AuthDAO;
+import server.dao.MemberDAO;
 import server.dao.ParkDAO;
 import server.dao.ReservationDAO;
 import server.dao.VisitDAO;
@@ -24,6 +25,7 @@ import static common.dto.RequestType.CASUAL_VISIT;
 import static common.dto.RequestType.CURRENT_OCCUPANCY;
 import static common.dto.RequestType.ENTER_VISIT;
 import static common.dto.RequestType.EXIT_VISIT;
+import static common.dto.RequestType.VISITOR_EXIT_VISIT;
 
 /**
  * Owns the visit domain: park entry by reservation, exit, casual walk-ins, and
@@ -45,32 +47,53 @@ import static common.dto.RequestType.EXIT_VISIT;
  * booking-time {@link ReservationDAO#availableCapacity}.
  */
 public class VisitController implements DomainController {
+/** Stores the visit dao value used by this component. */
 
     private final VisitDAO visitDao = new VisitDAO();
+/** Stores the reservation dao value used by this component. */
     private final ReservationDAO reservationDao = new ReservationDAO();
+/** Stores the park dao value used by this component. */
     private final ParkDAO parkDao = new ParkDAO();
+/** Stores the auth dao value used by this component. */
     private final AuthDAO authDao = new AuthDAO();
+    /** Member/subscriber lookup for family-visit rules. */
+    private final MemberDAO memberDao = new MemberDAO();
     /** Stateless price calculator, shared across all client threads. */
     private final PricingService pricing = new PricingService();
+/**
+ * Performs the handled types operation.
+ * @return the result produced by the operation
+ */
 
     @Override
     public Set<RequestType> handledTypes() {
-        return Set.of(ENTER_VISIT, EXIT_VISIT, CASUAL_VISIT, CURRENT_OCCUPANCY);
+        return Set.of(ENTER_VISIT, EXIT_VISIT, VISITOR_EXIT_VISIT, CASUAL_VISIT, CURRENT_OCCUPANCY);
     }
+/**
+ * Handles the supplied request and returns the appropriate server response.
+ * @param request value supplied to the operation
+ * @param session value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 
-        // All four ops are operated at a gate by a park employee. Resolve and
-        // role-check once; the employee's park drives every op below.
-        UserDTO me = currentEmployee(session);
-        if (me == null) {
-            return new ServerResponse(false, "Only a park employee can operate the gate.");
+        // Gate operations are park-employee only. The visitor self-exit operation
+        // is handled separately because it is explicitly required to be available
+        // to the booking owner as well.
+        UserDTO me = null;
+        int employeePark = -1;
+        if (request.getType() != VISITOR_EXIT_VISIT) {
+            me = currentEmployee(session);
+            if (me == null) {
+                return new ServerResponse(false, "Only a park employee can operate the gate.");
+            }
+            if (me.getParkId() == null) {
+                return new ServerResponse(false, "You are not assigned to a park.");
+            }
+            employeePark = me.getParkId();
         }
-        if (me.getParkId() == null) {
-            return new ServerResponse(false, "You are not assigned to a park.");
-        }
-        int employeePark = me.getParkId();
 
         switch (request.getType()) {
 
@@ -156,6 +179,38 @@ public class VisitController implements DomainController {
                 return new ServerResponse(true, "Exit recorded.");
             }
 
+            case VISITOR_EXIT_VISIT: {
+                Long actorId = session.getLoggedInActorId();
+                if (actorId == null || !"VISITOR".equals(session.getLoggedInKind())) {
+                    return new ServerResponse(false, "Only the booking visitor can record this exit.");
+                }
+                Object rawReservationId = request.get("reservationId");
+                if (rawReservationId == null) {
+                    return new ServerResponse(false, "A reservation id is required.");
+                }
+                int reservationId = ((Number) rawReservationId).intValue();
+                ReservationDTO reservation = reservationDao.getById(reservationId);
+                if (reservation == null) {
+                    return new ServerResponse(false, "Reservation not found.");
+                }
+                if (reservation.getVisitorId() != actorId.longValue()) {
+                    return new ServerResponse(false, "You can only exit your own reservation.");
+                }
+                if (reservation.getStatus() != ReservationStatus.CONFIRMED) {
+                    return new ServerResponse(false,
+                            "Only an active CONFIRMED reservation can be exited by the visitor.");
+                }
+                VisitDTO open = visitDao.findOpenByReservation(reservationId);
+                if (open == null) {
+                    return new ServerResponse(false, "No open visit found for this reservation.");
+                }
+                if (!visitDao.closeVisit(open.getId())) {
+                    return new ServerResponse(false, "Could not close the visit.");
+                }
+                reservationDao.updateStatus(reservationId, ReservationStatus.COMPLETED);
+                return new ServerResponse(true, "Visitor exit recorded for the whole reservation group.");
+            }
+
             case CASUAL_VISIT: {
                 Object rawParty = request.get("partySize");
                 Object rawType  = request.get("visitType");
@@ -200,7 +255,21 @@ public class VisitController implements DomainController {
                 boolean isGroup = (visitType == VisitType.GROUP);
                 // Casual walk-in: preOrdered=false, prePaid=false (see guide-rule
                 // note — a casual group's guide is charged under the current rule).
-                int price = pricing.calculate(visitType, isGroup, partySize, false, false, isMember);
+                if (visitType == VisitType.FAMILY) {
+                    if (visitorId == null) {
+                        return new ServerResponse(false, "Family casual visits require a subscriber visitor id.");
+                    }
+                    int familySize = memberDao.subscriberFamilySize(visitorId);
+                    if (familySize <= 0) {
+                        return new ServerResponse(false, "Family visits are available only for subscribers.");
+                    }
+                    if (partySize > familySize) {
+                        return new ServerResponse(false,
+                                "Party size exceeds the subscriber family size (" + familySize + ").");
+                    }
+                }
+                int price = pricing.calculate(visitType, isGroup, partySize, false, false, isMember,
+                        park.getSpecialDiscountPercent());
 
                 int visitId = visitDao.insertVisit(null, employeePark, visitorId, partySize, visitType, price);
                 if (visitId < 0) {

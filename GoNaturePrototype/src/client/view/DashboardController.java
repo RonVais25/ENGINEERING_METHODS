@@ -50,6 +50,7 @@ import java.util.Map;
  * blocking.
  */
 public class DashboardController {
+/** Stores the greeting lbl value used by this component. */
 
     @FXML private Label greetingLbl;
     @FXML private Label roleLbl;
@@ -58,21 +59,35 @@ public class DashboardController {
     @FXML private HBox  quickLinks;
 
     private final NetworkService network;
+/** Stores the session value used by this component. */
     private final Session        session;
+/** Stores the navigator value used by this component. */
     private final Navigator      navigator;
 
     // Visitor attention counters: fed by two independent async calls
     // (reservations + notifications) and folded into the alert line whenever
     // either resolves. Both callbacks land on the FX thread, so there is no race.
+/** Stores the visitor pending value used by this component. */
     private int visitorPending;
+/** Stores the visitor waiting value used by this component. */
     private int visitorWaiting;
+/** Stores the visitor unread value used by this component. */
     private int visitorUnread;
+/**
+ * Creates a new dashboard controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ * @param navigator value supplied to the operation
+ */
 
     public DashboardController(NetworkService network, Session session, Navigator navigator) {
         this.network   = network;
         this.session   = session;
         this.navigator = navigator;
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -111,6 +126,10 @@ public class DashboardController {
             refreshVisitorAlert();
         });
     }
+/**
+ * Performs the load visitor reservations operation.
+ * @param parkNames value supplied to the operation
+ */
 
     private void loadVisitorReservations(Map<Integer, String> parkNames) {
         network.listReservations(session.getActorId()).thenAccept(res -> {
@@ -149,6 +168,13 @@ public class DashboardController {
             refreshVisitorAlert();
         });
     }
+/**
+ * Performs the next visit card operation.
+ * @param next value supplied to the operation
+ * @param nextDate value supplied to the operation
+ * @param parkNames value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private VBox nextVisitCard(ReservationDTO next, LocalDate nextDate, Map<Integer, String> parkNames) {
         if (next == null) {
@@ -157,6 +183,14 @@ public class DashboardController {
         String park = parkNames.getOrDefault(next.getParkId(), "Park #" + next.getParkId());
         return statCard("NEXT VISIT", formatDate(nextDate), park);
     }
+/**
+ * Performs the active card operation.
+ * @param active value supplied to the operation
+ * @param confirmed value supplied to the operation
+ * @param pending value supplied to the operation
+ * @param waiting value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private VBox activeCard(int active, int confirmed, int pending, int waiting) {
         String sub;
@@ -170,6 +204,9 @@ public class DashboardController {
         }
         return statCard("ACTIVE RESERVATIONS", String.valueOf(active), sub);
     }
+/**
+ * Performs the refresh visitor alert operation.
+ */
 
     private void refreshVisitorAlert() {
         List<String> items = new ArrayList<>();
@@ -308,6 +345,13 @@ public class DashboardController {
     private VBox errorCard(String label, String message) {
         return statCard(label, "—", (message == null || message.isBlank()) ? "unavailable" : message);
     }
+/**
+ * Performs the quick button operation.
+ * @param text value supplied to the operation
+ * @param navId value supplied to the operation
+ * @param primary value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Button quickButton(String text, String navId, boolean primary) {
         Button b = new Button(text);
@@ -316,6 +360,11 @@ public class DashboardController {
         b.setOnAction(e -> navigator.go(navId));
         return b;
     }
+/**
+ * Performs the show alert operation.
+ * @param text value supplied to the operation
+ * @param calm value supplied to the operation
+ */
 
     private void showAlert(String text, boolean calm) {
         alertLabel.setText(text);
@@ -324,6 +373,9 @@ public class DashboardController {
         alertLabel.setVisible(true);
         alertLabel.setManaged(true);
     }
+/**
+ * Performs the hide alert operation.
+ */
 
     private void hideAlert() {
         alertLabel.setVisible(false);
@@ -341,6 +393,11 @@ public class DashboardController {
         }
         return names;
     }
+/**
+ * Performs the reservations from operation.
+ * @param res value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private List<ReservationDTO> reservationsFrom(ServerResponse res) {
         List<ReservationDTO> rows = new ArrayList<>();
@@ -351,6 +408,11 @@ public class DashboardController {
         }
         return rows;
     }
+/**
+ * Performs the unread count operation.
+ * @param res value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private int unreadCount(ServerResponse res) {
         int n = 0;
@@ -366,6 +428,11 @@ public class DashboardController {
 
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
+/**
+ * Performs the parse date operation.
+ * @param iso value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static LocalDate parseDate(String iso) {
         if (iso == null) return null;
@@ -375,10 +442,20 @@ public class DashboardController {
             return null;
         }
     }
+/**
+ * Performs the format date operation.
+ * @param d value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static String formatDate(LocalDate d) {
         return d == null ? "—" : d.format(DATE_FMT);
     }
+/**
+ * Performs the first name of operation.
+ * @param name value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static String firstNameOf(String name) {
         if (name == null || name.isBlank()) return "there";
@@ -396,10 +473,22 @@ public class DashboardController {
         }
         return b.toString();
     }
+/**
+ * Performs the plural operation.
+ * @param n value supplied to the operation
+ * @param noun value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static String plural(int n, String noun) {
         return n + " " + noun + (n == 1 ? "" : "s");
     }
+/**
+ * Performs the with class operation.
+ * @param node value supplied to the operation
+ * @param cls value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static <T extends javafx.scene.Node> T withClass(T node, String cls) {
         node.getStyleClass().add(cls);

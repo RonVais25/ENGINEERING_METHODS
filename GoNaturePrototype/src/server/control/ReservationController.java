@@ -73,8 +73,10 @@ import static common.dto.RequestType.UPDATE_RESERVATION;
  * — see {@link #publishReservation}. Subscribers get the committed row.
  */
 public class ReservationController implements DomainController {
+/** Stores the dao value used by this component. */
 
     private final ReservationDAO dao = new ReservationDAO();
+/** Stores the auth dao value used by this component. */
     private final AuthDAO authDao = new AuthDAO();
     /** Upserts the booking visitor's contact so the FK holds and notifications have a target. */
     private final MemberDAO memberDao = new MemberDAO();
@@ -90,6 +92,10 @@ public class ReservationController implements DomainController {
     /** Format for the {@code grab_expires_at} deadline strings handed to {@link WaitlistDAO}. */
     private static final DateTimeFormatter SQL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+/**
+ * Performs the handled types operation.
+ * @return the result produced by the operation
+ */
 
     @Override
     public Set<RequestType> handledTypes() {
@@ -97,6 +103,12 @@ public class ReservationController implements DomainController {
                 LIST_RESERVATIONS, CONFIRM_RESERVATION, JOIN_WAITLIST, LEAVE_WAITLIST, ACCEPT_GRAB,
                 LIST_WAITLIST);
     }
+/**
+ * Handles the supplied request and returns the appropriate server response.
+ * @param request value supplied to the operation
+ * @param session value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
@@ -158,6 +170,16 @@ public class ReservationController implements DomainController {
                 // so the reservation's visitor_id FK holds even for a brand-new id.
                 memberDao.upsertContact(visitorId, email.trim(), phone.trim());
 
+                ParkDTO park = parkDao.getById(parkId);
+                if (park == null) {
+                    return new ServerResponse(false, "Park not found.");
+                }
+
+                ServerResponse familyError = validateFamilyVisit(visitType, visitorId, partySize);
+                if (familyError != null) {
+                    return familyError;
+                }
+
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
 
@@ -196,7 +218,8 @@ public class ReservationController implements DomainController {
                 VisitorDTO visitor  = authDao.findVisitorById(visitorId);
                 boolean    isMember = visitor != null && visitor.isSubscriber();
 
-                int price = pricing.calculate(visitType, isGroup, partySize, true, prePaid, isMember);
+                int price = pricing.calculate(visitType, isGroup, partySize, true, prePaid, isMember,
+                        park.getSpecialDiscountPercent());
 
                 ReservationDTO toInsert = new ReservationDTO(
                         0,                        // id assigned by the DB
@@ -298,6 +321,10 @@ public class ReservationController implements DomainController {
                 if (existing.isGroup() && partySize > 15) {
                     return new ServerResponse(false, "Group size cannot exceed 15.");
                 }
+                ServerResponse familyError = validateFamilyVisit(existing.getVisitType(), existing.getVisitorId(), partySize);
+                if (familyError != null) {
+                    return familyError;
+                }
 
                 // Capacity re-check for the (possibly new) date. availableCapacity
                 // already counts this reservation's current party when it is
@@ -321,8 +348,10 @@ public class ReservationController implements DomainController {
                 int oldPrice = existing.getPriceCents();
                 VisitorDTO visitor  = authDao.findVisitorById(existing.getVisitorId());
                 boolean    isMember = visitor != null && visitor.isSubscriber();
+                ParkDTO park = parkDao.getById(existing.getParkId());
+                int specialDiscount = park == null ? 0 : park.getSpecialDiscountPercent();
                 int newPrice = pricing.calculate(existing.getVisitType(), existing.isGroup(),
-                        partySize, true, existing.isPaidInAdvance(), isMember);
+                        partySize, true, existing.isPaidInAdvance(), isMember, specialDiscount);
 
                 if (!dao.updateReschedule(id, visitDate, visitTime, partySize, newPrice)) {
                     return new ServerResponse(false, "Update failed.");
@@ -356,6 +385,16 @@ public class ReservationController implements DomainController {
                 }
                 memberDao.upsertContact(visitorId, email.trim(), phone.trim());
 
+                ParkDTO park = parkDao.getById(parkId);
+                if (park == null) {
+                    return new ServerResponse(false, "Park not found.");
+                }
+
+                ServerResponse familyError = validateFamilyVisit(visitType, visitorId, partySize);
+                if (familyError != null) {
+                    return familyError;
+                }
+
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
 
@@ -386,7 +425,8 @@ public class ReservationController implements DomainController {
                 VisitorDTO visitor  = authDao.findVisitorById(visitorId);
                 boolean    isMember = visitor != null && visitor.isSubscriber();
 
-                int price = pricing.calculate(visitType, isGroup, partySize, true, prePaid, isMember);
+                int price = pricing.calculate(visitType, isGroup, partySize, true, prePaid, isMember,
+                        park.getSpecialDiscountPercent());
                 // Issue the confirmation code up front, exactly as CREATE_RESERVATION
                 // does, so the booking is gate-usable the moment it is grabbed.
                 int confirmationCode = ThreadLocalRandom.current().nextInt(1000, 10000);
@@ -559,6 +599,36 @@ public class ReservationController implements DomainController {
             }
         }
         return digits >= 10;
+    }
+/**
+ * Indicates whether the legal transition condition is true.
+ * @param current value supplied to the operation
+ * @param target value supplied to the operation
+ * @return the result produced by the operation
+ */
+
+    /**
+     * Enforces the clarified family-visit rule: FAMILY visits belong to subscribers
+     * and cannot exceed the subscriber's registered family size.
+     *
+     * @param visitType the requested visit type
+     * @param visitorId the visitor who owns the booking
+     * @param partySize requested number of people
+     * @return an error response when invalid, otherwise {@code null}
+     */
+    private ServerResponse validateFamilyVisit(VisitType visitType, long visitorId, int partySize) {
+        if (visitType != VisitType.FAMILY) {
+            return null;
+        }
+        int familySize = memberDao.subscriberFamilySize(visitorId);
+        if (familySize <= 0) {
+            return new ServerResponse(false, "Family visits are available only for subscribers.");
+        }
+        if (partySize > familySize) {
+            return new ServerResponse(false,
+                    "Party size exceeds the subscriber family size (" + familySize + ").");
+        }
+        return null;
     }
 
     private boolean isLegalTransition(ReservationStatus current, ReservationStatus target) {

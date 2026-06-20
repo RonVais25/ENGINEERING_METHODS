@@ -25,6 +25,7 @@ import java.io.Serializable;
  * </ul>
  */
 public class VisitDTO implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** Unique visit identifier (primary key). */

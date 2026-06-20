@@ -50,26 +50,42 @@ import java.util.concurrent.atomic.AtomicLong;
  * on a worker thread.
  */
 public class ClientConnection {
+/** Stores the connect timeout ms value used by this component. */
 
     private static final int CONNECT_TIMEOUT_MS = 3000;
+/** Stores the request timeout seconds value used by this component. */
     private static final long REQUEST_TIMEOUT_SECONDS = 10;
+/** Stores the host value used by this component. */
 
     private final String host;
+/** Stores the port value used by this component. */
     private final int    port;
 
     // volatile so the reader thread, sender threads, and the close path all
     // see field updates without holding a common monitor.
+/** Stores the socket value used by this component. */
     private volatile Socket socket;
+/** Stores the out value used by this component. */
     private volatile ObjectOutputStream out;
+/** Stores the in value used by this component. */
     private volatile ObjectInputStream  in;
 
     // Starts at 1 so id=0 stays the unset sentinel on the server side; any
     // inbound response with id=0 must be an orphan and indicates a bug.
+/** Stores the correlation counter value used by this component. */
     private final AtomicLong correlationCounter = new AtomicLong(1);
+/** Stores the pending value used by this component. */
     private final ConcurrentHashMap<Long, CompletableFuture<ServerResponse>> pending = new ConcurrentHashMap<>();
+/** Stores the reader thread value used by this component. */
 
     private volatile Thread readerThread;
+/** Stores the shutting down value used by this component. */
     private volatile boolean shuttingDown = false;
+/**
+ * Creates a new client connection instance.
+ * @param host value supplied to the operation
+ * @param port value supplied to the operation
+ */
 
     public ClientConnection(String host, int port) {
         this.host = host;
@@ -156,6 +172,9 @@ public class ClientConnection {
             if (removePending) pending.remove(id);
         }
     }
+/**
+ * Performs the read loop operation.
+ */
 
     private void readLoop() {
         ObjectInputStream localIn = this.in;
@@ -211,6 +230,10 @@ public class ClientConnection {
                                (shuttingDown ? "shutdown" : "connection lost") + ")");
         }
     }
+/**
+ * Indicates whether the closed condition is true.
+ * @return the result produced by the operation
+ */
 
     private boolean isClosed() {
         Socket s = socket;

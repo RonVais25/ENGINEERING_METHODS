@@ -40,7 +40,13 @@
 .sidebar-logo-tile   { -fx-background-color: -g500; -fx-background-radius: 11; -fx-pref-width: 38; -fx-pref-height: 38; -fx-min-width: 38; -fx-min-height: 38; }
 .sidebar-app-name    { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: white; }
 .sidebar-app-sub     { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: -g300; }
-.sidebar-menu-label  { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: -g400; -fx-padding: 20 0 8 12; }
+.sidebar-menu-label  { -fx-font-size: 10; -fx-font-weight: bold; -fx-text-fill: -g400; -fx-padding: 18 0 6 12; }
+.sidebar-section-label {
+    -fx-font-size: 9;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255,255,255,0.36);
+    -fx-padding: 14 0 5 12;
+}
 .sidebar-nav         { -fx-padding: 0 10 0 10; -fx-spacing: 2; }
 
 .conn-wrapper        { -fx-padding: 8 10 8 10; }
@@ -59,7 +65,7 @@
 .topbar-subtitle     { -fx-font-size: 12; -fx-text-fill: -g400; }
 .topbar-version      { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: -g600; -fx-background-color: -g100; -fx-background-radius: 100; -fx-border-color: -g200; -fx-border-radius: 100; -fx-border-width: 1; -fx-padding: 4 10 4 10; }
 
-.content-area        { -fx-background-color: -g50; }
+.content-area        { -fx-background-color: -g50; -fx-padding: 0; }
 .screen-padded       { -fx-padding: 26 28 26 28; -fx-background-color: -g50; -fx-spacing: 20; }
 
 /* ---------- Sidebar nav buttons -------------------------------------------
@@ -72,10 +78,14 @@
     -fx-padding: 10 12 10 12;
     -fx-cursor: hand;
     -fx-max-width: infinity;
+    -fx-alignment: center-left;
     -fx-border-color: transparent;
+    -fx-border-radius: 10;
+    -fx-border-width: 0 0 0 3;
 }
 .nav-button:hover               { -fx-background-color: rgba(255,255,255,0.06); }
-.nav-button:active              { -fx-background-color: -g600; }
+.nav-button:focused             { -fx-border-color: rgba(255,255,255,0.18); }
+.nav-button:active              { -fx-background-color: -g600; -fx-border-color: -g300; }
 .nav-button .nav-icon           { -fx-font-size: 16; -fx-text-fill: -g300; -fx-opacity: 0.7; -fx-pref-width: 20; -fx-alignment: center; }
 .nav-button:hover  .nav-icon    { -fx-text-fill: white; -fx-opacity: 1.0; }
 .nav-button:active .nav-icon    { -fx-text-fill: white; -fx-opacity: 1.0; }
@@ -92,6 +102,7 @@
     -fx-border-width: 1;
     -fx-padding: 22 24 22 24;
     -fx-spacing: 12;
+    -fx-effect: dropshadow(gaussian, rgba(29,60,36,0.08), 16, 0.12, 0, 4);
 }
 .card-soft {
     -fx-background-color: -g50;
@@ -156,12 +167,15 @@
 .date-picker .arrow-button .arrow {
     -fx-background-color: -g500;
 }
-/* TODO: the open DatePicker popup (Book Visit screen, datePicker) renders the
-   month + year header white-on-white, so they're unreadable. The rules above
-   only style the closed control; add .date-picker-popup styling for the header —
-   e.g. give .date-picker-popup .month-year-pane a -g100 background (or set
-   .date-picker-popup .spinner .label -fx-text-fill: -g800) so the month/year
-   read as dark text. Also check the day-of-week / day-cell colours while there. */
+/* DatePicker popup: keep the month/year header readable and consistent with
+   the rest of the application theme. */
+.date-picker-popup { -fx-background-color: white; }
+.date-picker-popup .month-year-pane { -fx-background-color: -g100; }
+.date-picker-popup .spinner .label { -fx-text-fill: -g800; -fx-font-weight: bold; }
+.date-picker-popup .day-name-cell { -fx-text-fill: -g500; -fx-font-weight: bold; }
+.date-picker-popup .day-cell { -fx-text-fill: -g800; }
+.date-picker-popup .day-cell:hover { -fx-background-color: -g100; }
+.date-picker-popup .selected { -fx-background-color: -g500; -fx-text-fill: white; }
 
 /* Spinner — match the .input-field / .date-picker look */
 .spinner {
@@ -282,6 +296,16 @@
 }
 .logout-btn:hover { -fx-background-color: rgba(255,255,255,0.16); -fx-text-fill: white; }
 
+
+.btn-primary:focused, .btn-secondary:focused, .input-field:focused, .date-picker:focused, .spinner:focused {
+    -fx-border-color: -g500;
+    -fx-effect: dropshadow(gaussian, rgba(61,140,74,0.22), 10, 0.2, 0, 0);
+}
+.btn-primary:disabled, .btn-secondary:disabled, .logout-btn:disabled {
+    -fx-opacity: 0.55;
+    -fx-cursor: default;
+}
+
 /* ---------- Status tag ----------------------------------------------------- */
 .status-tag {
     -fx-font-size: 11;
@@ -321,6 +345,7 @@
     -fx-border-width: 1;
     -fx-padding: 20 22 20 22;
     -fx-spacing: 6;
+    -fx-effect: dropshadow(gaussian, rgba(29,60,36,0.06), 12, 0.1, 0, 3);
 }
 .stat-card-label { -fx-font-size: 11; -fx-text-fill: -g400; }
 .stat-card-value { -fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: -g500; }
@@ -524,3 +549,21 @@
 .history-cell.total       { -fx-font-weight: bold; -fx-text-fill: -g800; }
 .history-row.total-row    { -fx-background-color: -g50; -fx-border-color: -g200; -fx-border-width: 1 0 0 0; }
 .history-row.total-row:hover { -fx-background-color: -g50; }
+
+/* ---------- Professional control polish ----------------------------------- */
+.table-view {
+    -fx-background-color: white;
+    -fx-background-radius: 12;
+    -fx-border-color: -g200;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+}
+.table-view .column-header-background { -fx-background-color: -g100; -fx-background-radius: 12 12 0 0; }
+.table-view .column-header, .table-view .filler { -fx-background-color: transparent; }
+.table-view .column-header .label { -fx-text-fill: -g700; -fx-font-size: 11; -fx-font-weight: bold; }
+.table-row-cell { -fx-cell-size: 36; -fx-background-color: white; }
+.table-row-cell:odd { -fx-background-color: -g50; }
+.table-row-cell:selected { -fx-background-color: -g200; -fx-text-fill: -g800; }
+.scroll-bar:vertical, .scroll-bar:horizontal { -fx-background-color: transparent; }
+.scroll-bar .thumb { -fx-background-color: -g200; -fx-background-radius: 100; }
+.scroll-bar .thumb:hover { -fx-background-color: -g300; }

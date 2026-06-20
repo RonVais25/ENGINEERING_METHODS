@@ -4,6 +4,7 @@ import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
 import common.dto.VisitType;
 import server.db.DBConnection;
+import server.scheduler.SchedulerConfig;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -261,20 +262,27 @@ public class ReservationDAO {
      * @return the no-show candidates (possibly empty); never {@code null}
      */
     public List<ReservationDTO> findNoShowCandidates(boolean force) {
-        String dateBound = force ? "r.visit_date <= CURDATE() " : "r.visit_date < CURDATE() ";
+        String plannedAt = "TIMESTAMP(r.visit_date, COALESCE(r.visit_time, '00:00:00'))";
+        String timeBound = force
+                ? plannedAt + " <= NOW() "
+                : plannedAt + " + INTERVAL ? MINUTE < NOW() ";
         String sql = "SELECT r.* FROM reservation r " +
                 "WHERE r.status = 'CONFIRMED' " +
-                "  AND " + dateBound +
+                "  AND " + timeBound +
                 "  AND NOT EXISTS (SELECT 1 FROM visit v WHERE v.reservation_id = r.id) " +
-                "ORDER BY r.visit_date ASC, r.id ASC";
+                "ORDER BY r.visit_date ASC, r.visit_time ASC, r.id ASC";
         List<ReservationDTO> result = new ArrayList<>();
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            while (rs.next()) {
-                result.add(map(rs));
+            if (!force) {
+                stmt.setInt(1, SchedulerConfig.getNoShowGraceMinutes());
+            }
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    result.add(map(rs));
+                }
             }
 
         } catch (Exception e) {

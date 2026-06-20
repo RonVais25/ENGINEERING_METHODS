@@ -25,10 +25,17 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * notifications to the rest of the subscriber set.
  */
 public final class SubscriptionRegistry {
+/**
+ * Creates a new subscription registry instance.
+ */
 
     private static final SubscriptionRegistry INSTANCE = new SubscriptionRegistry();
+/** Stores the map value used by this component. */
 
     private final ConcurrentHashMap<SubscriptionKey, Set<ClientSession>> map = new ConcurrentHashMap<>();
+/**
+ * Creates a new subscription registry instance.
+ */
 
     private SubscriptionRegistry() {}
 

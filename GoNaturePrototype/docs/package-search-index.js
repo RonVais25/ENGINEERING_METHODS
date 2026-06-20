@@ -1,1 +1,1 @@
-packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"common.dto"},{"l":"server.dao"}];updateSearchResults();
+packageSearchIndex = [{"l":"All Packages","u":"allpackages-index.html"},{"l":"client.app"},{"l":"client.boundary"},{"l":"client.net"},{"l":"client.service"},{"l":"client.view"},{"l":"common.dto"},{"l":"server.app"},{"l":"server.boundary"},{"l":"server.control"},{"l":"server.dao"},{"l":"server.db"},{"l":"server.net"},{"l":"server.scheduler"},{"l":"server.subscription"}];updateSearchResults();

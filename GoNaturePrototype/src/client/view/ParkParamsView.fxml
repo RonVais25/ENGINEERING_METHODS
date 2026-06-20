@@ -34,6 +34,10 @@
                     <Label text="Default Stay (minutes)" styleClass="key"/>
                     <Label fx:id="stayValue" text="—" styleClass="val"/>
                 </HBox>
+                <HBox styleClass="result-row with-divider">
+                    <Label text="Special Sale Discount" styleClass="key"/>
+                    <Label fx:id="specialDiscountValue" text="—" styleClass="val"/>
+                </HBox>
             </VBox>
         </VBox>
 

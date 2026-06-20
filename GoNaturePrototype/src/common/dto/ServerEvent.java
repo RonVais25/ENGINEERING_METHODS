@@ -17,12 +17,18 @@ import java.io.Serializable;
  * both sides of the wire; clients should treat instances as read-only snapshots.
  */
 public class ServerEvent implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
+/** Stores the entity value used by this component. */
 
     private final String entity;
+/** Stores the entity id value used by this component. */
     private final long entityId;
+/** Stores the op value used by this component. */
     private final EventOp op;
+/** Stores the payload value used by this component. */
     private final Serializable payload;
+/** Stores the timestamp value used by this component. */
     private final long timestamp;
 
     /**

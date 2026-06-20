@@ -60,6 +60,26 @@ public class PricingService {
      */
     public int calculate(VisitType visitType, boolean isGroup, int partySize,
                          boolean preOrdered, boolean prePaid, boolean isMember) {
+        return calculate(visitType, isGroup, partySize, preOrdered, prePaid, isMember, 0);
+    }
+
+    /**
+     * Computes the total price and also applies an approved park special-sale
+     * discount percentage. The final discount is capped at 90% so a stack of
+     * discounts never creates a negative or zero-fee visit by mistake.
+     *
+     * @param visitType  the visit category
+     * @param isGroup    whether this booking is an organised group
+     * @param partySize  number of people in the party
+     * @param preOrdered whether the visit was booked ahead
+     * @param prePaid    whether the booking is paid in advance
+     * @param isMember   whether the owner is a subscriber
+     * @param specialDiscountPercent approved park special-sale discount percent
+     * @return the total price in cents
+     */
+    public int calculate(VisitType visitType, boolean isGroup, int partySize,
+                         boolean preOrdered, boolean prePaid, boolean isMember,
+                         int specialDiscountPercent) {
 
         // Guide-free perk: a pre-ordered group doesn't pay for its guide, so one
         // person drops off the paying count (never below zero). Everyone else
@@ -96,6 +116,13 @@ public class PricingService {
         // Member bonus stacks additively on top of the applicable tier.
         if (isMember) {
             discount = discount + 0.10;
+        }
+
+        if (specialDiscountPercent > 0) {
+            discount = discount + (specialDiscountPercent / 100.0);
+        }
+        if (discount > 0.90) {
+            discount = 0.90;
         }
 
         long net = Math.round(payingCount * FULL_PRICE_PER_VISITOR * (1 - discount));

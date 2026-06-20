@@ -21,5 +21,6 @@ import java.io.Serializable;
  * @param entityId numeric primary-key identifier of that entity
  */
 public record SubscriptionKey(String entity, long entityId) implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 }

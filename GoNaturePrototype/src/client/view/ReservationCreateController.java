@@ -50,6 +50,7 @@ public class ReservationCreateController extends BaseController {
     private record ParkOption(int id, String name) {
         @Override public String toString() { return name; }
     }
+/** Stores the park combo value used by this component. */
 
     @FXML private ComboBox<ParkOption> parkCombo;
     @FXML private TextField            visitorField;
@@ -70,11 +71,19 @@ public class ReservationCreateController extends BaseController {
     @FXML private VBox                 confirmationBox;
 
     private final Session session;
+/**
+ * Creates a new reservation create controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
 
     public ReservationCreateController(NetworkService network, Session session) {
         super(network);
         this.session = session;
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -124,6 +133,10 @@ public class ReservationCreateController extends BaseController {
             }
         }
     }
+/**
+ * Performs the show guide field operation.
+ * @param show value supplied to the operation
+ */
 
     private void showGuideField(boolean show) {
         guideRow.setVisible(show);
@@ -175,6 +188,9 @@ public class ReservationCreateController extends BaseController {
             parkCombo.getSelectionModel().selectFirst();
         });
     }
+/**
+ * Performs the on book operation.
+ */
 
     @FXML
     private void onBook() {

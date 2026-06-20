@@ -30,6 +30,7 @@ public class SubscriberRegisterController extends BaseController {
 
     /** Upper bound for the family-size spinner; the DB default is 1. */
     private static final int MAX_FAMILY_SIZE = 20;
+/** Stores the id field value used by this component. */
 
     @FXML private TextField        idField;
     @FXML private TextField        nameField;
@@ -42,12 +43,18 @@ public class SubscriberRegisterController extends BaseController {
     public SubscriberRegisterController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
         familySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, MAX_FAMILY_SIZE, 1));
     }
+/**
+ * Performs the on register operation.
+ */
 
     @FXML
     private void onRegister() {

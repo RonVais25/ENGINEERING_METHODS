@@ -18,16 +18,31 @@ import common.dto.VisitorDTO;
 public class Session {
 
     // Connection (set by the connection screen).
+/** Stores the connection value used by this component. */
     private ClientConnection connection;
+/** Stores the host value used by this component. */
     private String host;
+/** Stores the port value used by this component. */
     private int port;
 
     // Identity (set by the user-login screen). At most one is non-null.
     private UserDTO    user;     // staff login
     private VisitorDTO visitor;  // visitor login-by-ID
+/**
+ * Returns the connection.
+ * @return the result produced by the operation
+ */
 
     public ClientConnection getConnection() { return connection; }
+/**
+ * Returns the host.
+ * @return the result produced by the operation
+ */
     public String getHost()                 { return host; }
+/**
+ * Returns the port.
+ * @return the result produced by the operation
+ */
     public int getPort()                    { return port; }
 
     /** Promotes a freshly probed connection into the session (connection screen). */
@@ -110,6 +125,9 @@ public class Session {
         if (visitor != null) return visitor.isSubscriber() ? "Subscriber" : "Visitor";
         return "";
     }
+/**
+ * Performs the close connection operation.
+ */
 
     public void closeConnection() {
         if (connection != null) connection.close();

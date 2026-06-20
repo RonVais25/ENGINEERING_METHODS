@@ -54,6 +54,7 @@ import java.util.Optional;
  * auto-unsubscribes when the screen is navigated away.
  */
 public class ReservationListController extends BaseController {
+/** Stores the screen root value used by this component. */
 
     @FXML private VBox      screenRoot;
     @FXML private TextField visitorField;
@@ -64,19 +65,30 @@ public class ReservationListController extends BaseController {
 
     // The visitor whose list is currently shown, so action handlers can refresh
     // the same list after a successful confirm/cancel. -1 means "nothing loaded".
+/** Stores the current visitor id value used by this component. */
     private long currentVisitorId = -1;
 
     // Park id -> name, fetched once on init via LIST_PARKS so rows and the detail
     // show the park's name rather than a bare numeric id; empty until it resolves
     // (rows then fall back to "Park #<id>").
+/** Stores the park names value used by this component. */
     private Map<Integer, String> parkNames = new HashMap<>();
+/** Stores the session value used by this component. */
 
     private final Session session;
+/**
+ * Creates a new reservation list controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
 
     public ReservationListController(NetworkService network, Session session) {
         super(network);
         this.session = session;
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -117,6 +129,9 @@ public class ReservationListController extends BaseController {
     private String parkName(int parkId) {
         return parkNames.getOrDefault(parkId, "Park #" + parkId);
     }
+/**
+ * Performs the on load operation.
+ */
 
     @FXML
     private void onLoad() {
@@ -131,6 +146,10 @@ public class ReservationListController extends BaseController {
         }
         loadFor(visitorId);
     }
+/**
+ * Performs the load for operation.
+ * @param visitorId value supplied to the operation
+ */
 
     private void loadFor(long visitorId) {
         currentVisitorId = visitorId;
@@ -149,6 +168,10 @@ public class ReservationListController extends BaseController {
             resubscribe(rows);
         });
     }
+/**
+ * Performs the populate operation.
+ * @param rows value supplied to the operation
+ */
 
     private void populate(List<ReservationDTO> rows) {
         cardHeaderLabel.setText("RESERVATIONS — VISITOR " + currentVisitorId);
@@ -193,6 +216,10 @@ public class ReservationListController extends BaseController {
     private void onReservationEvent(ServerEvent ev) {
         if (currentVisitorId >= 0) loadFor(currentVisitorId);
     }
+/**
+ * Performs the header row operation.
+ * @return the result produced by the operation
+ */
 
     private HBox headerRow() {
         HBox row = new HBox();
@@ -222,6 +249,12 @@ public class ReservationListController extends BaseController {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         return spacer;
     }
+/**
+ * Performs the data row operation.
+ * @param r value supplied to the operation
+ * @param withDivider value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private HBox dataRow(ReservationDTO r, boolean withDivider) {
         Label idLbl    = cell("#" + r.getId(),                  "num", 30);
@@ -254,13 +287,21 @@ public class ReservationListController extends BaseController {
         editBtn.setDisable(!canEdit(r.getStatus()));
         editBtn.setOnAction(e -> edit(r));
 
+        // Visitor self-exit: the ordering visitor can mark the whole group as
+        // exited after a park employee has recorded entry. The server checks that
+        // the logged-in visitor owns the reservation and that an open visit exists.
+        Button exitBtn = new Button("Exit");
+        exitBtn.getStyleClass().add("btn-secondary");
+        exitBtn.setDisable(!canVisitorExit(r));
+        exitBtn.setOnAction(e -> visitorExit(r.getId()));
+
         // Pin each button to its preferred (label) width so a tight row never
         // shrinks them into ellipsized stubs ("Ac.." / "Ca.." / "E..").
-        for (Button b : new Button[] { confirmBtn, cancelBtn, editBtn }) {
+        for (Button b : new Button[] { confirmBtn, cancelBtn, editBtn, exitBtn }) {
             b.setMinWidth(Region.USE_PREF_SIZE);
         }
 
-        HBox actions = new HBox(8, confirmBtn, cancelBtn, editBtn);
+        HBox actions = new HBox(8, confirmBtn, cancelBtn, editBtn, exitBtn);
         actions.setAlignment(Pos.CENTER_LEFT);
 
         // A flexible spacer takes the row's slack so the actions keep their natural
@@ -355,6 +396,28 @@ public class ReservationListController extends BaseController {
         return (value == null || value.isBlank()) ? "—" : value;
     }
 
+    /** Visitor self-exit is offered only to the logged-in owner of a confirmed booking. */
+    private boolean canVisitorExit(ReservationDTO r) {
+        return session.isVisitor()
+                && r.getStatus() == ReservationStatus.CONFIRMED
+                && r.getVisitorId() == session.getActorId();
+    }
+
+    /**
+     * Lets the ordering visitor mark the whole reservation group as exited.
+     * The server verifies ownership and that the party actually has an open visit.
+     */
+    private void visitorExit(int reservationId) {
+        if (!confirmAction("Record exit for reservation #" + reservationId + "?",
+                "This will close the whole reservation group and mark the visit as completed.")) {
+            return;
+        }
+        network.visitorExitReservation(reservationId).thenAccept(res -> {
+            Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
+            if (res.isSuccess()) reload();
+        });
+    }
+
     /** Cancel is legal from PENDING, CONFIRMED or WAITING (mirrors the server rule). */
     private boolean canCancel(ReservationStatus s) {
         return s == ReservationStatus.PENDING
@@ -366,6 +429,10 @@ public class ReservationListController extends BaseController {
     private boolean canEdit(ReservationStatus s) {
         return s == ReservationStatus.PENDING || s == ReservationStatus.CONFIRMED;
     }
+/**
+ * Performs the confirm operation.
+ * @param reservationId value supplied to the operation
+ */
 
     private void confirm(int reservationId) {
         if (!confirmAction("Confirm reservation #" + reservationId + "?",
@@ -377,6 +444,10 @@ public class ReservationListController extends BaseController {
             if (res.isSuccess()) reload();
         });
     }
+/**
+ * Performs the cancel operation.
+ * @param reservationId value supplied to the operation
+ */
 
     private void cancel(int reservationId) {
         if (!confirmAction("Cancel reservation #" + reservationId + "?",
@@ -772,10 +843,19 @@ public class ReservationListController extends BaseController {
             errorLbl.setManaged(false);
         }
     }
+/**
+ * Performs the reload operation.
+ */
 
     private void reload() {
         if (currentVisitorId >= 0) loadFor(currentVisitorId);
     }
+/**
+ * Performs the header cell operation.
+ * @param text value supplied to the operation
+ * @param w value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Label headerCell(String text, double w) {
         Label l = new Label(text);
@@ -783,6 +863,13 @@ public class ReservationListController extends BaseController {
         if (w > 0) l.setPrefWidth(w);
         return l;
     }
+/**
+ * Performs the cell operation.
+ * @param text value supplied to the operation
+ * @param modifier value supplied to the operation
+ * @param w value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Label cell(String text, String modifier, double w) {
         Label l = new Label(text);

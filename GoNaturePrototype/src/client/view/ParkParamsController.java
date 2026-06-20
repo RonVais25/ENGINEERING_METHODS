@@ -32,11 +32,13 @@ import javafx.util.StringConverter;
  * push subscriptions.
  */
 public class ParkParamsController extends BaseController {
+/** Stores the park name label value used by this component. */
 
     @FXML private Label              parkNameLabel;
     @FXML private Label              maxCapValue;
     @FXML private Label              gapValue;
     @FXML private Label              stayValue;
+    @FXML private Label              specialDiscountValue;
     @FXML private ComboBox<ParamField> fieldCombo;
     @FXML private TextField          newValueField;
     @FXML private Button             submitBtn;
@@ -51,14 +53,23 @@ public class ParkParamsController extends BaseController {
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network, so the session is
     // accepted but unused (the server derives the park from the login).
+/**
+ * Creates a new park params controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
     public ParkParamsController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
         fieldCombo.getItems().setAll(
-                ParamField.MAX_CAPACITY, ParamField.GAP_SIZE, ParamField.DEFAULT_STAY_MINUTES);
+                ParamField.MAX_CAPACITY, ParamField.GAP_SIZE, ParamField.DEFAULT_STAY_MINUTES,
+                ParamField.SPECIAL_DISCOUNT_PERCENT);
         fieldCombo.setConverter(new StringConverter<>() {
             @Override public String toString(ParamField f) { return f == null ? "" : labelFor(f); }
             @Override public ParamField fromString(String s) { return null; }
@@ -81,9 +92,13 @@ public class ParkParamsController extends BaseController {
             maxCapValue.setText(String.valueOf(p.getMaxCapacity()));
             gapValue.setText(String.valueOf(p.getGapSize()));
             stayValue.setText(String.valueOf(p.getDefaultStayMinutes()));
+            specialDiscountValue.setText(p.getSpecialDiscountPercent() + "%");
             submitBtn.setDisable(false);
         });
     }
+/**
+ * Performs the on submit operation.
+ */
 
     @FXML
     private void onSubmit() {
@@ -107,6 +122,10 @@ public class ParkParamsController extends BaseController {
         }
         if (newValue < 0) {
             Widgets.showToast(resultLabel, false, "The new value must be zero or greater");
+            return;
+        }
+        if (field == ParamField.SPECIAL_DISCOUNT_PERCENT && newValue > 90) {
+            Widgets.showToast(resultLabel, false, "Special sale discount cannot exceed 90%");
             return;
         }
 
@@ -133,6 +152,7 @@ public class ParkParamsController extends BaseController {
             case MAX_CAPACITY:         return park.getMaxCapacity();
             case GAP_SIZE:             return park.getGapSize();
             case DEFAULT_STAY_MINUTES: return park.getDefaultStayMinutes();
+            case SPECIAL_DISCOUNT_PERCENT: return park.getSpecialDiscountPercent();
             default:                   return 0;
         }
     }
@@ -156,6 +176,12 @@ public class ParkParamsController extends BaseController {
         row.getStyleClass().addAll("history-row", "with-divider");
         requestsBox.getChildren().add(0, row);
     }
+/**
+ * Performs the cell operation.
+ * @param text value supplied to the operation
+ * @param w value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private Label cell(String text, double w) {
         Label l = new Label(text);
@@ -170,6 +196,7 @@ public class ParkParamsController extends BaseController {
             case MAX_CAPACITY:         return "Max Capacity";
             case GAP_SIZE:             return "Gap Size";
             case DEFAULT_STAY_MINUTES: return "Default Stay (minutes)";
+            case SPECIAL_DISCOUNT_PERCENT: return "Special Sale Discount (%)";
             default:                   return field.name();
         }
     }

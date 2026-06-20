@@ -11,11 +11,19 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
+/**
+ * Represents the dot env component of the GoNature application.
+ */
 
 public class DotEnv {
+/** Stores the values value used by this component. */
 
     private static final Map<String, String> values = new HashMap<>();
+/** Stores the loaded value used by this component. */
     private static boolean loaded = false;
+/**
+ * Performs the load operation.
+ */
 
     public static void load() {
         if (loaded) return;
@@ -33,16 +41,29 @@ public class DotEnv {
             }
         }
     }
+/**
+ * Performs the get operation.
+ * @param key value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     public static String get(String key) {
         return values.get(key);
     }
+/**
+ * Performs the load into operation.
+ * @param sink value supplied to the operation
+ */
 
     public static void loadInto(BiConsumer<String, String> sink) {
         for (Map.Entry<String, String> e : values.entrySet()) {
             sink.accept(e.getKey(), e.getValue());
         }
     }
+/**
+ * Performs the locate env file operation.
+ * @return the result produced by the operation
+ */
 
     private static File locateEnvFile() {
         String override = System.getProperty("gonature.env");
@@ -65,6 +86,10 @@ public class DotEnv {
 
         return null;
     }
+/**
+ * Performs the jar sibling env operation.
+ * @return the result produced by the operation
+ */
 
     private static File jarSiblingEnv() {
         try {
@@ -79,6 +104,11 @@ public class DotEnv {
             return null;
         }
     }
+/**
+ * Performs the parse operation.
+ * @param file value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     private static Map<String, String> parse(File file) {
         Map<String, String> out = new LinkedHashMap<>();

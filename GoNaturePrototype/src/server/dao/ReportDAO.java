@@ -4,6 +4,8 @@ import common.dto.CancellationsReportDTO;
 import common.dto.CancellationsReportRow;
 import common.dto.VisitsReportDTO;
 import common.dto.VisitsReportRow;
+import common.dto.UsageReportDTO;
+import common.dto.UsageReportRow;
 import server.db.DBConnection;
 
 import java.sql.Connection;
@@ -187,6 +189,63 @@ public class ReportDAO {
         double avgPerDay = (totalCancelled + totalNoShow) / (double) days;
         return new CancellationsReportDTO(from, to, parkId, rows,
                 totalCancelled, totalNoShow, avgPerDay);
+    }
+
+    /**
+     * Usage report: lists each park/date that had recorded visits but did not reach
+     * full capacity. This gives the department manager the required view of when a
+     * park was not fully occupied.
+     *
+     * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
+     * @param parkId a specific park, or {@code null} for all parks
+     * @return the populated usage report, or {@code null} if the query fails
+     */
+    public UsageReportDTO usage(String from, String to, Integer parkId) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT DATE(v.entered_at) AS d, p.id AS park_id, p.name AS park_name, " +
+                "       p.max_capacity, SUM(v.headcount) AS total_visitors " +
+                "FROM visit v " +
+                "JOIN park p ON p.id = v.park_id " +
+                "WHERE DATE(v.entered_at) BETWEEN ? AND ? ");
+        if (parkId != null) {
+            sql.append("AND v.park_id = ? ");
+        }
+        sql.append("GROUP BY DATE(v.entered_at), p.id, p.name, p.max_capacity " +
+                "HAVING SUM(v.headcount) < p.max_capacity " +
+                "ORDER BY d ASC, p.name ASC");
+
+        List<UsageReportRow> rows = new ArrayList<>();
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+
+            int idx = 1;
+            stmt.setString(idx++, from);
+            stmt.setString(idx++, to);
+            if (parkId != null) {
+                stmt.setInt(idx++, parkId);
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int total = rs.getInt("total_visitors");
+                    int max = rs.getInt("max_capacity");
+                    rows.add(new UsageReportRow(
+                            rs.getString("d"),
+                            rs.getInt("park_id"),
+                            rs.getString("park_name"),
+                            total,
+                            max,
+                            Math.max(0, max - total)));
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return new UsageReportDTO(from, to, parkId, rows);
     }
 
     /**

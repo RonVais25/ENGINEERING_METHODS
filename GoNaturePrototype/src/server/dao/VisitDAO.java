@@ -189,6 +189,35 @@ public class VisitDAO {
     }
 
     /**
+     * Finds the open visit for a specific reservation. If duplicate open rows ever
+     * exist, the most recent one wins.
+     *
+     * @param reservationId the reservation whose physical visit should be open
+     * @return the open visit, or {@code null} when the party is not currently inside
+     */
+    public VisitDTO findOpenByReservation(int reservationId) {
+        String sql = "SELECT " + COLUMNS + " FROM visit " +
+                "WHERE reservation_id = ? AND exited_at IS NULL " +
+                "ORDER BY id DESC LIMIT 1";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, reservationId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return map(rs);
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    /**
      * Closes an open visit by stamping {@code exited_at = NOW()}. The
      * {@code exited_at IS NULL} guard makes this idempotent — a visit that is
      * already closed is not re-stamped and the method reports {@code false}.

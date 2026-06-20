@@ -49,23 +49,27 @@ import javafx.scene.layout.VBox;
 public class GateController extends BaseController {
 
     // Occupancy header.
+/** Stores the occupancy value value used by this component. */
     @FXML private Label occupancyValue;
     @FXML private Label occupancySub;
     @FXML private Button refreshBtn;
 
     // Entry / Exit mode toggle and the two mode containers.
+/** Stores the entry tab value used by this component. */
     @FXML private ToggleButton entryTab;
     @FXML private ToggleButton exitTab;
     @FXML private VBox         entryMode;
     @FXML private VBox         exitMode;
 
     // Entry · reservation section.
+/** Stores the entry code field value used by this component. */
     @FXML private TextField entryCodeField;
     @FXML private TextField entryVisitorField;
     @FXML private Button    entryBtn;
     @FXML private Label     entryResult;
 
     // Entry · casual walk-in section.
+/** Stores the casual party spinner value used by this component. */
     @FXML private Spinner<Integer>    casualPartySpinner;
     @FXML private ComboBox<VisitType> casualTypeCombo;
     @FXML private TextField           casualVisitorField;
@@ -74,12 +78,14 @@ public class GateController extends BaseController {
     @FXML private VBox                casualConfirmBox;
 
     // Exit · reservation section.
+/** Stores the exit code field value used by this component. */
     @FXML private TextField exitCodeField;
     @FXML private TextField exitVisitorField;
     @FXML private Button    exitBtn;
     @FXML private Label     exitResult;
 
     // Exit · casual walk-in section (by ticket number).
+/** Stores the casual exit ticket field value used by this component. */
     @FXML private TextField casualExitTicketField;
     @FXML private Button    casualExitBtn;
     @FXML private Label     casualExitResult;
@@ -87,9 +93,17 @@ public class GateController extends BaseController {
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server derives the
     // park from the login), so the session is accepted but unused.
+/**
+ * Creates a new gate controller instance.
+ * @param network value supplied to the operation
+ * @param session value supplied to the operation
+ */
     public GateController(NetworkService network, Session session) {
         super(network);
     }
+/**
+ * Initializes the controller after its FXML fields are injected.
+ */
 
     @FXML
     private void initialize() {
@@ -362,6 +376,9 @@ public class GateController extends BaseController {
         row.getStyleClass().add("result-row");
         return row;
     }
+/**
+ * Performs the hide casual price operation.
+ */
 
     private void hideCasualPrice() {
         casualConfirmBox.getChildren().clear();

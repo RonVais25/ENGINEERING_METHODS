@@ -14,5 +14,7 @@ public enum ParamField {
     /** The reserved capacity buffer held back from booking ({@code park.gap_size}). */
     GAP_SIZE,
     /** The default visit length in minutes ({@code park.default_stay_minutes}). */
-    DEFAULT_STAY_MINUTES
+    DEFAULT_STAY_MINUTES,
+    /** Additional special-sale discount percent applied after department approval. */
+    SPECIAL_DISCOUNT_PERCENT
 }

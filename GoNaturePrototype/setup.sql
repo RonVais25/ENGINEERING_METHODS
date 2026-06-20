@@ -45,6 +45,7 @@ CREATE TABLE park (
     max_capacity         INT NOT NULL,
     gap_size             INT NOT NULL DEFAULT 0,
     default_stay_minutes INT NOT NULL DEFAULT 240,
+    special_discount_percent INT NOT NULL DEFAULT 0,
     manager_id           INT NULL            -- FK -> user.id
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -125,7 +126,7 @@ CREATE TABLE parameter_change_request (
     id              INT PRIMARY KEY AUTO_INCREMENT,
     park_id         INT NOT NULL,
     requested_by    INT NOT NULL,
-    field           ENUM('MAX_CAPACITY','GAP_SIZE','DEFAULT_STAY_MINUTES') NOT NULL,
+    field           ENUM('MAX_CAPACITY','GAP_SIZE','DEFAULT_STAY_MINUTES','SPECIAL_DISCOUNT_PERCENT') NOT NULL,
     old_value       INT,
     new_value       INT NOT NULL,
     status          ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
@@ -186,10 +187,10 @@ ALTER TABLE park   ADD CONSTRAINT fk_park_manager FOREIGN KEY (manager_id) REFER
 
 -- 1) Parks (manager_id NULL for now -- users don't exist yet). ids: 1, 2, 3.
 --    Varied capacity / gap / default stay so per-park behaviour differs.
-INSERT INTO park (name, max_capacity, gap_size, default_stay_minutes, manager_id) VALUES
-('Galilee Park', 100, 10, 240, NULL),
-('Carmel Park',   80,  8, 180, NULL),
-('Negev Park',   150, 15, 300, NULL);
+INSERT INTO park (name, max_capacity, gap_size, default_stay_minutes, special_discount_percent, manager_id) VALUES
+('Galilee Park', 100, 10, 240, 0, NULL),
+('Carmel Park',   80,  8, 180, 5, NULL),
+('Negev Park',   150, 15, 300, 0, NULL);
 
 -- 2) Users -- at least one per role, spread across parks, all share the known
 --    demo password 'changeme' so login + quick-login keep working.
@@ -249,23 +250,23 @@ INSERT INTO reservation
     (park_id, visitor_id, visit_date, visit_time, party_size, visit_type, status, is_group, guide_id, price_cents, paid_in_advance, confirmation_code, status_changed_at) VALUES
 -- ids 1..8: COMPLETED in the past (each gets a closed visit below).
 (1, 200000001, CURDATE() - INTERVAL 28 DAY, '09:00:00',  1, 'INDIVIDUAL', 'COMPLETED', FALSE, NULL,      5000,  TRUE,  1001, TIMESTAMP(CURDATE() - INTERVAL 28 DAY, '12:30:00')),
-(1, 200000002, CURDATE() - INTERVAL 25 DAY, '10:30:00',  4, 'FAMILY',     'COMPLETED', FALSE, NULL,      18000, TRUE,  1002, TIMESTAMP(CURDATE() - INTERVAL 25 DAY, '14:50:00')),
+(1, 200000005, CURDATE() - INTERVAL 25 DAY, '10:30:00',  4, 'FAMILY',     'COMPLETED', FALSE, NULL,      18000, TRUE,  1002, TIMESTAMP(CURDATE() - INTERVAL 25 DAY, '14:50:00')),
 (2, 200000004, CURDATE() - INTERVAL 24 DAY, '11:00:00', 12, 'GROUP',      'COMPLETED', TRUE,  200000003, 50000, TRUE,  1003, TIMESTAMP(CURDATE() - INTERVAL 24 DAY, '14:00:00')),
 (3, 200000007, CURDATE() - INTERVAL 21 DAY, '09:30:00',  1, 'INDIVIDUAL', 'COMPLETED', FALSE, NULL,      5000,  FALSE, 1004, TIMESTAMP(CURDATE() - INTERVAL 21 DAY, '13:15:00')),
 (2, 200000005, CURDATE() - INTERVAL 18 DAY, '10:00:00',  4, 'FAMILY',     'COMPLETED', FALSE, NULL,      16000, TRUE,  1005, TIMESTAMP(CURDATE() - INTERVAL 18 DAY, '13:40:00')),
 (1, 200000008, CURDATE() - INTERVAL 14 DAY, '09:45:00', 10, 'GROUP',      'COMPLETED', TRUE,  200000011, 45000, TRUE,  1006, TIMESTAMP(CURDATE() - INTERVAL 14 DAY, '13:30:00')),
 (3, 200000009, CURDATE() - INTERVAL 10 DAY, '14:00:00',  1, 'INDIVIDUAL', 'COMPLETED', FALSE, NULL,      5000,  FALSE, 1007, TIMESTAMP(CURDATE() - INTERVAL 10 DAY, '16:30:00')),
-(1, 200000006, CURDATE() - INTERVAL  7 DAY, '13:00:00',  3, 'FAMILY',     'COMPLETED', FALSE, NULL,      14000, TRUE,  1008, TIMESTAMP(CURDATE() - INTERVAL  7 DAY, '17:00:00')),
+(1, 200000001, CURDATE() - INTERVAL  7 DAY, '13:00:00',  3, 'FAMILY',     'COMPLETED', FALSE, NULL,      14000, TRUE,  1008, TIMESTAMP(CURDATE() - INTERVAL  7 DAY, '17:00:00')),
 -- ids 9..11: NO_SHOW on distinct recent days.
 (1, 200000002, CURDATE() - INTERVAL 20 DAY, '09:00:00',  1, 'INDIVIDUAL', 'NO_SHOW',   FALSE, NULL,      5000,  FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL 20 DAY, '10:00:00')),
-(2, 200000010, CURDATE() - INTERVAL 12 DAY, '11:30:00',  3, 'FAMILY',     'NO_SHOW',   FALSE, NULL,      13000, FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL 12 DAY, '12:30:00')),
+(2, 200000001, CURDATE() - INTERVAL 12 DAY, '11:30:00',  3, 'FAMILY',     'NO_SHOW',   FALSE, NULL,      13000, FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL 12 DAY, '12:30:00')),
 (3, 200000004, CURDATE() - INTERVAL  5 DAY, '10:15:00',  9, 'GROUP',      'NO_SHOW',   TRUE,  200000003, 40000, FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL  5 DAY, '11:15:00')),
 -- ids 12..17: CANCELLED, each status_changed_at on a different recent day.
 (1, 200000007, CURDATE() - INTERVAL 22 DAY, '09:00:00',  1, 'INDIVIDUAL', 'CANCELLED', FALSE, NULL,      5000,  FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL 23 DAY, '08:10:00')),
-(2, 200000008, CURDATE() - INTERVAL 15 DAY, '12:00:00',  4, 'FAMILY',     'CANCELLED', FALSE, NULL,      16000, TRUE,  NULL, TIMESTAMP(CURDATE() - INTERVAL 17 DAY, '19:25:00')),
+(2, 200000005, CURDATE() - INTERVAL 15 DAY, '12:00:00',  4, 'FAMILY',     'CANCELLED', FALSE, NULL,      16000, TRUE,  NULL, TIMESTAMP(CURDATE() - INTERVAL 17 DAY, '19:25:00')),
 (3, 200000009, CURDATE() - INTERVAL  9 DAY, '10:30:00',  8, 'GROUP',      'CANCELLED', TRUE,  200000011, 38000, FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL 11 DAY, '07:45:00')),
 (1, 200000010, CURDATE() - INTERVAL  3 DAY, '13:00:00',  1, 'INDIVIDUAL', 'CANCELLED', FALSE, NULL,      5000,  FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL  4 DAY, '21:05:00')),
-(2, 200000002, CURDATE() + INTERVAL  2 DAY, '14:00:00',  4, 'FAMILY',     'CANCELLED', FALSE, NULL,      16000, FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL  2 DAY, '10:40:00')),
+(2, 200000005, CURDATE() + INTERVAL  2 DAY, '14:00:00',  4, 'FAMILY',     'CANCELLED', FALSE, NULL,      16000, FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL  2 DAY, '10:40:00')),
 (1, 200000012, CURDATE() + INTERVAL  5 DAY, '09:30:00',  1, 'INDIVIDUAL', 'CANCELLED', FALSE, NULL,      5000,  FALSE, NULL, TIMESTAMP(CURDATE() - INTERVAL  1 DAY, '16:15:00')),
 -- ids 18..20: CONFIRMED for TODAY (each gets an OPEN visit -> live occupancy).
 (1, 200000001, CURDATE(),                   '09:00:00',  1, 'INDIVIDUAL', 'CONFIRMED', FALSE, NULL,      5000,  TRUE,  2001, NULL),
@@ -277,12 +278,12 @@ INSERT INTO reservation
 (3, 200000008, CURDATE() + INTERVAL  7 DAY, '11:30:00', 11, 'GROUP',      'CONFIRMED', TRUE,  200000011, 55000, TRUE,  2006, NULL),
 -- ids 24..26: PENDING, awaiting confirmation (future dates).
 (1, 200000009, CURDATE() + INTERVAL  4 DAY, '09:00:00',  1, 'INDIVIDUAL', 'PENDING',   FALSE, NULL,      5000,  FALSE, NULL, NULL),
-(2, 200000010, CURDATE() + INTERVAL 10 DAY, '12:00:00',  4, 'FAMILY',     'PENDING',   FALSE, NULL,      16000, FALSE, NULL, NULL),
+(2, 200000005, CURDATE() + INTERVAL 10 DAY, '12:00:00',  4, 'FAMILY',     'PENDING',   FALSE, NULL,      16000, FALSE, NULL, NULL),
 (3, 200000012, CURDATE() + INTERVAL 12 DAY, '10:00:00',  8, 'GROUP',      'PENDING',   TRUE,  200000003, 38000, FALSE, NULL, NULL),
 -- ids 27..29: WAITING -> each has a waiting_list_entry; id 27 has an active grab.
 (2, 200000004, CURDATE(),                   '11:00:00', 10, 'GROUP',      'WAITING',   TRUE,  200000011, 50000, FALSE, NULL, NULL),
 (1, 200000002, CURDATE() + INTERVAL  2 DAY, '09:00:00',  1, 'INDIVIDUAL', 'WAITING',   FALSE, NULL,      5000,  FALSE, NULL, NULL),
-(3, 200000009, CURDATE() + INTERVAL  6 DAY, '13:00:00',  3, 'FAMILY',     'WAITING',   FALSE, NULL,      13000, FALSE, NULL, NULL),
+(3, 200000001, CURDATE() + INTERVAL  6 DAY, '13:00:00',  3, 'FAMILY',     'WAITING',   FALSE, NULL,      13000, FALSE, NULL, NULL),
 -- id 30: CONFIRMED for TODAY with NO visit row -> the no-show "run now" target.
 --   The timed NoShowJob is strict (visit_date < today) and leaves it alone, so a
 --   same-day no-show normally only resolves after midnight; a manual forced run
@@ -320,20 +321,20 @@ INSERT INTO visit (reservation_id, park_id, visitor_id, entered_at, exited_at, h
 -- 8c) Casual walk-ins, CLOSED (reservation_id NULL -> visit_type + price_cents set).
 INSERT INTO visit (reservation_id, park_id, visitor_id, entered_at, exited_at, headcount, visit_type, price_cents) VALUES
 (NULL, 1, 200000010, TIMESTAMP(CURDATE() - INTERVAL 27 DAY, '10:00:00'), TIMESTAMP(CURDATE() - INTERVAL 27 DAY, '13:00:00'), 1, 'INDIVIDUAL',  5000),
-(NULL, 2, 200000007, TIMESTAMP(CURDATE() - INTERVAL 23 DAY, '09:15:00'), TIMESTAMP(CURDATE() - INTERVAL 23 DAY, '13:15:00'), 3, 'FAMILY',     12000),
+(NULL, 2, 200000001, TIMESTAMP(CURDATE() - INTERVAL 23 DAY, '09:15:00'), TIMESTAMP(CURDATE() - INTERVAL 23 DAY, '13:15:00'), 3, 'FAMILY',     12000),
 (NULL, 3, NULL,      TIMESTAMP(CURDATE() - INTERVAL 19 DAY, '11:00:00'), TIMESTAMP(CURDATE() - INTERVAL 19 DAY, '13:40:00'), 9, 'GROUP',      40000),
 (NULL, 1, 200000009, TIMESTAMP(CURDATE() - INTERVAL 16 DAY, '12:00:00'), TIMESTAMP(CURDATE() - INTERVAL 16 DAY, '15:20:00'), 1, 'INDIVIDUAL',  5000),
-(NULL, 2, 200000012, TIMESTAMP(CURDATE() - INTERVAL 13 DAY, '09:40:00'), TIMESTAMP(CURDATE() - INTERVAL 13 DAY, '14:00:00'), 4, 'FAMILY',     13000),
+(NULL, 2, 200000005, TIMESTAMP(CURDATE() - INTERVAL 13 DAY, '09:40:00'), TIMESTAMP(CURDATE() - INTERVAL 13 DAY, '14:00:00'), 4, 'FAMILY',     13000),
 (NULL, 3, 200000008, TIMESTAMP(CURDATE() - INTERVAL 11 DAY, '15:00:00'), TIMESTAMP(CURDATE() - INTERVAL 11 DAY, '16:30:00'), 1, 'INDIVIDUAL',  5000),
 (NULL, 2, 200000005, TIMESTAMP(CURDATE() - INTERVAL  6 DAY, '10:30:00'), TIMESTAMP(CURDATE() - INTERVAL  6 DAY, '14:10:00'), 4, 'FAMILY',     15000),
 (NULL, 3, NULL,      TIMESTAMP(CURDATE() - INTERVAL  4 DAY, '11:20:00'), TIMESTAMP(CURDATE() - INTERVAL  4 DAY, '14:15:00'), 8, 'GROUP',      38000),
 (NULL, 1, 200000002, TIMESTAMP(CURDATE() - INTERVAL  2 DAY, '09:30:00'), TIMESTAMP(CURDATE() - INTERVAL  2 DAY, '13:00:00'), 1, 'INDIVIDUAL',  5000),
-(NULL, 3, 200000010, TIMESTAMP(CURDATE() - INTERVAL  1 DAY, '10:00:00'), TIMESTAMP(CURDATE() - INTERVAL  1 DAY, '14:00:00'), 3, 'FAMILY',     12000);
+(NULL, 3, 200000001, TIMESTAMP(CURDATE() - INTERVAL  1 DAY, '10:00:00'), TIMESTAMP(CURDATE() - INTERVAL  1 DAY, '14:00:00'), 3, 'FAMILY',     12000);
 -- 8d) Casual walk-ins, OPEN today (exited_at NULL -> add to live occupancy).
 INSERT INTO visit (reservation_id, park_id, visitor_id, entered_at, exited_at, headcount, visit_type, price_cents) VALUES
 (NULL, 1, 200000011, NOW() - INTERVAL 2 HOUR, NULL, 1, 'INDIVIDUAL',  5000),
-(NULL, 1, 200000007, NOW() - INTERVAL 4 HOUR, NULL, 4, 'FAMILY',     14000),
-(NULL, 2, 200000012, NOW() - INTERVAL 1 HOUR, NULL, 3, 'FAMILY',     13000),
+(NULL, 1, 200000005, NOW() - INTERVAL 4 HOUR, NULL, 4, 'FAMILY',     14000),
+(NULL, 2, 200000001, NOW() - INTERVAL 1 HOUR, NULL, 3, 'FAMILY',     13000),
 (NULL, 3, NULL,      NOW() - INTERVAL 3 HOUR, NULL, 11,'GROUP',      42000);
 
 -- 9) parameter_change_request: 2 PENDING (approval queue is non-empty) + 2 decided

@@ -22,15 +22,27 @@ public class WaitlistGrabExpiryJob implements SchedulerJob {
 
     /** One-line summary sink, wired to the server console activity log. */
     private final Consumer<String> log;
+/**
+ * Creates a new waitlist grab expiry job instance.
+ * @param log value supplied to the operation
+ */
 
     public WaitlistGrabExpiryJob(Consumer<String> log) {
         this.log = log;
     }
+/**
+ * Performs the name operation.
+ * @return the result produced by the operation
+ */
 
     @Override
     public String name() {
         return NAME;
     }
+/**
+ * Performs the run once operation.
+ * @param force value supplied to the operation
+ */
 
     @Override
     public void runOnce(boolean force) {

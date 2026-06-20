@@ -24,6 +24,7 @@ import java.io.Serializable;
  * still in the future marks an <em>active</em> grab offer.
  */
 public class WaitlistEntryDTO implements Serializable {
+/** Serialization identifier for this class. */
     private static final long serialVersionUID = 1L;
 
     /** Unique waiting-list entry identifier (primary key). */

@@ -36,14 +36,26 @@ import static common.dto.RequestType.REGISTER_SUBSCRIBER;
  * server-side — the screen being hidden on the client is convenience only.
  */
 public class AuthController implements DomainController {
+/** Stores the dao value used by this component. */
 
     private final AuthDAO dao = new AuthDAO();
+/** Stores the member dao value used by this component. */
     private final MemberDAO memberDao = new MemberDAO();
+/**
+ * Performs the handled types operation.
+ * @return the result produced by the operation
+ */
 
     @Override
     public Set<RequestType> handledTypes() {
         return Set.of(LOGIN_STAFF, LOGIN_VISITOR, LOGOUT, REGISTER_SUBSCRIBER, REGISTER_GUIDE);
     }
+/**
+ * Handles the supplied request and returns the appropriate server response.
+ * @param request value supplied to the operation
+ * @param session value supplied to the operation
+ * @return the result produced by the operation
+ */
 
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
