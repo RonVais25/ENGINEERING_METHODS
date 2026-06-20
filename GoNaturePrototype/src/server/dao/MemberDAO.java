@@ -1,6 +1,7 @@
 package server.dao;
 
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -46,7 +47,7 @@ public class MemberDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;
@@ -90,7 +91,7 @@ public class MemberDAO {
                 stmt.executeUpdate();
 
             } catch (Exception e) {
-                e.printStackTrace();
+                ServerLog.daoError(e);
             }
         } else {
             String sql = "INSERT INTO visitor (id, full_name, phone, email, is_subscriber) VALUES (?, ?, ?, ?, ?)";
@@ -106,7 +107,7 @@ public class MemberDAO {
                 stmt.executeUpdate();
 
             } catch (Exception e) {
-                e.printStackTrace();
+                ServerLog.daoError(e);
             }
         }
     }
@@ -151,7 +152,7 @@ public class MemberDAO {
             stmt.executeUpdate();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
     }
 
@@ -193,7 +194,7 @@ public class MemberDAO {
             return true;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
             return false;
         }
     }
@@ -226,7 +227,7 @@ public class MemberDAO {
             // Duplicate guide.visitor_id -> already a registered guide.
             return false;
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
             return false;
         }
     }

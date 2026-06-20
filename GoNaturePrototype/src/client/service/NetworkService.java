@@ -9,7 +9,6 @@ import common.dto.ServerResponse;
 import common.dto.VisitType;
 import javafx.application.Platform;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -78,14 +77,18 @@ public class NetworkService {
             if (conn == null) {
                 res = new ServerResponse(false, "Not connected");
             } else {
-                // sendRequest now throws IOException on timeout/interrupt/drop
-                // (correlation-future model). Convert to an error ServerResponse
-                // so callers keep the existing "future completes with a result"
-                // contract instead of propagating a checked exception.
+                // sendRequest throws IOException on timeout/interrupt/drop
+                // (correlation-future model). Catch any failure — including an
+                // unexpected runtime error — and convert it to an error
+                // ServerResponse, so the future ALWAYS completes with a result.
+                // Otherwise an uncaught throwable here would leave the future
+                // unresolved and the caller's thenAccept never runs, hanging the
+                // UI on a disabled button rather than showing a clear message.
                 try {
                     res = conn.sendRequest(req);
-                } catch (IOException ex) {
-                    res = new ServerResponse(false, ex.getMessage());
+                } catch (Exception ex) {
+                    String msg = ex.getMessage() == null ? ex.toString() : ex.getMessage();
+                    res = new ServerResponse(false, msg);
                 }
             }
             boolean reachable = conn != null && conn.isConnected();

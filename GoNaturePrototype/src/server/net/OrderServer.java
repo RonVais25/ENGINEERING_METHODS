@@ -5,6 +5,7 @@ import common.dto.ServerResponse;
 import server.dao.AuthDAO;
 import server.scheduler.SchedulerService;
 import server.subscription.SubscriptionRegistry;
+import server.util.ServerLog;
 
 import java.io.EOFException;
 import java.io.ObjectInputStream;
@@ -146,10 +147,38 @@ public class OrderServer {
                                " id=" + request.getCorrelationId() +
                                " type=" + request.getType());
 
-                ServerResponse response = router.handle(request, session);
+                // Contain handler failures to THIS request. router.handle runs
+                // arbitrary domain/DAO code; without this guard any exception it
+                // throws would unwind handleClient and drop the whole connection.
+                // We locate the failure in the server console (op + session +
+                // stack), reply with a clear error, then fall through to send and
+                // loop — so one bad request no longer kills the connection.
+                ServerResponse response;
+                try {
+                    response = router.handle(request, session);
+                    if (response == null) {
+                        // A handler returning null would NPE on setCorrelationId
+                        // below; treat it as a located server error too.
+                        throw new IllegalStateException("handler returned no response");
+                    }
+                } catch (Throwable t) {
+                    String op  = String.valueOf(request.getType());
+                    String msg = (t.getMessage() == null) ? t.getClass().getSimpleName() : t.getMessage();
+                    String ctx = "[ERROR] op=" + op +
+                                 " session=" + session.remoteAddressString();
+                    // Red line in the GUI activity log + full stack trace to the
+                    // server console, so the failure is located, not silent.
+                    listener.onError(ctx + ": " + msg);
+                    ServerLog.error(ctx, t);
+                    response = new ServerResponse(false,
+                            "Server error processing " + op + ": " + msg);
+                }
+
                 // Echo the request's correlation id onto the response so the
                 // client can match it back to the originating request via the
-                // reader-thread routing introduced in step 3.
+                // reader-thread routing introduced in step 3. A failure to write
+                // here is a genuine connection drop — let it propagate to the
+                // outer catch, which logs it and tears the session down.
                 response.setCorrelationId(request.getCorrelationId());
                 session.sendResponse(response);
 

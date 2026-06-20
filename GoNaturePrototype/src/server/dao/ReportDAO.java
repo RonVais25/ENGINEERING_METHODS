@@ -5,6 +5,7 @@ import common.dto.CancellationsReportRow;
 import common.dto.VisitsReportDTO;
 import common.dto.VisitsReportRow;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -106,7 +107,7 @@ public class ReportDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
             return null;
         }
 
@@ -179,7 +180,7 @@ public class ReportDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
             return null;
         }
 
