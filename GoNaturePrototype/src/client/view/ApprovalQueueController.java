@@ -30,23 +30,35 @@ import java.util.List;
  */
 public class ApprovalQueueController extends BaseController {
 
+    /** Manually reloads the pending queue. */
     @FXML private Button refreshBtn;
+    /** Result/toast label for action feedback. */
     @FXML private Label  resultLabel;
+    /** Header label showing the pending count. */
     @FXML private Label  cardHeaderLabel;
+    /** Container the request rows are rendered into. */
     @FXML private VBox   tableBox;
 
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
     // the DEPT_MANAGER role), so the session is accepted but unused.
+    /**
+     * Creates the approval-queue controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public ApprovalQueueController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** FXML lifecycle hook: loads the pending queue. */
     @FXML
     private void initialize() {
         load();
     }
 
+    /** Refresh-button handler: reloads the pending queue. */
     @FXML
     private void onRefresh() {
         load();
@@ -69,6 +81,11 @@ public class ApprovalQueueController extends BaseController {
         });
     }
 
+    /**
+     * Renders the header and one row per pending request (or an empty-state row).
+     *
+     * @param rows the pending requests to display
+     */
     private void populate(List<ParameterChangeRequestDTO> rows) {
         cardHeaderLabel.setText("PENDING PARAMETER CHANGES (" + rows.size() + ")");
         tableBox.getChildren().setAll(headerRow());
@@ -87,6 +104,7 @@ public class ApprovalQueueController extends BaseController {
         }
     }
 
+    /** {@return the table header row of column titles} */
     private HBox headerRow() {
         HBox row = new HBox();
         row.getStyleClass().add("history-header-row");
@@ -99,6 +117,13 @@ public class ApprovalQueueController extends BaseController {
         return row;
     }
 
+    /**
+     * Builds one request row: details plus Approve/Reject buttons.
+     *
+     * @param r           the pending request to render
+     * @param withDivider whether to draw a divider below the row
+     * @return the assembled row
+     */
     private HBox dataRow(ParameterChangeRequestDTO r, boolean withDivider) {
         Label parkLbl   = cell(r.getParkName(),                          140);
         Label fieldLbl  = cell(labelFor(r.getField()),                   180);
@@ -133,7 +158,12 @@ public class ApprovalQueueController extends BaseController {
         return row;
     }
 
-    /** Approves or rejects a request, then reloads the queue on success. */
+    /**
+     * Approves or rejects a request, then reloads the queue on success.
+     *
+     * @param requestId the request to decide
+     * @param approve   {@code true} to approve, {@code false} to reject
+     */
     private void decide(int requestId, boolean approve) {
         var future = approve
                 ? network.approveParamChange(requestId)
@@ -144,6 +174,13 @@ public class ApprovalQueueController extends BaseController {
         });
     }
 
+    /**
+     * Builds a fixed-width column header cell.
+     *
+     * @param text the header text
+     * @param w    the preferred width, or {@code 0} for natural width
+     * @return the header cell label
+     */
     private Label headerCell(String text, double w) {
         Label l = new Label(text);
         l.getStyleClass().add("history-header-cell");
@@ -151,6 +188,13 @@ public class ApprovalQueueController extends BaseController {
         return l;
     }
 
+    /**
+     * Builds a fixed-width data cell.
+     *
+     * @param text the cell text
+     * @param w    the preferred width
+     * @return the data cell label
+     */
     private Label cell(String text, double w) {
         Label l = new Label(text);
         l.getStyleClass().add("history-cell");
@@ -158,7 +202,12 @@ public class ApprovalQueueController extends BaseController {
         return l;
     }
 
-    /** Friendly label for a parameter field, e.g. {@code MAX_CAPACITY → "Max Capacity"}. */
+    /**
+     * Friendly label for a parameter field, e.g. {@code MAX_CAPACITY → "Max Capacity"}.
+     *
+     * @param field the parameter field
+     * @return a human-friendly label for the field
+     */
     private static String labelFor(common.dto.ParamField field) {
         switch (field) {
             case MAX_CAPACITY:         return "Max Capacity";

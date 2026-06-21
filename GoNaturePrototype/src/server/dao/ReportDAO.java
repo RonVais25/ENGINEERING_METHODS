@@ -32,6 +32,9 @@ import java.util.List;
  */
 public class ReportDAO {
 
+    /** Creates the report DAO. */
+    public ReportDAO() { }
+
     /**
      * Visits-by-type report: per-category visit counts and average stay lengths
      * over a date range, optionally narrowed to a single park.

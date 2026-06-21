@@ -46,9 +46,16 @@ import static common.dto.RequestType.EXIT_VISIT;
  */
 public class VisitController implements DomainController {
 
+    /** Creates the visit controller. */
+    public VisitController() { }
+
+    /** Visit data access (open/close visits, occupancy). */
     private final VisitDAO visitDao = new VisitDAO();
+    /** Reservation data access (resolve a booking at the gate). */
     private final ReservationDAO reservationDao = new ReservationDAO();
+    /** Park data access (capacity for the walk-in gate). */
     private final ParkDAO parkDao = new ParkDAO();
+    /** Authentication data access (role checks). */
     private final AuthDAO authDao = new AuthDAO();
     /** Stateless price calculator, shared across all client threads. */
     private final PricingService pricing = new PricingService();

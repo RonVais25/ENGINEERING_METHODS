@@ -27,8 +27,15 @@ import server.subscription.SubscriptionRegistry;
  */
 public class RequestRouter {
 
+    /** Dispatch map from request type to the controller that handles it. */
     private final Map<RequestType, DomainController> controllers = new HashMap<>();
 
+    /**
+     * Builds the dispatch map by registering every domain controller and fanning
+     * out the {@link RequestType}s each one declares it handles.
+     *
+     * @throws IllegalStateException if two controllers claim the same request type
+     */
     public RequestRouter() {
         // Every domain controller registered here. Each declares the ops it
         // owns via handledTypes(); we fan those out into the dispatch map.
@@ -55,6 +62,14 @@ public class RequestRouter {
         }
     }
 
+    /**
+     * Dispatches one request: handles the infrastructure ops (PING / SUBSCRIBE /
+     * UNSUBSCRIBE) inline and routes every domain op to its registered controller.
+     *
+     * @param request the incoming client request
+     * @param session the session it arrived on
+     * @return the response to send back to the client
+     */
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 
         RequestType type = request.getType();

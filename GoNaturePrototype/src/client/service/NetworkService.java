@@ -24,16 +24,34 @@ import java.util.concurrent.CompletableFuture;
  */
 public class NetworkService {
 
+    /** Notified after every completed call so the UI can reflect socket reachability. */
     @FunctionalInterface
     public interface ConnectionListener {
+        /**
+         * Invoked when the connection's reachability may have changed.
+         *
+         * @param reachable {@code true} if the socket is currently connected
+         */
         void onConnectionChanged(boolean reachable);
     }
 
+    /** The client session whose connection requests are sent over. */
     private final Session session;
+    /** Registered connection-state listeners, notified after each call. */
     private final List<ConnectionListener> listeners = new ArrayList<>();
 
+    /**
+     * Creates a network service bound to a client session.
+     *
+     * @param session the session whose connection requests are sent over
+     */
     public NetworkService(Session session) { this.session = session; }
 
+    /**
+     * Registers a listener notified of connection-state changes.
+     *
+     * @param l the listener to add
+     */
     public void addConnectionListener(ConnectionListener l) { listeners.add(l); }
 
     /**
@@ -41,6 +59,10 @@ public class NetworkService {
      * Returned future resolves with the opened ClientConnection on success
      * (caller is responsible for promoting it into the Session) or null on
      * failure with a message in the accompanying ServerResponse.
+     *
+     * @param host the host name or IP to probe
+     * @param port the TCP port to probe
+     * @return a future, completed on the JavaFX thread, with the probe outcome
      */
     public CompletableFuture<ProbeResult> probe(String host, int port) {
         CompletableFuture<ProbeResult> future = new CompletableFuture<>();
@@ -68,7 +90,13 @@ public class NetworkService {
         return future;
     }
 
-    /** Send a request using the active Session connection, asynchronously. */
+    /**
+     * Send a request using the active Session connection, asynchronously.
+     *
+     * @param req the request to send
+     * @return a future, completed on the JavaFX thread, with the server's response
+     *         (an error {@link ServerResponse} if not connected or the send fails)
+     */
     public CompletableFuture<ServerResponse> send(ClientRequest req) {
         CompletableFuture<ServerResponse> future = new CompletableFuture<>();
         Thread t = new Thread(() -> {
@@ -141,21 +169,37 @@ public class NetworkService {
         return send(req);
     }
 
-    /** Lists every reservation owned by a visitor. */
+    /**
+     * Lists every reservation owned by a visitor.
+     *
+     * @param visitorId the owning visitor's national id
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
     public CompletableFuture<ServerResponse> listReservations(long visitorId) {
         ClientRequest req = new ClientRequest(RequestType.LIST_RESERVATIONS);
         req.put("visitorId", visitorId);
         return send(req);
     }
 
-    /** Confirms a PENDING reservation (server enforces the legal transition). */
+    /**
+     * Confirms a PENDING reservation (server enforces the legal transition).
+     *
+     * @param reservationId the reservation to confirm
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
     public CompletableFuture<ServerResponse> confirmReservation(int reservationId) {
         ClientRequest req = new ClientRequest(RequestType.CONFIRM_RESERVATION);
         req.put("reservationId", reservationId);
         return send(req);
     }
 
-    /** Cancels a PENDING/CONFIRMED/WAITING reservation (server enforces the legal transition). */
+    /**
+     * Cancels a PENDING/CONFIRMED/WAITING reservation (server enforces the legal
+     * transition).
+     *
+     * @param reservationId the reservation to cancel
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
     public CompletableFuture<ServerResponse> cancelReservation(int reservationId) {
         ClientRequest req = new ClientRequest(RequestType.CANCEL_RESERVATION);
         req.put("reservationId", reservationId);
@@ -174,6 +218,7 @@ public class NetworkService {
      * @param visitDate     the new visit date, ISO {@code yyyy-MM-dd}
      * @param visitTime     the new visit time {@code HH:mm:ss}, or {@code null}
      * @param partySize     the new party size
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> updateReservation(int reservationId, String visitDate,
                                                                String visitTime, int partySize) {
@@ -203,6 +248,7 @@ public class NetworkService {
      * @param paidInAdvance whether the visitor opts to pay up front
      * @param email         the visitor's contact email (required; target for the grab-offer notification)
      * @param phone         the visitor's contact phone (required)
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> joinWaitlist(int parkId, long visitorId, String visitDate,
                                                           String visitTime, int partySize, VisitType visitType,
@@ -228,6 +274,7 @@ public class NetworkService {
      * {@code List<}{@link common.dto.WaitlistEntryDTO}{@code >}.
      *
      * @param visitorId the owning visitor's national id
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> listWaitlist(long visitorId) {
         ClientRequest req = new ClientRequest(RequestType.LIST_WAITLIST);
@@ -241,6 +288,7 @@ public class NetworkService {
      * now-CONFIRMED {@link common.dto.ReservationDTO}.
      *
      * @param reservationId the offered WAITING reservation to claim
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> acceptGrab(int reservationId) {
         ClientRequest req = new ClientRequest(RequestType.ACCEPT_GRAB);
@@ -253,6 +301,7 @@ public class NetworkService {
      * this is a decline, and the server advances the freed slot to the next in line.
      *
      * @param reservationId the WAITING reservation to remove from the queue
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> leaveWaitlist(int reservationId) {
         ClientRequest req = new ClientRequest(RequestType.LEAVE_WAITLIST);
@@ -266,6 +315,7 @@ public class NetworkService {
      * Fetches the logged-in park manager's own park — no id is sent, so the
      * server derives it from the session. Response {@code getData()} is a
      * {@link common.dto.ParkDTO}.
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> getMyPark() {
         return send(new ClientRequest(RequestType.GET_PARK));
@@ -274,6 +324,7 @@ public class NetworkService {
     /**
      * Lists every park, for the booking dropdown. Response {@code getData()} is a
      * {@code List<}{@link common.dto.ParkDTO}{@code >}.
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> listParks() {
         return send(new ClientRequest(RequestType.LIST_PARKS));
@@ -288,6 +339,7 @@ public class NetworkService {
      *
      * @param field    which park parameter to change
      * @param newValue the requested new value
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> requestParamChange(ParamField field, int newValue) {
         ClientRequest req = new ClientRequest(RequestType.REQUEST_PARAM_CHANGE);
@@ -299,6 +351,7 @@ public class NetworkService {
     /**
      * Lists all PENDING parameter-change requests (DEPT_MANAGER only). Response
      * {@code getData()} is a {@code List<}{@link common.dto.ParameterChangeRequestDTO}{@code >}.
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> listPendingChanges() {
         return send(new ClientRequest(RequestType.LIST_PENDING_CHANGES));
@@ -309,6 +362,7 @@ public class NetworkService {
      * written to the park. Fails if the request is no longer PENDING.
      *
      * @param requestId the change request to approve
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> approveParamChange(int requestId) {
         ClientRequest req = new ClientRequest(RequestType.APPROVE_PARAM_CHANGE);
@@ -321,6 +375,7 @@ public class NetworkService {
      * Fails if the request is no longer PENDING.
      *
      * @param requestId the change request to reject
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> rejectParamChange(int requestId) {
         ClientRequest req = new ClientRequest(RequestType.REJECT_PARAM_CHANGE);
@@ -338,6 +393,7 @@ public class NetworkService {
      *
      * @param confirmationCode the booking confirmation code presented at the gate
      * @param visitorId        the national id presented, which must match the reservation
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> enterVisit(int confirmationCode, long visitorId) {
         ClientRequest req = new ClientRequest(RequestType.ENTER_VISIT);
@@ -354,6 +410,7 @@ public class NetworkService {
      *
      * @param confirmationCode the booking confirmation code, or {@code null} to exit by visitor id
      * @param visitorId        the visitor's national id, or {@code null} to exit by code
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> exitVisit(Integer confirmationCode, Long visitorId) {
         ClientRequest req = new ClientRequest(RequestType.EXIT_VISIT);
@@ -369,6 +426,7 @@ public class NetworkService {
      * code or visitor id). The server closes the open visit at the employee's park.
      *
      * @param visitId the ticket number shown at casual admission
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> exitVisitByTicket(int visitId) {
         ClientRequest req = new ClientRequest(RequestType.EXIT_VISIT);
@@ -385,6 +443,7 @@ public class NetworkService {
      * @param partySize the number of people walking in
      * @param visitType INDIVIDUAL, FAMILY, or GROUP
      * @param visitorId an optional national id (a subscriber earns the member discount), or {@code null}
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> casualVisit(int partySize, VisitType visitType, Long visitorId) {
         ClientRequest req = new ClientRequest(RequestType.CASUAL_VISIT);
@@ -398,6 +457,7 @@ public class NetworkService {
      * Fetches live occupancy for the employee's own park (PARK_EMPLOYEE only — no
      * park id is sent, so the server derives it from the session). Response
      * {@code getData()} is an {@link common.dto.OccupancyDTO}.
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> currentOccupancy() {
         return send(new ClientRequest(RequestType.CURRENT_OCCUPANCY));
@@ -408,6 +468,10 @@ public class NetworkService {
      * {@link common.dto.UserDTO} in {@code getData()}; on failure the message
      * explains why ("Invalid username or password." / "already logged in
      * elsewhere.").
+     *
+     * @param username the staff member's username
+     * @param password the staff member's password
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> loginStaff(String username, String password) {
         ClientRequest req = new ClientRequest(RequestType.LOGIN_STAFF);
@@ -419,6 +483,9 @@ public class NetworkService {
     /**
      * Authenticates a visitor by national ID. On success the response carries a
      * {@link common.dto.VisitorDTO} in {@code getData()}.
+     *
+     * @param visitorId the visitor's national id
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> loginVisitor(long visitorId) {
         ClientRequest req = new ClientRequest(RequestType.LOGIN_VISITOR);
@@ -426,7 +493,11 @@ public class NetworkService {
         return send(req);
     }
 
-    /** Logs the current actor out, releasing the server-side single-login lock. */
+    /**
+     * Logs the current actor out, releasing the server-side single-login lock.
+     *
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
     public CompletableFuture<ServerResponse> logout() {
         return send(new ClientRequest(RequestType.LOGOUT));
     }
@@ -438,6 +509,7 @@ public class NetworkService {
      * path for the notification center). The server derives the recipient from
      * the session, so no id is sent. Response {@code getData()} is a
      * {@code List<}{@link common.dto.NotificationDTO}{@code >}.
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> listNotifications() {
         return send(new ClientRequest(RequestType.LIST_NOTIFICATIONS));
@@ -447,6 +519,7 @@ public class NetworkService {
      * Acknowledges (marks read) a single notification, clearing its unread state.
      *
      * @param notificationId the notification to acknowledge
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> ackNotification(int notificationId) {
         ClientRequest req = new ClientRequest(RequestType.ACK_NOTIFICATION);
@@ -466,6 +539,7 @@ public class NetworkService {
      * @param phone      the subscriber's phone number
      * @param email      the subscriber's email address
      * @param familySize the subscriber's family size
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> registerSubscriber(long visitorId, String fullName,
                                                                 String phone, String email, int familySize) {
@@ -488,6 +562,7 @@ public class NetworkService {
      * @param fullName  the guide's full name
      * @param phone     the guide's phone number
      * @param email     the guide's email address
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> registerGuide(long visitorId, String fullName,
                                                            String phone, String email) {
@@ -508,6 +583,7 @@ public class NetworkService {
      * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
      * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
      * @param parkId a specific park id, or {@code null} for the whole region (all parks)
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> visitsReport(String from, String to, Integer parkId) {
         return reportRequest(RequestType.REPORT_VISITS_BY_TYPE, from, to, parkId);
@@ -520,6 +596,7 @@ public class NetworkService {
      * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
      * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
      * @param parkId a specific park id, or {@code null} for the whole region (all parks)
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> cancellationsReport(String from, String to, Integer parkId) {
         return reportRequest(RequestType.REPORT_CANCELLATIONS, from, to, parkId);
@@ -529,6 +606,12 @@ public class NetworkService {
      * Shared builder for the two report requests. A {@code null} park id travels as
      * the {@code "ALL"} sentinel, which the server normalises (together with a
      * missing/blank value) to "whole region".
+     *
+     * @param type   the report request type
+     * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
+     * @param parkId a specific park id, or {@code null} for the whole region
+     * @return a future, completed on the JavaFX thread, with the server's response
      */
     private CompletableFuture<ServerResponse> reportRequest(RequestType type, String from, String to, Integer parkId) {
         ClientRequest req = new ClientRequest(type);
@@ -540,12 +623,21 @@ public class NetworkService {
 
     /** Result bundle for {@link #probe(String, int)}. */
     public static final class ProbeResult {
+        /** The opened connection on success, or {@code null} on failure. */
         public final ClientConnection connection;
+        /** The PING response (or a synthetic error response on failure). */
         public final ServerResponse   response;
+        /**
+         * Bundles a probe's connection and response.
+         *
+         * @param connection the opened connection, or {@code null} on failure
+         * @param response   the probe response
+         */
         public ProbeResult(ClientConnection connection, ServerResponse response) {
             this.connection = connection;
             this.response   = response;
         }
+        /** {@return {@code true} if the probe connected and the server replied success} */
         public boolean isSuccess() { return connection != null && response.isSuccess(); }
     }
 }

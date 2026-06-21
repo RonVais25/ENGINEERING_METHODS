@@ -34,23 +34,35 @@ import java.util.List;
  */
 public class NotificationCenterController extends BaseController {
 
+    /** Manually reloads the notifications. */
     @FXML private Button refreshBtn;
+    /** Result/toast label for action feedback. */
     @FXML private Label  resultLabel;
+    /** Header label showing total/unread counts. */
     @FXML private Label  cardHeaderLabel;
+    /** Container the notification rows are rendered into. */
     @FXML private VBox   tableBox;
 
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server derives the
     // recipient from the session), so the session is accepted but unused.
+    /**
+     * Creates the notification-center controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public NotificationCenterController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** FXML lifecycle hook: loads the actor's notifications. */
     @FXML
     private void initialize() {
         load();
     }
 
+    /** Refresh-button handler: reloads the notifications. */
     @FXML
     private void onRefresh() {
         load();
@@ -73,6 +85,11 @@ public class NotificationCenterController extends BaseController {
         });
     }
 
+    /**
+     * Renders the header and one row per notification (or an empty-state row).
+     *
+     * @param rows the notifications to display, newest first
+     */
     private void populate(List<NotificationDTO> rows) {
         int unread = 0;
         for (NotificationDTO n : rows) {
@@ -95,6 +112,13 @@ public class NotificationCenterController extends BaseController {
         }
     }
 
+    /**
+     * Builds one notification row (with an Acknowledge action when unread).
+     *
+     * @param n           the notification to render
+     * @param withDivider whether to draw a divider below the row
+     * @return the assembled row
+     */
     private HBox dataRow(NotificationDTO n, boolean withDivider) {
         boolean unread = !n.isAcknowledged();
 
@@ -127,7 +151,11 @@ public class NotificationCenterController extends BaseController {
         return row;
     }
 
-    /** Acknowledges one notification, then reloads on success so it clears unread. */
+    /**
+     * Acknowledges one notification, then reloads on success so it clears unread.
+     *
+     * @param notificationId the notification to acknowledge
+     */
     private void acknowledge(int notificationId) {
         network.ackNotification(notificationId).thenAccept(res -> {
             Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
@@ -135,7 +163,13 @@ public class NotificationCenterController extends BaseController {
         });
     }
 
-    /** Prefers the delivery time, falling back to creation time; {@code ""} if neither is set. */
+    /**
+     * Prefers the delivery time, falling back to creation time; {@code ""} if
+     * neither is set.
+     *
+     * @param n the notification
+     * @return the best available timestamp, or {@code ""}
+     */
     private static String when(NotificationDTO n) {
         String t = n.getSentAt() != null ? n.getSentAt() : n.getCreatedAt();
         return t == null ? "" : t;

@@ -37,7 +37,12 @@ import static common.dto.RequestType.REGISTER_SUBSCRIBER;
  */
 public class AuthController implements DomainController {
 
+    /** Creates the authentication controller. */
+    public AuthController() { }
+
+    /** Authentication data access (login, single-login lock). */
     private final AuthDAO dao = new AuthDAO();
+    /** Member/visitor data access (subscriber and guide registration). */
     private final MemberDAO memberDao = new MemberDAO();
     /**
      * Returns the request types handled by this controller.

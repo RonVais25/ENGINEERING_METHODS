@@ -21,6 +21,7 @@ import java.io.Serializable;
  * since subscribers refresh from the new row and do not settle.
  */
 public class ReservationUpdateResultDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** The reservation as persisted after the edit (carries the new price). */
@@ -43,22 +44,22 @@ public class ReservationUpdateResultDTO implements Serializable {
         this.newPriceCents = newPriceCents;
     }
 
-    /** @return the reservation as persisted after the edit */
+    /** {@return the reservation as persisted after the edit} */
     public ReservationDTO getReservation() {
         return reservation;
     }
 
-    /** @return the price before the edit, in cents */
+    /** {@return the price before the edit, in cents} */
     public int getOldPriceCents() {
         return oldPriceCents;
     }
 
-    /** @return the recomputed price after the edit, in cents */
+    /** {@return the recomputed price after the edit, in cents} */
     public int getNewPriceCents() {
         return newPriceCents;
     }
 
-    /** @return the price change, in cents (positive = increase, negative = refund). */
+    /** {@return the price change, in cents (positive = increase, negative = refund).} */
     public int getDeltaCents() {
         return newPriceCents - oldPriceCents;
     }

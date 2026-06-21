@@ -16,6 +16,7 @@ import java.io.Serializable;
  * inside a {@link CancellationsReportDTO}; immutable and {@link Serializable}.
  */
 public class CancellationsReportRow implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** The calendar day the status changed, ISO {@code yyyy-MM-dd}. */
@@ -38,17 +39,17 @@ public class CancellationsReportRow implements Serializable {
         this.noShow = noShow;
     }
 
-    /** @return the calendar day, ISO {@code yyyy-MM-dd} */
+    /** {@return the calendar day, ISO {@code yyyy-MM-dd}} */
     public String getDate() {
         return date;
     }
 
-    /** @return reservations cancelled that day */
+    /** {@return reservations cancelled that day} */
     public int getCancelled() {
         return cancelled;
     }
 
-    /** @return reservations marked no-show that day */
+    /** {@return reservations marked no-show that day} */
     public int getNoShow() {
         return noShow;
     }

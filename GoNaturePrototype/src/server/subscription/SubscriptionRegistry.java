@@ -26,13 +26,16 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public final class SubscriptionRegistry {
 
+    /** The singleton instance. */
     private static final SubscriptionRegistry INSTANCE = new SubscriptionRegistry();
 
+    /** Subscription key &rarr; the set of sessions subscribed to it. */
     private final ConcurrentHashMap<SubscriptionKey, Set<ClientSession>> map = new ConcurrentHashMap<>();
 
+    /** Private: use {@link #getInstance()}. */
     private SubscriptionRegistry() {}
 
-    /** @return the singleton registry instance */
+    /** {@return the singleton registry instance} */
     public static SubscriptionRegistry getInstance() {
         return INSTANCE;
     }

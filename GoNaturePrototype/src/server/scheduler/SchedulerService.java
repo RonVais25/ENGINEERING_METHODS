@@ -43,8 +43,10 @@ public class SchedulerService {
     /** How often each job re-runs, captured once from {@link SchedulerConfig}. */
     private final long pollSeconds;
 
+    /** Runs the scheduled job sweeps on daemon threads. */
     private final ScheduledExecutorService executor;
 
+    /** Whether {@link #start()} has already scheduled the jobs. */
     private volatile boolean started;
 
     /**
@@ -65,6 +67,11 @@ public class SchedulerService {
         register(new ConfirmTimeoutJob(log));
     }
 
+    /**
+     * Registers a job under its {@link SchedulerJob#name()}.
+     *
+     * @param job the job to register
+     */
     private void register(SchedulerJob job) {
         jobs.put(job.name(), job);
     }
@@ -127,6 +134,7 @@ public class SchedulerService {
      * Runs a job, containing any exception so the executor (and the job's recurring
      * schedule) survives a one-off failure.
      *
+     * @param job   the job to run
      * @param force {@code true} for a manual forced run (drop the time threshold),
      *              {@code false} for a normal scheduled sweep
      */
@@ -159,6 +167,8 @@ public class SchedulerService {
     /**
      * Names the threads and marks them daemon so a missed {@link #shutdown()} can
      * never keep the JVM alive.
+     *
+     * @return a daemon-thread factory naming threads {@code Scheduler-N}
      */
     private static ThreadFactory daemonThreads() {
         AtomicInteger n = new AtomicInteger(1);

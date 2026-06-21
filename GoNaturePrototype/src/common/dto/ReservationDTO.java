@@ -16,6 +16,7 @@ import java.io.Serializable;
  * so a SQL {@code NULL} maps to a Java {@code null} rather than a misleading zero.
  */
 public class ReservationDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Unique reservation identifier (primary key). */
@@ -85,72 +86,72 @@ public class ReservationDTO implements Serializable {
         this.createdAt = createdAt;
     }
 
-    /** @return the unique reservation identifier */
+    /** {@return the unique reservation identifier} */
     public int getId() {
         return id;
     }
 
-    /** @return the identifier of the booked park */
+    /** {@return the identifier of the booked park} */
     public int getParkId() {
         return parkId;
     }
 
-    /** @return the identifier of the owning visitor */
+    /** {@return the identifier of the owning visitor} */
     public long getVisitorId() {
         return visitorId;
     }
 
-    /** @return the scheduled visit date, ISO {@code yyyy-MM-dd} */
+    /** {@return the scheduled visit date, ISO {@code yyyy-MM-dd}} */
     public String getVisitDate() {
         return visitDate;
     }
 
-    /** @return the scheduled visit time ({@code HH:mm:ss}), or {@code null} if unset */
+    /** {@return the scheduled visit time ({@code HH:mm:ss}), or {@code null} if unset} */
     public String getVisitTime() {
         return visitTime;
     }
 
-    /** @return the number of people in the party */
+    /** {@return the number of people in the party} */
     public int getPartySize() {
         return partySize;
     }
 
-    /** @return the nature of the visit */
+    /** {@return the nature of the visit} */
     public VisitType getVisitType() {
         return visitType;
     }
 
-    /** @return the current lifecycle state */
+    /** {@return the current lifecycle state} */
     public ReservationStatus getStatus() {
         return status;
     }
 
-    /** @return whether the booking is treated as an organised group */
+    /** {@return whether the booking is treated as an organised group} */
     public boolean isGroup() {
         return isGroup;
     }
 
-    /** @return the identifier of the assigned guide, or {@code null} if none */
+    /** {@return the identifier of the assigned guide, or {@code null} if none} */
     public Long getGuideId() {
         return guideId;
     }
 
-    /** @return the price of the reservation, in cents */
+    /** {@return the price of the reservation, in cents} */
     public int getPriceCents() {
         return priceCents;
     }
 
-    /** @return whether the reservation was paid for in advance */
+    /** {@return whether the reservation was paid for in advance} */
     public boolean isPaidInAdvance() {
         return paidInAdvance;
     }
 
-    /** @return the booking confirmation code, or {@code null} if not yet issued */
+    /** {@return the booking confirmation code, or {@code null} if not yet issued} */
     public Integer getConfirmationCode() {
         return confirmationCode;
     }
 
-    /** @return the creation timestamp as a string */
+    /** {@return the creation timestamp as a string} */
     public String getCreatedAt() {
         return createdAt;
     }

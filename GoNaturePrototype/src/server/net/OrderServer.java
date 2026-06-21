@@ -17,25 +17,46 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * The TCP server: accepts client connections on a port, spawns a handler thread
+ * per client that reads {@link ClientRequest}s in a loop and dispatches them
+ * through a {@link RequestRouter}, and runs the {@link SchedulerService} timed
+ * jobs for its lifetime. Lifecycle events and per-request activity are reported
+ * through a {@link ServerListener}. Handler failures are contained per request so
+ * one bad request never drops the whole connection.
+ */
 public class OrderServer {
 
+    /** The TCP port to listen on. */
     private final int port;
+    /** Receives lifecycle, connection, and activity events. */
     private final ServerListener listener;
+    /** Shared request dispatcher, one instance across all client threads. */
     private final RequestRouter router = new RequestRouter();
 
+    /** The listening server socket, or {@code null} while stopped. */
     private ServerSocket serverSocket;
+    /** Whether the accept loop is running. */
     private volatile boolean running;
 
     // Timed-job runner: started alongside the accept loop and shut down in stop()
     // so its threads live exactly as long as the server. Jobs log their one-line
     // summaries through the same ServerListener as the rest of the server.
+    /** The timed-job runner, started and stopped with the server. */
     private final SchedulerService scheduler;
 
     // Every accepted client socket is tracked so stop() can force-close them.
     // Without this, server.stop() only stops accept() — existing handleClient
     // threads keep running and the clients can still send requests.
+    /** Every accepted client socket, so {@link #stop()} can force-close them. */
     private final List<Socket> activeClients = Collections.synchronizedList(new ArrayList<>());
 
+    /**
+     * Creates a server bound to a port and reporting to a listener.
+     *
+     * @param port     the TCP port to listen on
+     * @param listener receives lifecycle, connection, and activity events
+     */
     public OrderServer(int port, ServerListener listener) {
         this.port = port;
         this.listener = listener;
@@ -43,6 +64,7 @@ public class OrderServer {
         this.scheduler = new SchedulerService(listener::onLog);
     }
 
+    /** Starts the accept loop (on a daemon thread) and the timed-job scheduler. */
     public void start() {
         Thread t = new Thread(this::runAcceptLoop, "OrderServer-accept");
         t.setDaemon(true);
@@ -63,6 +85,10 @@ public class OrderServer {
         return scheduler;
     }
 
+    /**
+     * Stops the scheduler, closes the listening socket, and force-closes every
+     * still-open client connection so their handler threads unwind.
+     */
     public void stop() {
         running = false;
         // Stop the timed jobs first so no sweep runs against a tearing-down server.
@@ -85,6 +111,7 @@ public class OrderServer {
         }
     }
 
+    /** Accept loop: binds the socket and spawns a handler thread per client. */
     private void runAcceptLoop() {
         try {
             serverSocket = new ServerSocket(port);
@@ -117,6 +144,15 @@ public class OrderServer {
         }
     }
 
+    /**
+     * Per-client handler thread: reads requests in a loop until disconnect,
+     * dispatching each through the router and writing the response, with per-request
+     * failure containment and session/lock cleanup on teardown.
+     *
+     * @param socket the client socket
+     * @param ip     the client's IP address
+     * @param host   the client's resolved host name
+     */
     private void handleClient(Socket socket, String ip, String host) {
         // Persistent connection: read requests in a loop until the client
         // closes its socket (EOF) or the connection drops. The session ends

@@ -29,13 +29,16 @@ import java.util.function.Consumer;
  */
 public final class EventBus {
 
+    /** The singleton instance. */
     private static final EventBus INSTANCE = new EventBus();
 
+    /** Subscriber callbacks keyed by subscription key. */
     private final ConcurrentHashMap<SubscriptionKey, List<Consumer<ServerEvent>>> subscribers = new ConcurrentHashMap<>();
 
+    /** Private: use {@link #getInstance()}. */
     private EventBus() {}
 
-    /** @return the singleton event bus instance */
+    /** {@return the singleton event bus instance} */
     public static EventBus getInstance() {
         return INSTANCE;
     }
@@ -111,18 +114,26 @@ public final class EventBus {
      * without holding references to the underlying callback or key.
      */
     public static final class Subscription {
+        /** The key this subscription is registered against. */
         private final SubscriptionKey key;
+        /** The registered callback. */
         private final Consumer<ServerEvent> cb;
 
+        /**
+         * Creates a subscription handle.
+         *
+         * @param key the subscription key
+         * @param cb  the callback to detach on {@link #unsubscribe()}
+         */
         private Subscription(SubscriptionKey key, Consumer<ServerEvent> cb) {
             this.key = key;
             this.cb = cb;
         }
 
         /**
-         * @return the resource this subscription is registered against; used
-         *         by controllers to issue a matching UNSUBSCRIBE request on
-         *         the wire when they detach locally
+         * {@return the resource this subscription is registered against; used
+         * by controllers to issue a matching UNSUBSCRIBE request on the wire
+         * when they detach locally}
          */
         public SubscriptionKey getKey() {
             return key;

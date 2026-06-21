@@ -12,11 +12,40 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+/**
+ * Tiny {@code .env} loader for the server's database credentials, so secrets such
+ * as the MySQL password live in an untracked file rather than in source.
+ *
+ * <p>{@link #load()} reads the first {@code .env} it can find and copies each
+ * {@code KEY=value} pair into the JVM's system properties (without overwriting
+ * any property already set on the command line), while also keeping them in an
+ * in-memory map readable via {@link #get(String)} and {@link #loadInto(BiConsumer)}.
+ * The file is searched for in priority order: the path named by the
+ * {@code gonature.env} system property, a {@code .env} next to the running JAR or
+ * classes directory, a {@code .env} in the current working directory, and finally
+ * {@code ~/.gonature.env}.
+ *
+ * <p>Loading is best-effort: a missing or unreadable file is treated as absent so
+ * the server still starts. Lines are simple {@code KEY=value} pairs; blank lines
+ * and {@code #} comments are skipped, and surrounding single or double quotes
+ * around a value are stripped.
+ */
 public class DotEnv {
 
+    /** Creates the .env loader (state and operations are static). */
+    public DotEnv() { }
+
+    /** Parsed key/value pairs from the {@code .env} file. */
     private static final Map<String, String> values = new HashMap<>();
+    /** Whether {@link #load()} has already run (it is idempotent). */
     private static boolean loaded = false;
 
+    /**
+     * Locates and parses the {@code .env} file (see the class description for the
+     * search order), copying every pair into the in-memory map and into system
+     * properties that are not already set. Safe to call more than once: only the
+     * first call does any work.
+     */
     public static void load() {
         if (loaded) return;
         loaded = true;
@@ -34,16 +63,31 @@ public class DotEnv {
         }
     }
 
+    /**
+     * Returns the value loaded for a key from the {@code .env} file.
+     *
+     * @param key the key to look up
+     * @return the value parsed from the file, or {@code null} if the key was not
+     *         present (or {@link #load()} found no file)
+     */
     public static String get(String key) {
         return values.get(key);
     }
 
+    /**
+     * Feeds every loaded key/value pair to the given consumer, letting callers
+     * forward the {@code .env} contents elsewhere (for example into another
+     * configuration object).
+     *
+     * @param sink receives each {@code (key, value)} pair currently loaded
+     */
     public static void loadInto(BiConsumer<String, String> sink) {
         for (Map.Entry<String, String> e : values.entrySet()) {
             sink.accept(e.getKey(), e.getValue());
         }
     }
 
+    /** {@return the first {@code .env} file found in the search order, or {@code null}} */
     private static File locateEnvFile() {
         String override = System.getProperty("gonature.env");
         if (override != null && !override.isEmpty()) {
@@ -66,6 +110,7 @@ public class DotEnv {
         return null;
     }
 
+    /** {@return a {@code .env} beside the running JAR/classes dir, or {@code null}} */
     private static File jarSiblingEnv() {
         try {
             URL src = DotEnv.class.getProtectionDomain().getCodeSource().getLocation();
@@ -80,6 +125,13 @@ public class DotEnv {
         }
     }
 
+    /**
+     * Parses a {@code .env} file into key/value pairs (skips blanks and {@code #}
+     * comments; strips surrounding quotes). Unreadable files yield an empty map.
+     *
+     * @param file the file to parse
+     * @return the parsed key/value pairs
+     */
     private static Map<String, String> parse(File file) {
         Map<String, String> out = new LinkedHashMap<>();
         try (BufferedReader r = new BufferedReader(new FileReader(file))) {

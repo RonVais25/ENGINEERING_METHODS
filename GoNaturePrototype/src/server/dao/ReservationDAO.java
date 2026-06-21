@@ -27,6 +27,9 @@ import java.util.List;
  */
 public class ReservationDAO {
 
+    /** Creates the reservation DAO. */
+    public ReservationDAO() { }
+
     /**
      * Looks up a single reservation by its primary key.
      *

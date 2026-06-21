@@ -51,26 +51,43 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class ClientConnection {
 
+    /** Socket connect timeout, in milliseconds. */
     private static final int CONNECT_TIMEOUT_MS = 3000;
+    /** How long {@link #sendRequest(ClientRequest)} waits for a reply, in seconds. */
     private static final long REQUEST_TIMEOUT_SECONDS = 10;
 
+    /** Server host to connect to. */
     private final String host;
+    /** Server port to connect to. */
     private final int    port;
 
     // volatile so the reader thread, sender threads, and the close path all
     // see field updates without holding a common monitor.
+    /** The TCP socket (volatile: shared across reader/sender/close threads). */
     private volatile Socket socket;
+    /** Object output stream (writes are serialized on its monitor). */
     private volatile ObjectOutputStream out;
+    /** Object input stream, read by the reader thread. */
     private volatile ObjectInputStream  in;
 
     // Starts at 1 so id=0 stays the unset sentinel on the server side; any
     // inbound response with id=0 must be an orphan and indicates a bug.
+    /** Allocates correlation ids (starts at 1; 0 is the unset sentinel). */
     private final AtomicLong correlationCounter = new AtomicLong(1);
+    /** In-flight requests keyed by correlation id, completed by the reader thread. */
     private final ConcurrentHashMap<Long, CompletableFuture<ServerResponse>> pending = new ConcurrentHashMap<>();
 
+    /** The background reader thread. */
     private volatile Thread readerThread;
+    /** Set during {@link #close()} so the reader loop exits cleanly. */
     private volatile boolean shuttingDown = false;
 
+    /**
+     * Creates an unconnected client connection; call {@link #connect()} to open it.
+     *
+     * @param host the server host to connect to
+     * @param port the server port to connect to
+     */
     public ClientConnection(String host, int port) {
         this.host = host;
         this.port = port;
@@ -99,7 +116,7 @@ public class ClientConnection {
         System.out.println("[client] reader started");
     }
 
-    /** @return {@code true} if the underlying socket is connected and not closed */
+    /** {@return {@code true} if the underlying socket is connected and not closed} */
     public boolean isConnected() {
         Socket s = socket;
         return s != null && s.isConnected() && !s.isClosed();
@@ -157,6 +174,11 @@ public class ClientConnection {
         }
     }
 
+    /**
+     * Reader-thread loop: reads inbound objects until shutdown/disconnect, routing
+     * {@link ServerResponse}s to their pending future and {@link ServerEvent}s to
+     * the {@link EventBus}.
+     */
     private void readLoop() {
         ObjectInputStream localIn = this.in;
         try {
@@ -212,6 +234,7 @@ public class ClientConnection {
         }
     }
 
+    /** {@return whether the socket is unset or closed} */
     private boolean isClosed() {
         Socket s = socket;
         return s == null || s.isClosed();
@@ -240,7 +263,13 @@ public class ClientConnection {
      * callers can distinguish it from generic stream failures.
      */
     public static final class ConnectionClosedException extends IOException {
+        /** Serialization-format version identifier. */
         private static final long serialVersionUID = 1L;
+        /**
+         * Creates the exception with a description of the drop.
+         *
+         * @param message the detail message
+         */
         public ConnectionClosedException(String message) { super(message); }
     }
 }

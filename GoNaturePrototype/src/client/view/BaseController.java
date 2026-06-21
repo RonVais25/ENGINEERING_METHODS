@@ -51,6 +51,8 @@ public abstract class BaseController {
     private final List<EventBus.Subscription> activeSubs = new ArrayList<>();
 
     /**
+     * Creates the controller with the shared network service.
+     *
      * @param network the NetworkService instance shared across the client
      *                (constructed once in {@code GoNatureClientApp} and
      *                injected via the Navigator's controller factory)

@@ -51,29 +51,48 @@ import java.util.Map;
  */
 public class DashboardController {
 
+    /** Greeting line ("Welcome back, …"). */
     @FXML private Label greetingLbl;
+    /** Pretty-printed role of the logged-in actor. */
     @FXML private Label roleLbl;
+    /** Attention/alert banner line. */
     @FXML private Label alertLabel;
+    /** Row holding the summary stat cards. */
     @FXML private HBox  statsRow;
+    /** Row holding the quick-link buttons. */
     @FXML private HBox  quickLinks;
 
+    /** Shared network service for the dashboard's metric calls. */
     private final NetworkService network;
+    /** The current client session (identity and role). */
     private final Session        session;
+    /** Navigator for the quick-link buttons. */
     private final Navigator      navigator;
 
     // Visitor attention counters: fed by two independent async calls
     // (reservations + notifications) and folded into the alert line whenever
     // either resolves. Both callbacks land on the FX thread, so there is no race.
+    /** Count of the visitor's PENDING reservations (drives the alert line). */
     private int visitorPending;
+    /** Count of the visitor's WAITING reservations (drives the alert line). */
     private int visitorWaiting;
+    /** Count of the visitor's unread notifications (drives the alert line). */
     private int visitorUnread;
 
+    /**
+     * Creates the dashboard controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     * @param navigator navigates between screens
+     */
     public DashboardController(NetworkService network, Session session, Navigator navigator) {
         this.network   = network;
         this.session   = session;
         this.navigator = navigator;
     }
 
+    /** FXML lifecycle hook: greets the actor and renders the role-specific view. */
     @FXML
     private void initialize() {
         greetingLbl.setText("Welcome back, " + firstNameOf(session.getDisplayName()));
@@ -95,6 +114,7 @@ public class DashboardController {
 
     /* ---------- Visitor ---------------------------------------------------- */
 
+    /** Renders the visitor dashboard: next-visit and active-reservations cards. */
     private void renderVisitor() {
         quickLinks.getChildren().setAll(
                 quickButton("Book a visit",    "reserve", true),
@@ -112,6 +132,11 @@ public class DashboardController {
         });
     }
 
+    /**
+     * Loads the visitor's reservations and fills the next-visit/active cards.
+     *
+     * @param parkNames park id &rarr; name lookup for naming the next visit's park
+     */
     private void loadVisitorReservations(Map<Integer, String> parkNames) {
         network.listReservations(session.getActorId()).thenAccept(res -> {
             List<ReservationDTO> rows = reservationsFrom(res);
@@ -150,6 +175,14 @@ public class DashboardController {
         });
     }
 
+    /**
+     * Builds the "next visit" card, or an empty-state card when there is none.
+     *
+     * @param next      the soonest upcoming reservation, or {@code null}
+     * @param nextDate  that reservation's date, or {@code null}
+     * @param parkNames park id &rarr; name lookup
+     * @return the next-visit stat card
+     */
     private VBox nextVisitCard(ReservationDTO next, LocalDate nextDate, Map<Integer, String> parkNames) {
         if (next == null) {
             return statCard("NEXT VISIT", "No upcoming visits", "Book a visit to get started");
@@ -158,6 +191,15 @@ public class DashboardController {
         return statCard("NEXT VISIT", formatDate(nextDate), park);
     }
 
+    /**
+     * Builds the "active reservations" card with a per-status breakdown.
+     *
+     * @param active    total active reservations
+     * @param confirmed confirmed count
+     * @param pending   pending count
+     * @param waiting   waiting-list count
+     * @return the active-reservations stat card
+     */
     private VBox activeCard(int active, int confirmed, int pending, int waiting) {
         String sub;
         if (active == 0) {
@@ -171,6 +213,7 @@ public class DashboardController {
         return statCard("ACTIVE RESERVATIONS", String.valueOf(active), sub);
     }
 
+    /** Recomputes the visitor attention line from the pending/waiting/unread counts. */
     private void refreshVisitorAlert() {
         List<String> items = new ArrayList<>();
         if (visitorPending > 0) items.add(plural(visitorPending, "reservation") + " to confirm");
@@ -186,6 +229,7 @@ public class DashboardController {
 
     /* ---------- PARK_EMPLOYEE ---------------------------------------------- */
 
+    /** Renders the park-employee dashboard: a live occupancy card for their park. */
     private void renderParkEmployee() {
         quickLinks.getChildren().setAll(quickButton("Open gate", "gate", true));
         statsRow.getChildren().setAll(loadingCard("CURRENT OCCUPANCY"));
@@ -215,6 +259,7 @@ public class DashboardController {
 
     /* ---------- DEPT_MANAGER ----------------------------------------------- */
 
+    /** Renders the department-manager dashboard: a pending-approvals card. */
     private void renderDeptManager() {
         quickLinks.getChildren().setAll(
                 quickButton("Approval queue", "approvals",    true),
@@ -242,6 +287,7 @@ public class DashboardController {
 
     /* ---------- PARK_MANAGER ----------------------------------------------- */
 
+    /** Renders the park-manager dashboard: their park's configured capacity card. */
     private void renderParkManager() {
         quickLinks.getChildren().setAll(quickButton("Park parameters", "parkparams", true));
         statsRow.getChildren().setAll(loadingCard("PARK CAPACITY"));
@@ -276,6 +322,7 @@ public class DashboardController {
 
     /* ---------- SERVICE_REP ------------------------------------------------ */
 
+    /** Renders the service-rep dashboard: registration quick links, no metric card. */
     private void renderServiceRep() {
         quickLinks.getChildren().setAll(
                 quickButton("Register subscriber", "regsub",   true),
@@ -288,6 +335,14 @@ public class DashboardController {
 
     /* ---------- Card / button / alert builders ----------------------------- */
 
+    /**
+     * Builds a stat card with a label, a big value, and a sub-line.
+     *
+     * @param label the card's caption
+     * @param value the headline value
+     * @param sub   the sub-line detail
+     * @return the assembled stat card
+     */
     private VBox statCard(String label, String value, String sub) {
         VBox card = new VBox(
                 withClass(new Label(label), "stat-card-label"),
@@ -299,16 +354,35 @@ public class DashboardController {
         return card;
     }
 
-    /** Placeholder card shown while a metric is still loading. */
+    /**
+     * Placeholder card shown while a metric is still loading.
+     *
+     * @param label the card's caption
+     * @return a loading stat card
+     */
     private VBox loadingCard(String label) {
         return statCard(label, "…", "loading…");
     }
 
-    /** Card shown when a metric request fails, surfacing the server's message. */
+    /**
+     * Card shown when a metric request fails, surfacing the server's message.
+     *
+     * @param label   the card's caption
+     * @param message the server's error message (or blank for "unavailable")
+     * @return an error stat card
+     */
     private VBox errorCard(String label, String message) {
         return statCard(label, "—", (message == null || message.isBlank()) ? "unavailable" : message);
     }
 
+    /**
+     * Builds a quick-link button that navigates to a screen on click.
+     *
+     * @param text    the button label
+     * @param navId   the target screen id
+     * @param primary whether to use primary (vs secondary) styling
+     * @return the quick-link button
+     */
     private Button quickButton(String text, String navId, boolean primary) {
         Button b = new Button(text);
         b.getStyleClass().add(primary ? "btn-primary" : "btn-secondary");
@@ -317,6 +391,12 @@ public class DashboardController {
         return b;
     }
 
+    /**
+     * Shows the attention banner.
+     *
+     * @param text the banner text
+     * @param calm whether to use the calm (all-caught-up) styling
+     */
     private void showAlert(String text, boolean calm) {
         alertLabel.setText(text);
         alertLabel.getStyleClass().remove("calm");
@@ -325,6 +405,7 @@ public class DashboardController {
         alertLabel.setManaged(true);
     }
 
+    /** Hides the attention banner. */
     private void hideAlert() {
         alertLabel.setVisible(false);
         alertLabel.setManaged(false);
@@ -332,6 +413,12 @@ public class DashboardController {
 
     /* ---------- Response → value extraction (defensive, never throws) ------- */
 
+    /**
+     * Builds the park id &rarr; name lookup from a LIST_PARKS response.
+     *
+     * @param res the LIST_PARKS response
+     * @return a park id &rarr; name map (empty on failure)
+     */
     private Map<Integer, String> parkNamesFrom(ServerResponse res) {
         Map<Integer, String> names = new HashMap<>();
         if (res.isSuccess() && res.getData() instanceof List<?> raw) {
@@ -342,6 +429,12 @@ public class DashboardController {
         return names;
     }
 
+    /**
+     * Extracts the reservation list from a LIST_RESERVATIONS response.
+     *
+     * @param res the response
+     * @return the reservations (empty on failure)
+     */
     private List<ReservationDTO> reservationsFrom(ServerResponse res) {
         List<ReservationDTO> rows = new ArrayList<>();
         if (res.isSuccess() && res.getData() instanceof List<?> raw) {
@@ -352,6 +445,12 @@ public class DashboardController {
         return rows;
     }
 
+    /**
+     * Counts unacknowledged notifications in a LIST_NOTIFICATIONS response.
+     *
+     * @param res the response
+     * @return the number of unread notifications (0 on failure)
+     */
     private int unreadCount(ServerResponse res) {
         int n = 0;
         if (res.isSuccess() && res.getData() instanceof List<?> raw) {
@@ -364,9 +463,16 @@ public class DashboardController {
 
     /* ---------- Small formatting helpers ----------------------------------- */
 
+    /** Date format for the next-visit card (e.g. {@code "Jun 21, 2026"}). */
     private static final DateTimeFormatter DATE_FMT =
             DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.ENGLISH);
 
+    /**
+     * Parses an ISO date, returning {@code null} on null/invalid input.
+     *
+     * @param iso the ISO {@code yyyy-MM-dd} string, or {@code null}
+     * @return the parsed date, or {@code null}
+     */
     private static LocalDate parseDate(String iso) {
         if (iso == null) return null;
         try {
@@ -376,16 +482,34 @@ public class DashboardController {
         }
     }
 
+    /**
+     * Formats a date with {@link #DATE_FMT}, or an em dash for {@code null}.
+     *
+     * @param d the date, or {@code null}
+     * @return the formatted date, or an em dash
+     */
     private static String formatDate(LocalDate d) {
         return d == null ? "—" : d.format(DATE_FMT);
     }
 
+    /**
+     * Extracts the first name from a display name, defaulting to "there".
+     *
+     * @param name the full display name, or {@code null}
+     * @return the first word, or "there" if blank
+     */
     private static String firstNameOf(String name) {
         if (name == null || name.isBlank()) return "there";
         return name.trim().split("\\s+")[0];
     }
 
-    /** "PARK_EMPLOYEE" → "Park Employee"; "Subscriber" stays "Subscriber". */
+    /**
+     * Title-cases a role label: "PARK_EMPLOYEE" → "Park Employee"; "Subscriber"
+     * stays "Subscriber".
+     *
+     * @param roleLabel the raw role label
+     * @return the human-friendly role label
+     */
     private static String prettyRole(String roleLabel) {
         if (roleLabel == null || roleLabel.isBlank()) return "";
         StringBuilder b = new StringBuilder();
@@ -397,10 +521,25 @@ public class DashboardController {
         return b.toString();
     }
 
+    /**
+     * Formats a count with a pluralized noun (1 item / 2 items).
+     *
+     * @param n    the count
+     * @param noun the singular noun
+     * @return {@code "<n> <noun>[s]"}
+     */
     private static String plural(int n, String noun) {
         return n + " " + noun + (n == 1 ? "" : "s");
     }
 
+    /**
+     * Adds a style class to a node and returns it (for inline use).
+     *
+     * @param node the node to style
+     * @param cls  the style class to add
+     * @param <T>  the node type
+     * @return the same node, for chaining
+     */
     private static <T extends javafx.scene.Node> T withClass(T node, String cls) {
         node.getStyleClass().add(cls);
         return node;

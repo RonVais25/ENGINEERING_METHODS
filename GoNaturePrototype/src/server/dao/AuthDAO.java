@@ -23,6 +23,9 @@ import java.sql.SQLIntegrityConstraintViolationException;
  */
 public class AuthDAO {
 
+    /** Creates the authentication DAO. */
+    public AuthDAO() { }
+
     /**
      * Looks up a staff user by username and password.
      *

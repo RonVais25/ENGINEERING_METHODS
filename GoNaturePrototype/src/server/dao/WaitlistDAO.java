@@ -32,6 +32,9 @@ import java.util.List;
  */
 public class WaitlistDAO {
 
+    /** Creates the waiting-list DAO. */
+    public WaitlistDAO() { }
+
     /**
      * Shared SELECT prefix for every read. Joins the parent reservation so
      * {@link #map} can resolve park/date/party/visitor in one round-trip. Callers

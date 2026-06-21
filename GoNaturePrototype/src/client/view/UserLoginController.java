@@ -52,30 +52,54 @@ public class UserLoginController {
     /** Shared password of every seeded account in {@code setup.sql}. */
     private static final String DEV_PASSWORD = "changeme";
 
+    /** Server host input. */
     @FXML private TextField     hostField;
+    /** Server port input. */
     @FXML private TextField     portField;
+    /** Tab selecting staff login. */
     @FXML private ToggleButton  staffTab;
+    /** Tab selecting visitor login. */
     @FXML private ToggleButton  visitorTab;
+    /** Pane with the staff credential fields. */
     @FXML private VBox          staffPane;
+    /** Pane with the visitor credential field. */
     @FXML private VBox          visitorPane;
+    /** Staff username input. */
     @FXML private TextField     usernameField;
+    /** Staff password input. */
     @FXML private PasswordField passwordField;
+    /** Visitor national-id input. */
     @FXML private TextField     visitorIdField;
+    /** Sign-in submit button. */
     @FXML private Button        submitBtn;
+    /** Error message label. */
     @FXML private Label         errorLabel;
+    /** Caption above the dev quick-login row. */
     @FXML private Label         quickLoginLabel;
+    /** Container of the dev quick-login buttons. */
     @FXML private FlowPane      quickLoginBox;
 
+    /** Shared network service for probe + login calls. */
     private final NetworkService network;
+    /** The current client session (holds the connection and identity). */
     private final Session        session;
+    /** Callback run on successful login (opens the main shell). */
     private final Runnable       onSuccess;
 
+    /**
+     * Creates the user-login controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     * @param onSuccess callback invoked on successful login
+     */
     public UserLoginController(NetworkService network, Session session, Runnable onSuccess) {
         this.network   = network;
         this.session   = session;
         this.onSuccess = onSuccess;
     }
 
+    /** FXML lifecycle hook: wires the tabs, server fields, and dev quick-login. */
     @FXML
     private void initialize() {
         ToggleGroup group = new ToggleGroup();
@@ -122,8 +146,14 @@ public class UserLoginController {
         }
     }
 
-    /** One seeded account reachable via a quick-login button: staff carry a
-     *  {@code username}; visitors carry a {@code visitorId} (the other is null). */
+    /**
+     * One seeded account reachable via a quick-login button: staff carry a
+     * {@code username}; visitors carry a {@code visitorId} (the other is null).
+     *
+     * @param label     the button caption
+     * @param username  the staff username, or {@code null} for a visitor
+     * @param visitorId the visitor national id, or {@code null} for staff
+     */
     private record Quick(String label, String username, Long visitorId) {}
 
     /**
@@ -132,6 +162,8 @@ public class UserLoginController {
      * carry a username (logged in with {@link #DEV_PASSWORD}); the two visitor rows
      * carry a national id. Managers/employees are labelled by their park so the
      * park-scoped screens (approvals, occupancy, park params) are easy to reach.
+     *
+     * @return the seeded quick-login accounts
      */
     private List<Quick> quickAccounts() {
         return List.of(
@@ -147,6 +179,7 @@ public class UserLoginController {
                 new Quick("Visitor",     null, 200000002L));     // Victor Visit (plain visitor)
     }
 
+    /** Builds one quick-login button per seeded account into the quick-login row. */
     private void buildQuickLoginButtons() {
         for (Quick q : quickAccounts()) {
             Button b = new Button(q.label());
@@ -161,6 +194,8 @@ public class UserLoginController {
      * shared {@link #DEV_PASSWORD}; visitor accounts log in by national id. The
      * fields are populated (and the matching tab selected) so it stays visible
      * which account was used and remains editable for a retry.
+     *
+     * @param q the seeded account to log in as
      */
     private void quickLogin(Quick q) {
         if (q.username() != null) {
@@ -175,6 +210,11 @@ public class UserLoginController {
         }
     }
 
+    /**
+     * Shows the staff pane and hides the visitor pane (or vice versa).
+     *
+     * @param staff {@code true} to show staff login, {@code false} for visitor
+     */
     private void showStaff(boolean staff) {
         staffPane.setVisible(staff);
         staffPane.setManaged(staff);
@@ -183,6 +223,7 @@ public class UserLoginController {
         hideError();
     }
 
+    /** Submit handler: connects if needed, then submits the active credential set. */
     @FXML
     private void onSubmit() {
         ensureConnectedThen(staffTab.isSelected() ? this::submitStaff : this::submitVisitor);
@@ -192,6 +233,8 @@ public class UserLoginController {
      * Connects first if there's no live socket yet (first login), then runs the
      * credential submit; a re-login after logout reuses the existing connection
      * and goes straight to {@code submit}.
+     *
+     * @param submit the credential submit to run once connected
      */
     private void ensureConnectedThen(Runnable submit) {
         if (isConnected()) {
@@ -201,7 +244,7 @@ public class UserLoginController {
         }
     }
 
-    /** @return whether the session already holds a live server connection. */
+    /** {@return whether the session already holds a live server connection.} */
     private boolean isConnected() {
         return session.getConnection() != null && session.getConnection().isConnected();
     }
@@ -211,6 +254,8 @@ public class UserLoginController {
      * into the {@link Session} and runs {@code after} (the credential submit). On
      * failure it surfaces a reach error and re-enables the form. This is the old
      * connection screen's probe, folded into this combined step.
+     *
+     * @param after the credential submit to run after a successful probe
      */
     private void connectThen(Runnable after) {
         String host = hostField.getText() == null ? "" : hostField.getText().trim();
@@ -241,6 +286,7 @@ public class UserLoginController {
         });
     }
 
+    /** Validates and sends LOGIN_STAFF; on success stores the user and continues. */
     private void submitStaff() {
         String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
         String password = passwordField.getText() == null ? "" : passwordField.getText();
@@ -260,6 +306,7 @@ public class UserLoginController {
         });
     }
 
+    /** Validates and sends LOGIN_VISITOR; on success stores the visitor and continues. */
     private void submitVisitor() {
         String raw = visitorIdField.getText() == null ? "" : visitorIdField.getText().trim();
         long visitorId;
@@ -281,17 +328,28 @@ public class UserLoginController {
         });
     }
 
+    /**
+     * Toggles the submit button's busy state and label.
+     *
+     * @param busy whether a sign-in is in progress
+     */
     private void setBusy(boolean busy) {
         submitBtn.setDisable(busy);
         submitBtn.setText(busy ? "Signing in…" : "Sign In");
     }
 
+    /**
+     * Shows a login error message.
+     *
+     * @param msg the message (a default is used if {@code null})
+     */
     private void showError(String msg) {
         errorLabel.setText(msg == null ? "Login failed" : msg);
         errorLabel.setVisible(true);
         errorLabel.setManaged(true);
     }
 
+    /** Hides the login error message. */
     private void hideError() {
         errorLabel.setVisible(false);
         errorLabel.setManaged(false);

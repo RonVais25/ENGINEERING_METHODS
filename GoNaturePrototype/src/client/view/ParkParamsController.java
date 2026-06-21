@@ -33,14 +33,23 @@ import javafx.util.StringConverter;
  */
 public class ParkParamsController extends BaseController {
 
+    /** Name of the manager's park. */
     @FXML private Label              parkNameLabel;
+    /** Current max-capacity value. */
     @FXML private Label              maxCapValue;
+    /** Current gap-size value. */
     @FXML private Label              gapValue;
+    /** Current default-stay value. */
     @FXML private Label              stayValue;
+    /** Parameter to change. */
     @FXML private ComboBox<ParamField> fieldCombo;
+    /** New value input. */
     @FXML private TextField          newValueField;
+    /** Submits the change request. */
     @FXML private Button             submitBtn;
+    /** Result/toast label for submit feedback. */
     @FXML private Label              resultLabel;
+    /** Container for the session-local "submitted this session" rows. */
     @FXML private VBox               requestsBox;
 
     /** The manager's park, loaded on show; {@code null} until the load resolves. */
@@ -51,10 +60,17 @@ public class ParkParamsController extends BaseController {
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network, so the session is
     // accepted but unused (the server derives the park from the login).
+    /**
+     * Creates the park-parameters controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public ParkParamsController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** FXML lifecycle hook: fills the field dropdown and loads the manager's park. */
     @FXML
     private void initialize() {
         fieldCombo.getItems().setAll(
@@ -85,6 +101,7 @@ public class ParkParamsController extends BaseController {
         });
     }
 
+    /** Submit handler: validates the new value and sends REQUEST_PARAM_CHANGE. */
     @FXML
     private void onSubmit() {
         if (park == null) {
@@ -127,7 +144,12 @@ public class ParkParamsController extends BaseController {
         });
     }
 
-    /** Reads the loaded park's current value for the chosen field. */
+    /**
+     * Reads the loaded park's current value for the chosen field.
+     *
+     * @param field the parameter field
+     * @return the park's current value for that field
+     */
     private int currentValue(ParamField field) {
         switch (field) {
             case MAX_CAPACITY:         return park.getMaxCapacity();
@@ -137,7 +159,13 @@ public class ParkParamsController extends BaseController {
         }
     }
 
-    /** Prepends a row to the session-local "submitted this session" list. */
+    /**
+     * Prepends a row to the session-local "submitted this session" list.
+     *
+     * @param field    the changed parameter
+     * @param oldValue the previous value
+     * @param newValue the requested new value
+     */
     private void addSubmittedRow(ParamField field, int oldValue, int newValue) {
         if (requestsEmpty) {
             requestsBox.getChildren().clear();
@@ -157,6 +185,13 @@ public class ParkParamsController extends BaseController {
         requestsBox.getChildren().add(0, row);
     }
 
+    /**
+     * Builds a fixed-width row cell.
+     *
+     * @param text the cell text
+     * @param w    the preferred width
+     * @return the cell label
+     */
     private Label cell(String text, double w) {
         Label l = new Label(text);
         l.getStyleClass().add("history-cell");
@@ -164,7 +199,12 @@ public class ParkParamsController extends BaseController {
         return l;
     }
 
-    /** Friendly label for a parameter field, e.g. {@code MAX_CAPACITY → "Max Capacity"}. */
+    /**
+     * Friendly label for a parameter field, e.g. {@code MAX_CAPACITY → "Max Capacity"}.
+     *
+     * @param field the parameter field
+     * @return a human-friendly label for the field
+     */
     private static String labelFor(ParamField field) {
         switch (field) {
             case MAX_CAPACITY:         return "Max Capacity";

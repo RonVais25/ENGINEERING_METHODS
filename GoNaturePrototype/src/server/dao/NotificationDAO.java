@@ -29,6 +29,9 @@ import java.util.List;
  */
 public class NotificationDAO {
 
+    /** Creates the notification DAO. */
+    public NotificationDAO() { }
+
     /**
      * Shared SELECT prefix for every read. Joins the recipient's contact columns
      * so {@link #map} can compute the simulated target in one round-trip. Callers

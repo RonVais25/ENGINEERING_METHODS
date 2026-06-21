@@ -57,11 +57,16 @@ public class WaitlistController extends BaseController {
     /** Parses the DB {@code DATETIME} strings the server sends ({@code yyyy-MM-dd HH:mm:ss}). */
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /** Manually reloads the waiting list. */
     @FXML private Button refreshBtn;
+    /** Result/toast label for action feedback. */
     @FXML private Label  resultLabel;
+    /** Header label showing entry/offer counts. */
     @FXML private Label  cardHeaderLabel;
+    /** Container the waiting-list rows are rendered into. */
     @FXML private VBox   tableBox;
 
+    /** The current client session (provides the visitor's id). */
     private final Session session;
 
     /** Park id → display name, loaded once from {@code LIST_PARKS}. */
@@ -79,11 +84,18 @@ public class WaitlistController extends BaseController {
     /** Local-only piggyback on the shell's notification subscription (see class javadoc). */
     private EventBus.Subscription offerSub;
 
+    /**
+     * Creates the waiting-list controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public WaitlistController(NetworkService network, Session session) {
         super(network);
         this.session = session;
     }
 
+    /** FXML lifecycle hook: starts the offer feed, countdown, and initial load. */
     @FXML
     private void initialize() {
         visitorId = session.getActorId();
@@ -94,6 +106,7 @@ public class WaitlistController extends BaseController {
         loadParks();
     }
 
+    /** Refresh-button handler: reloads the waiting list. */
     @FXML
     private void onRefresh() {
         load();
@@ -101,6 +114,7 @@ public class WaitlistController extends BaseController {
 
     /* ---------- data load -------------------------------------------------- */
 
+    /** Loads park id &rarr; name once, then loads the waiting list. */
     private void loadParks() {
         network.listParks().thenAccept(res -> {
             if (res.isSuccess() && res.getData() instanceof List<?> raw) {
@@ -132,6 +146,11 @@ public class WaitlistController extends BaseController {
         });
     }
 
+    /**
+     * Renders the header and one row per waiting entry (offer rows stand out).
+     *
+     * @param rows the waiting-list entries to display
+     */
     private void populate(List<WaitlistEntryDTO> rows) {
         tickTargets.clear();
 
@@ -164,6 +183,8 @@ public class WaitlistController extends BaseController {
      * Points this screen's per-reservation subscriptions at exactly the WAITING
      * reservation ids on screen, dropping the previous set first (also sends the
      * matching UNSUBSCRIBE). The notification piggyback is separate and untouched.
+     *
+     * @param rows the currently displayed waiting entries to subscribe to
      */
     private void resubscribe(List<WaitlistEntryDTO> rows) {
         unsubscribeAll();
@@ -172,6 +193,11 @@ public class WaitlistController extends BaseController {
         }
     }
 
+    /**
+     * Reacts to a pushed reservation change by reloading the list.
+     *
+     * @param ev the pushed event
+     */
     private void onReservationEvent(ServerEvent ev) {
         load();
     }
@@ -198,6 +224,7 @@ public class WaitlistController extends BaseController {
 
     /* ---------- countdown -------------------------------------------------- */
 
+    /** Starts the one-second timeline that updates offer countdowns. */
     private void startCountdown() {
         countdown = new Timeline(new KeyFrame(Duration.seconds(1), e -> tick()));
         countdown.setCycleCount(Animation.INDEFINITE);
@@ -218,12 +245,23 @@ public class WaitlistController extends BaseController {
         }
     }
 
+    /**
+     * Formats a seconds count as {@code mm:ss}.
+     *
+     * @param secs the remaining seconds
+     * @return the {@code mm:ss} string
+     */
     private static String formatRemaining(long secs) {
         return String.format("%02d:%02d", secs / 60, secs % 60);
     }
 
     /* ---------- ops -------------------------------------------------------- */
 
+    /**
+     * Accepts a grab offer, then reloads on success.
+     *
+     * @param reservationId the offered WAITING reservation to claim
+     */
     private void accept(int reservationId) {
         network.acceptGrab(reservationId).thenAccept(res -> {
             Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
@@ -231,6 +269,11 @@ public class WaitlistController extends BaseController {
         });
     }
 
+    /**
+     * Leaves the waiting list (or declines an offer) after a confirmation prompt.
+     *
+     * @param reservationId the WAITING reservation to remove from the queue
+     */
     private void leave(int reservationId) {
         if (!confirmAction("Leave the waiting list for reservation #" + reservationId + "?",
                 "Are you sure you want to leave this waiting list? You'll lose your place in the queue.")) {
@@ -266,6 +309,7 @@ public class WaitlistController extends BaseController {
 
     /* ---------- row building ----------------------------------------------- */
 
+    /** {@return the table header row of column titles} */
     private HBox headerRow() {
         HBox row = new HBox();
         row.getStyleClass().add("history-header-row");
@@ -279,14 +323,26 @@ public class WaitlistController extends BaseController {
         return row;
     }
 
-    /** A zero-width filler that absorbs the row's slack so fixed columns and the
-     *  action buttons keep their natural widths instead of being squeezed. */
+    /**
+     * A zero-width filler that absorbs the row's slack so fixed columns and the
+     * action buttons keep their natural widths instead of being squeezed.
+     *
+     * @return a horizontally-growing spacer region
+     */
     private Region flexSpacer() {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         return spacer;
     }
 
+    /**
+     * Builds one waiting-list row: an offer row (countdown + Accept/Decline) or a
+     * plain WAITING row (status + Leave).
+     *
+     * @param e           the waiting entry to render
+     * @param withDivider whether to draw a divider below the row
+     * @return the assembled row
+     */
     private HBox dataRow(WaitlistEntryDTO e, boolean withDivider) {
         Label parkLbl  = cell(parkNames.getOrDefault(e.getParkId(), "Park #" + e.getParkId()), "num", 150);
         Label dateLbl  = cell(e.getVisitDate(), null, 110);
@@ -338,11 +394,23 @@ public class WaitlistController extends BaseController {
         return row;
     }
 
-    /** True when the entry currently holds a parseable grab offer (offered + has an expiry). */
+    /**
+     * True when the entry currently holds a parseable grab offer (offered + has an
+     * expiry).
+     *
+     * @param e the waiting entry
+     * @return whether the entry has a live, parseable grab offer
+     */
     private boolean isOffered(WaitlistEntryDTO e) {
         return e.getGrabOfferedAt() != null && parseTs(e.getGrabExpiresAt()) != null;
     }
 
+    /**
+     * Parses a server {@code DATETIME} string, returning {@code null} on bad input.
+     *
+     * @param s the timestamp string, or {@code null}
+     * @return the parsed datetime, or {@code null}
+     */
     private static LocalDateTime parseTs(String s) {
         if (s == null) return null;
         try {
@@ -352,6 +420,13 @@ public class WaitlistController extends BaseController {
         }
     }
 
+    /**
+     * Builds a fixed-width column header cell.
+     *
+     * @param text the header text
+     * @param w    the preferred width, or {@code 0} for natural width
+     * @return the header cell label
+     */
     private Label headerCell(String text, double w) {
         Label l = new Label(text);
         l.getStyleClass().add("history-header-cell");
@@ -359,6 +434,14 @@ public class WaitlistController extends BaseController {
         return l;
     }
 
+    /**
+     * Builds a fixed-width data cell.
+     *
+     * @param text     the cell text
+     * @param modifier an extra style-class modifier, or {@code null}
+     * @param w        the preferred width
+     * @return the data cell label
+     */
     private Label cell(String text, String modifier, double w) {
         Label l = new Label(text);
         l.getStyleClass().add("history-cell");
@@ -369,10 +452,20 @@ public class WaitlistController extends BaseController {
 
     /** One offered row's countdown state: where to write, and which Accept to disable at zero. */
     private static final class TickTarget {
+        /** When this offer expires. */
         final LocalDateTime expiry;
+        /** The countdown label to update each tick. */
         final Label label;
+        /** The Accept button to disable when the offer expires. */
         final Button acceptBtn;
 
+        /**
+         * Creates a countdown target.
+         *
+         * @param expiry    the offer's expiry time
+         * @param label     the countdown label to update
+         * @param acceptBtn the Accept button to disable at zero
+         */
         TickTarget(LocalDateTime expiry, Label label, Button acceptBtn) {
             this.expiry = expiry;
             this.label = label;

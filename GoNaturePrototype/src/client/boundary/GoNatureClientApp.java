@@ -28,10 +28,15 @@ import java.net.URL;
  */
 public class GoNatureClientApp extends Application {
 
+    /** Creates the client application (instantiated by the JavaFX runtime). */
+    public GoNatureClientApp() { }
+
     /** Classpath path to the single shared stylesheet. */
     public static final String CSS_PATH = "/client/resources/client.css";
 
+    /** The single client session shared across all controllers. */
     private final Session session = new Session();
+    /** The shared network service, bound to {@link #session}. */
     private final NetworkService network = new NetworkService(session);
 
     /** Primary stage, reused for the user-login screen and the main shell. */
@@ -48,6 +53,11 @@ public class GoNatureClientApp extends Application {
         session.closeConnection();
     }
 
+    /**
+     * Client entry point; launches the JavaFX application.
+     *
+     * @param args JVM command-line arguments (unused)
+     */
     public static void main(String[] args) { launch(args); }
 
     /**
@@ -96,12 +106,20 @@ public class GoNatureClientApp extends Application {
         }
     }
 
+    /**
+     * Resolves a required classpath resource.
+     *
+     * @param path the classpath resource path
+     * @return the resource URL
+     * @throws IllegalStateException if the resource is missing
+     */
     private URL resource(String path) {
         URL url = getClass().getResource(path);
         if (url == null) throw new IllegalStateException("Missing classpath resource: " + path);
         return url;
     }
 
+    /** {@return the shared stylesheet as an external-form URL string} */
     private String stylesheet() {
         return getClass().getResource(CSS_PATH).toExternalForm();
     }

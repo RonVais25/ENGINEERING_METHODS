@@ -27,6 +27,9 @@ import common.dto.VisitType;
  */
 public class PricingService {
 
+    /** Creates the pricing service. */
+    public PricingService() { }
+
     /**
      * Full, undiscounted price charged per paying visitor, in cents.
      *

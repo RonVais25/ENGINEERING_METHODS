@@ -49,48 +49,79 @@ import javafx.scene.layout.VBox;
 public class GateController extends BaseController {
 
     // Occupancy header.
+    /** Live occupancy value ("current / limit"). */
     @FXML private Label occupancyValue;
+    /** Occupancy sub-line ("(N free)"). */
     @FXML private Label occupancySub;
+    /** Manually refreshes the occupancy header. */
     @FXML private Button refreshBtn;
 
     // Entry / Exit mode toggle and the two mode containers.
+    /** Tab selecting Entry mode. */
     @FXML private ToggleButton entryTab;
+    /** Tab selecting Exit mode. */
     @FXML private ToggleButton exitTab;
+    /** Container of the Entry-mode cards. */
     @FXML private VBox         entryMode;
+    /** Container of the Exit-mode cards. */
     @FXML private VBox         exitMode;
 
     // Entry · reservation section.
+    /** Entry: confirmation-code input. */
     @FXML private TextField entryCodeField;
+    /** Entry: visitor-id input. */
     @FXML private TextField entryVisitorField;
+    /** Entry: admit-by-reservation button. */
     @FXML private Button    entryBtn;
+    /** Entry: reservation result/toast label. */
     @FXML private Label     entryResult;
 
     // Entry · casual walk-in section.
+    /** Casual entry: party-size spinner. */
     @FXML private Spinner<Integer>    casualPartySpinner;
+    /** Casual entry: visit-type dropdown. */
     @FXML private ComboBox<VisitType> casualTypeCombo;
+    /** Casual entry: optional visitor-id input. */
     @FXML private TextField           casualVisitorField;
+    /** Casual entry: admit walk-in button. */
     @FXML private Button              casualBtn;
+    /** Casual entry: result/toast label. */
     @FXML private Label               casualResult;
+    /** Casual entry: server-priced ticket confirmation panel. */
     @FXML private VBox                casualConfirmBox;
 
     // Exit · reservation section.
+    /** Exit: confirmation-code input. */
     @FXML private TextField exitCodeField;
+    /** Exit: visitor-id input. */
     @FXML private TextField exitVisitorField;
+    /** Exit: record-exit-by-reservation button. */
     @FXML private Button    exitBtn;
+    /** Exit: reservation result/toast label. */
     @FXML private Label     exitResult;
 
     // Exit · casual walk-in section (by ticket number).
+    /** Casual exit: ticket-number input. */
     @FXML private TextField casualExitTicketField;
+    /** Casual exit: record-exit button. */
     @FXML private Button    casualExitBtn;
+    /** Casual exit: result/toast label. */
     @FXML private Label     casualExitResult;
 
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server derives the
     // park from the login), so the session is accepted but unused.
+    /**
+     * Creates the gate controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public GateController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** FXML lifecycle hook: configures the inputs and the Entry/Exit toggle. */
     @FXML
     private void initialize() {
         casualPartySpinner.setValueFactory(
@@ -116,7 +147,11 @@ public class GateController extends BaseController {
         showEntryMode(true);
     }
 
-    /** Shows the Entry-mode cards and hides the Exit-mode cards (or vice versa). */
+    /**
+     * Shows the Entry-mode cards and hides the Exit-mode cards (or vice versa).
+     *
+     * @param entry {@code true} to show Entry mode, {@code false} for Exit mode
+     */
     private void showEntryMode(boolean entry) {
         entryMode.setVisible(entry);
         entryMode.setManaged(entry);
@@ -132,6 +167,7 @@ public class GateController extends BaseController {
 
     /* ---------- Occupancy header ------------------------------------------- */
 
+    /** Refresh-button handler: repaints the occupancy header. */
     @FXML
     private void onRefresh() {
         refreshOccupancy();
@@ -157,6 +193,7 @@ public class GateController extends BaseController {
 
     /* ---------- Entry ------------------------------------------------------- */
 
+    /** Entry handler: validates the code + visitor id and admits via ENTER_VISIT. */
     @FXML
     private void onEnter() {
         String codeRaw = text(entryCodeField);
@@ -197,6 +234,7 @@ public class GateController extends BaseController {
 
     /* ---------- Exit -------------------------------------------------------- */
 
+    /** Exit handler: records an exit by confirmation code or visitor id. */
     @FXML
     private void onExit() {
         String codeRaw = text(exitCodeField);
@@ -271,6 +309,7 @@ public class GateController extends BaseController {
 
     /* ---------- Casual walk-in --------------------------------------------- */
 
+    /** Casual-entry handler: admits a walk-in via CASUAL_VISIT and shows the ticket. */
     @FXML
     private void onCasual() {
         hideCasualPrice();
@@ -352,7 +391,13 @@ public class GateController extends BaseController {
         casualConfirmBox.setManaged(true);
     }
 
-    /** Builds one key/value line for the casual price panel. */
+    /**
+     * Builds one key/value line for the casual price panel.
+     *
+     * @param key   the line label
+     * @param value the line value
+     * @return the key/value row
+     */
     private HBox priceRow(String key, String value) {
         Label k = new Label(key);
         k.getStyleClass().add("key");
@@ -363,6 +408,7 @@ public class GateController extends BaseController {
         return row;
     }
 
+    /** Hides and clears the casual price/ticket panel. */
     private void hideCasualPrice() {
         casualConfirmBox.getChildren().clear();
         casualConfirmBox.setVisible(false);
@@ -371,7 +417,12 @@ public class GateController extends BaseController {
 
     /* ---------- helpers ----------------------------------------------------- */
 
-    /** Trimmed text of a field, never {@code null}. */
+    /**
+     * Trimmed text of a field, never {@code null}.
+     *
+     * @param f the text field to read
+     * @return the trimmed text, or {@code ""} if empty
+     */
     private static String text(TextField f) {
         return f.getText() == null ? "" : f.getText().trim();
     }

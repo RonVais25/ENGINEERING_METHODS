@@ -23,6 +23,9 @@ import java.util.List;
  */
 public class ParkDAO {
 
+    /** Creates the park DAO. */
+    public ParkDAO() { }
+
     /** The columns selected by every park query, in {@link #map} order. */
     private static final String COLUMNS =
             "id, name, max_capacity, gap_size, default_stay_minutes, manager_id";

@@ -28,6 +28,9 @@ import java.sql.SQLIntegrityConstraintViolationException;
  */
 public class MemberDAO {
 
+    /** Creates the member DAO. */
+    public MemberDAO() { }
+
     /**
      * Checks whether a visitor row already exists for the given national ID.
      *

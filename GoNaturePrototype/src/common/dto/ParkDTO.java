@@ -11,6 +11,7 @@ import java.io.Serializable;
  * manager their park's current parameters ({@link RequestType#GET_PARK}).
  */
 public class ParkDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Unique park identifier (primary key). */
@@ -46,32 +47,32 @@ public class ParkDTO implements Serializable {
         this.managerId = managerId;
     }
 
-    /** @return the unique park identifier */
+    /** {@return the unique park identifier} */
     public int getId() {
         return id;
     }
 
-    /** @return the display name of the park */
+    /** {@return the display name of the park} */
     public String getName() {
         return name;
     }
 
-    /** @return the maximum visitor capacity */
+    /** {@return the maximum visitor capacity} */
     public int getMaxCapacity() {
         return maxCapacity;
     }
 
-    /** @return the reserved capacity buffer */
+    /** {@return the reserved capacity buffer} */
     public int getGapSize() {
         return gapSize;
     }
 
-    /** @return the default visit length in minutes */
+    /** {@return the default visit length in minutes} */
     public int getDefaultStayMinutes() {
         return defaultStayMinutes;
     }
 
-    /** @return the identifier of the park manager, or {@code null} if none */
+    /** {@return the identifier of the park manager, or {@code null} if none} */
     public Integer getManagerId() {
         return managerId;
     }

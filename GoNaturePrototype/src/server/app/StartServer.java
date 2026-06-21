@@ -8,6 +8,9 @@ import server.db.DotEnv;
  * Loads environment variables and starts the server GUI.
  */
 public class StartServer {
+
+    /** Creates the server launcher. */
+    public StartServer() { }
 	/**
      * Starts the server application.
      *

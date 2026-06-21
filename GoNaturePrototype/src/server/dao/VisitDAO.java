@@ -29,6 +29,9 @@ import java.sql.Types;
  */
 public class VisitDAO {
 
+    /** Creates the visit DAO. */
+    public VisitDAO() { }
+
     /** The visit columns selected by every query, in {@link #map} order. */
     private static final String COLUMNS =
             "id, reservation_id, park_id, visitor_id, entered_at, exited_at, headcount, price_cents, visit_type";

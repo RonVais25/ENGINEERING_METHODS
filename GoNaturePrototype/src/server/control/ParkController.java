@@ -47,8 +47,14 @@ import static common.dto.RequestType.REQUEST_PARAM_CHANGE;
  */
 public class ParkController implements DomainController {
 
+    /** Creates the park controller. */
+    public ParkController() { }
+
+    /** Park data access (read parks, apply approved changes). */
     private final ParkDAO parkDao = new ParkDAO();
+    /** Parameter-change-request data access (the approval workflow). */
     private final ParameterChangeDAO changeDao = new ParameterChangeDAO();
+    /** Authentication data access (role checks). */
     private final AuthDAO authDao = new AuthDAO();
     /** Read-only collaborator for {@link RequestType#CHECK_AVAILABILITY}. */
     private final ReservationDAO reservationDao = new ReservationDAO();

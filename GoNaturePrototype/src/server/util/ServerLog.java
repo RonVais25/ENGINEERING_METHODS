@@ -20,6 +20,7 @@ package server.util;
  */
 public final class ServerLog {
 
+    /** Non-instantiable: all logging methods are static. */
     private ServerLog() {}
 
     /**
@@ -56,19 +57,31 @@ public final class ServerLog {
      * The frame that called {@link #daoError(Throwable)}. Index 0 is this
      * method, 1 is {@code daoError}, so 2 is the DAO method that caught the
      * exception.
+     *
+     * @return the DAO caller's stack frame, or {@code null} if unavailable
      */
     private static StackTraceElement callerFrame() {
         StackTraceElement[] frames = new Throwable().getStackTrace();
         return frames.length > 2 ? frames[2] : null;
     }
 
-    /** Strips the package prefix from a fully-qualified class name. */
+    /**
+     * Strips the package prefix from a fully-qualified class name.
+     *
+     * @param className the fully-qualified class name
+     * @return the simple (unqualified) class name
+     */
     private static String simpleName(String className) {
         int dot = className.lastIndexOf('.');
         return dot < 0 ? className : className.substring(dot + 1);
     }
 
-    /** A non-null message for {@code t}, falling back to its type when blank. */
+    /**
+     * A non-null message for {@code t}, falling back to its type when blank.
+     *
+     * @param t the throwable
+     * @return its message, or its simple type name if the message is null/blank
+     */
     private static String message(Throwable t) {
         String m = t.getMessage();
         return (m == null || m.isBlank()) ? t.getClass().getSimpleName() : m;

@@ -32,6 +32,7 @@ import java.io.Serializable;
  * because it is stamped at delivery time, before the recipient has seen it.
  */
 public class NotificationDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Unique notification identifier (primary key). */
@@ -80,52 +81,52 @@ public class NotificationDTO implements Serializable {
         this.acknowledgedAt = acknowledgedAt;
     }
 
-    /** @return the unique notification identifier */
+    /** {@return the unique notification identifier} */
     public int getId() {
         return id;
     }
 
-    /** @return the recipient visitor's national id, or {@code null} for a staff recipient */
+    /** {@return the recipient visitor's national id, or {@code null} for a staff recipient} */
     public Long getRecipientVisitorId() {
         return recipientVisitorId;
     }
 
-    /** @return the recipient staff user's id, or {@code null} for a visitor recipient */
+    /** {@return the recipient staff user's id, or {@code null} for a visitor recipient} */
     public Integer getRecipientUserId() {
         return recipientUserId;
     }
 
-    /** @return the delivery channel ({@code SIM_EMAIL}/{@code SIM_SMS}/{@code POPUP}) */
+    /** {@return the delivery channel ({@code SIM_EMAIL}/{@code SIM_SMS}/{@code POPUP})} */
     public String getChannel() {
         return channel;
     }
 
-    /** @return the message body */
+    /** {@return the message body} */
     public String getBody() {
         return body;
     }
 
-    /** @return the recipient contact the message would be sent to (email/phone, or a staff username) */
+    /** {@return the recipient contact the message would be sent to (email/phone, or a staff username)} */
     public String getSimulatedTarget() {
         return simulatedTarget;
     }
 
-    /** @return the creation timestamp (string form) */
+    /** {@return the creation timestamp (string form)} */
     public String getCreatedAt() {
         return createdAt;
     }
 
-    /** @return the delivery timestamp (string form), or {@code null} if not yet delivered */
+    /** {@return the delivery timestamp (string form), or {@code null} if not yet delivered} */
     public String getSentAt() {
         return sentAt;
     }
 
-    /** @return the acknowledgement timestamp (string form), or {@code null} while unread */
+    /** {@return the acknowledgement timestamp (string form), or {@code null} while unread} */
     public String getAcknowledgedAt() {
         return acknowledgedAt;
     }
 
-    /** @return {@code true} if this notification has been acknowledged (read) by the recipient */
+    /** {@return {@code true} if this notification has been acknowledged (read) by the recipient} */
     public boolean isAcknowledged() {
         return acknowledgedAt != null;
     }

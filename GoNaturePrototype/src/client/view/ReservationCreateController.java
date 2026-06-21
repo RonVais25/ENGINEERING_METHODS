@@ -46,36 +46,66 @@ public class ReservationCreateController extends BaseController {
     /** Maximum party size for a guide-led group visit (mirrored on the server). */
     private static final int MAX_GROUP_SIZE = 15;
 
-    /** Park dropdown entry: carries the id but renders the name. */
+    /**
+     * Park dropdown entry: carries the id but renders the name.
+     *
+     * @param id   the park id sent with the booking
+     * @param name the park name shown in the dropdown
+     */
     private record ParkOption(int id, String name) {
         @Override public String toString() { return name; }
     }
 
+    /** Park selection dropdown. */
     @FXML private ComboBox<ParkOption> parkCombo;
+    /** Visitor-id input (prefilled and locked for a logged-in visitor). */
     @FXML private TextField            visitorField;
+    /** Contact email input (notification target). */
     @FXML private TextField            emailField;
+    /** Contact phone input. */
     @FXML private TextField            phoneField;
+    /** Visit-date picker. */
     @FXML private DatePicker           datePicker;
+    /** Toggle for whether a specific visit time is set. */
     @FXML private CheckBox             timeEnabledCheck;
+    /** Hour dropdown (1–12). */
     @FXML private ComboBox<Integer>    hourCombo;
+    /** Minute dropdown (quarter-hour steps). */
     @FXML private ComboBox<String>     minuteCombo;
+    /** AM/PM dropdown. */
     @FXML private ComboBox<String>     ampmCombo;
+    /** Party-size spinner. */
     @FXML private Spinner<Integer>     partySpinner;
+    /** Visit-type dropdown (INDIVIDUAL/FAMILY/GROUP). */
     @FXML private ComboBox<VisitType>  typeCombo;
+    /** Row holding the guide-id field, shown only for GROUP visits. */
     @FXML private VBox                 guideRow;
+    /** Guide-id input (GROUP visits only). */
     @FXML private TextField            guideField;
+    /** Toggle for paying in advance. */
     @FXML private CheckBox             prePayCheck;
+    /** Submits the booking. */
     @FXML private Button               bookBtn;
+    /** Result/toast label for booking feedback. */
     @FXML private Label                resultLabel;
+    /** Server-priced payment confirmation panel. */
     @FXML private VBox                 confirmationBox;
 
+    /** The current client session (used to prefill a logged-in visitor). */
     private final Session session;
 
+    /**
+     * Creates the reservation-create controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public ReservationCreateController(NetworkService network, Session session) {
         super(network);
         this.session = session;
     }
 
+    /** FXML lifecycle hook: loads parks, configures inputs, prefills for a visitor. */
     @FXML
     private void initialize() {
         // Park list comes from the server (LIST_PARKS) so the dropdown always
@@ -125,6 +155,11 @@ public class ReservationCreateController extends BaseController {
         }
     }
 
+    /**
+     * Shows or hides the guide-id field (relevant only to GROUP visits).
+     *
+     * @param show whether to reveal the guide field
+     */
     private void showGuideField(boolean show) {
         guideRow.setVisible(show);
         guideRow.setManaged(show);
@@ -176,6 +211,7 @@ public class ReservationCreateController extends BaseController {
         });
     }
 
+    /** Book-button handler: validates the form and sends CREATE_RESERVATION. */
     @FXML
     private void onBook() {
         // Clear any confirmation from a previous booking before validating this one.
@@ -346,6 +382,17 @@ public class ReservationCreateController extends BaseController {
     /**
      * Asks the visitor whether to join the waiting list after a park-full rejection.
      * On confirm, re-sends the <em>same</em> booking inputs as {@code JOIN_WAITLIST}.
+     *
+     * @param parkId        target park id
+     * @param visitorId     the visitor's national id
+     * @param visitDate     visit date, ISO {@code yyyy-MM-dd}
+     * @param visitTime     visit time {@code HH:mm:ss}, or {@code null}
+     * @param partySize     number of people in the party
+     * @param visitType     INDIVIDUAL, FAMILY, or GROUP
+     * @param guideId       guide id for GROUP visits, or {@code null}
+     * @param paidInAdvance whether the visitor opts to pay up front
+     * @param email         contact email
+     * @param phone         contact phone
      */
     private void promptJoinWaitlist(int parkId, long visitorId, String visitDate, String visitTime,
                                     int partySize, VisitType visitType, Long guideId, boolean paidInAdvance,
@@ -404,7 +451,13 @@ public class ReservationCreateController extends BaseController {
         confirmationBox.setManaged(true);
     }
 
-    /** Builds one key/value line for the payment confirmation panel. */
+    /**
+     * Builds one key/value line for the payment confirmation panel.
+     *
+     * @param key   the line label
+     * @param value the line value
+     * @return the key/value row
+     */
     private HBox paymentRow(String key, String value) {
         Label k = new Label(key);
         k.getStyleClass().add("key");

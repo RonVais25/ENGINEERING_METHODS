@@ -32,6 +32,10 @@ import static common.dto.RequestType.LIST_NOTIFICATIONS;
  */
 public class NotificationController implements DomainController {
 
+    /** Creates the notification controller. */
+    public NotificationController() { }
+
+    /** Notification data access. */
     private final NotificationDAO dao = new NotificationDAO();
     /**
      * Returns the notification-related request types

@@ -28,6 +28,9 @@ import java.util.List;
  */
 public class ParameterChangeDAO {
 
+    /** Creates the parameter-change DAO. */
+    public ParameterChangeDAO() { }
+
     /**
      * Columns selected by {@link #listPending} and {@link #getById}, joining the
      * park name and the requester's full name in for display. Order matches

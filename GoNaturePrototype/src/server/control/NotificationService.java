@@ -29,6 +29,9 @@ import server.subscription.SubscriptionRegistry;
  */
 public class NotificationService {
 
+    /** Creates the notification service. */
+    public NotificationService() { }
+
     /** Stateless DAO collaborator, shared across all client threads. */
     private final NotificationDAO dao = new NotificationDAO();
 

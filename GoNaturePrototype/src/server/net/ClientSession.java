@@ -31,17 +31,24 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class ClientSession {
 
+    /** The client's socket. */
     private final Socket socket;
+    /** Object input stream for reading requests. */
     private final ObjectInputStream in;
+    /** Object output stream for writing responses/events. */
     private final ObjectOutputStream out;
+    /** The push subscriptions this connection currently holds. */
     private final Set<SubscriptionKey> subscriptions = new CopyOnWriteArraySet<>();
+    /** Serializes outbound writes so frames ship atomically. */
     private final ReentrantLock writeLock = new ReentrantLock();
 
     // Who is authenticated on this connection, and which single-login lock kind
     // ("USER"/"VISITOR") was taken. Both null while logged out. Set on login,
     // cleared on logout; read on disconnect so OrderServer can release a stale
     // active_session lock left by a crashed/closed client.
+    /** Id of the actor authenticated on this connection, or {@code null} if none. */
     private Long loggedInActorId;
+    /** Single-login lock kind held ({@code "USER"}/{@code "VISITOR"}), or {@code null}. */
     private String loggedInKind;
 
     /**
@@ -132,16 +139,16 @@ public class ClientSession {
     }
 
     /**
-     * @return the id of the actor authenticated on this connection, or
-     *         {@code null} if no one is logged in
+     * {@return the id of the actor authenticated on this connection, or
+     * {@code null} if no one is logged in}
      */
     public Long getLoggedInActorId() {
         return loggedInActorId;
     }
 
     /**
-     * @return the single-login lock kind held by this connection
-     *         ({@code "USER"}/{@code "VISITOR"}), or {@code null} if logged out
+     * {@return the single-login lock kind held by this connection
+     * ({@code "USER"}/{@code "VISITOR"}), or {@code null} if logged out}
      */
     public String getLoggedInKind() {
         return loggedInKind;
@@ -172,8 +179,8 @@ public class ClientSession {
     }
 
     /**
-     * @return string form of the peer's socket address (or {@code "(unknown)"}
-     *         if the address is no longer available) for use in log lines
+     * {@return string form of the peer's socket address (or {@code "(unknown)"}
+     * if the address is no longer available) for use in log lines}
      */
     public String remoteAddressString() {
         var addr = socket.getRemoteSocketAddress();
