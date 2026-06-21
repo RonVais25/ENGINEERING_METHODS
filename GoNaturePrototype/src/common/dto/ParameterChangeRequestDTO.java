@@ -13,6 +13,7 @@ import java.io.Serializable;
  * second lookup.
  */
 public class ParameterChangeRequestDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Unique request identifier (primary key). */
@@ -74,62 +75,62 @@ public class ParameterChangeRequestDTO implements Serializable {
         this.decidedAt = decidedAt;
     }
 
-    /** @return the unique request identifier */
+    /** {@return the unique request identifier} */
     public int getId() {
         return id;
     }
 
-    /** @return the identifier of the target park */
+    /** {@return the identifier of the target park} */
     public int getParkId() {
         return parkId;
     }
 
-    /** @return the display name of the target park */
+    /** {@return the display name of the target park} */
     public String getParkName() {
         return parkName;
     }
 
-    /** @return the id of the park manager who requested the change */
+    /** {@return the id of the park manager who requested the change} */
     public int getRequestedBy() {
         return requestedBy;
     }
 
-    /** @return the full name of the requesting park manager (joined in for display) */
+    /** {@return the full name of the requesting park manager (joined in for display)} */
     public String getRequesterName() {
         return requesterName;
     }
 
-    /** @return which park parameter the change targets */
+    /** {@return which park parameter the change targets} */
     public ParamField getField() {
         return field;
     }
 
-    /** @return the park's value for that field when the request was made */
+    /** {@return the park's value for that field when the request was made} */
     public int getOldValue() {
         return oldValue;
     }
 
-    /** @return the requested new value */
+    /** {@return the requested new value} */
     public int getNewValue() {
         return newValue;
     }
 
-    /** @return the current lifecycle status of the request */
+    /** {@return the current lifecycle status of the request} */
     public ChangeStatus getStatus() {
         return status;
     }
 
-    /** @return the id of the deciding department manager, or {@code null} while PENDING */
+    /** {@return the id of the deciding department manager, or {@code null} while PENDING} */
     public Integer getDecidedBy() {
         return decidedBy;
     }
 
-    /** @return the creation timestamp (string form), or {@code null} */
+    /** {@return the creation timestamp (string form), or {@code null}} */
     public String getCreatedAt() {
         return createdAt;
     }
 
-    /** @return the decision timestamp (string form), or {@code null} while PENDING */
+    /** {@return the decision timestamp (string form), or {@code null} while PENDING} */
     public String getDecidedAt() {
         return decidedAt;
     }

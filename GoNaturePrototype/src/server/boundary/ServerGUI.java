@@ -40,42 +40,67 @@ import java.util.Map;
  */
 public class ServerGUI extends Application implements ServerListener {
 
+    /** Creates the server GUI (instantiated by the JavaFX runtime). */
+    public ServerGUI() { }
+
     // Design tokens — mirror the client palette
+    /** Darkest green (topbar background). */
     private static final String G800 = "#1a3320";
+    /** Dark green (primary text on light surfaces). */
     private static final String G700 = "#254d2e";
+    /** Mid-dark green (hover / OK log text). */
     private static final String G600 = "#2e6638";
+    /** Brand green (primary buttons, section labels). */
     private static final String G500 = "#3d8c4a";
+    /** Light green (muted accents). */
     private static final String G300 = "#80cb8b";
+    /** Lighter green (borders). */
     private static final String G200 = "#c2e5c8";
+    /** Very light green (secondary button fill). */
     private static final String G100 = "#e5f3e8";
+    /** Near-white green tint (page/input background). */
     private static final String G50  = "#f2f9f3";
+    /** Error red (failed log lines). */
     private static final String RED  = "#c94040";
+    /** Amber (stopped/idle status). */
     private static final String AMBER = "#d4a847";
 
+    /** The running server instance, or {@code null} while stopped. */
     private OrderServer server;
 
     // Header status
+    /** Status indicator dot in the header. */
     private Circle statusDot;
+    /** Status text in the header ("Running …"/"Stopped"). */
     private Label  statusLabel;
 
     // Controls
+    /** Port input. */
     private TextField     portField;
+    /** Database-password input. */
     private PasswordField passwordField;
+    /** Starts the server. */
     private Button        startBtn;
+    /** Stops the server. */
     private Button        stopBtn;
 
-    // Scheduler manual-trigger buttons (enabled only while the server runs).
+    /** Scheduler manual-trigger buttons (enabled only while the server runs). */
     private final List<Button> schedulerButtons = new ArrayList<>();
 
     // Reachable-at info (populated on start)
+    /** Container listing the LAN addresses the server is reachable at. */
     private VBox  reachableBox;
+    /** Caption above the reachable-at list. */
     private Label reachableTitle;
 
     // Clients table
+    /** Backing list of connected-client rows for the table. */
     private final ObservableList<ClientRow> clients = FXCollections.observableArrayList();
+    /** Index of client rows by IP, so reconnects update the existing row. */
     private final Map<String, ClientRow> clientByIp = new HashMap<>();
 
     // Log
+    /** Container holding the activity-log entries. */
     private VBox logBox;
 
     /**
@@ -108,6 +133,7 @@ public class ServerGUI extends Application implements ServerListener {
 
     // ─── Topbar ───────────────────────────────────────────────────────────────
 
+    /** {@return the header bar with the logo, title, and status pill} */
     private HBox buildTopbar() {
         StackPane iconTile = new StackPane();
         iconTile.setPrefSize(38, 38);
@@ -150,6 +176,7 @@ public class ServerGUI extends Application implements ServerListener {
 
     // ─── Body ─────────────────────────────────────────────────────────────────
 
+    /** {@return the split-pane body: controls/scheduler on the left, clients/log on the right} */
     private SplitPane buildBody() {
         VBox leftCol  = new VBox(16, buildControlCard(), buildSchedulerCard());
         leftCol.setPadding(new Insets(22, 14, 22, 22));
@@ -165,6 +192,7 @@ public class ServerGUI extends Application implements ServerListener {
         return split;
     }
 
+    /** {@return a blank styled card container} */
     private VBox buildCard() {
         VBox card = new VBox(12);
         card.setPadding(new Insets(22, 24, 22, 24));
@@ -173,6 +201,7 @@ public class ServerGUI extends Application implements ServerListener {
         return card;
     }
 
+    /** {@return the server-controls card (port, password, start/stop, reachable-at)} */
     private VBox buildControlCard() {
         VBox card = buildCard();
 
@@ -223,6 +252,8 @@ public class ServerGUI extends Application implements ServerListener {
      * "Run all jobs now" button. These are the manual triggers used during the
      * defense — each fires an off-cycle run via {@link OrderServer#getScheduler()}.
      * The buttons start disabled and are enabled only while the server runs.
+     *
+     * @return the scheduler-controls card
      */
     private VBox buildSchedulerCard() {
         VBox card = buildCard();
@@ -266,6 +297,7 @@ public class ServerGUI extends Application implements ServerListener {
      *
      * @param text    the button caption
      * @param jobName supplies the target job name, or {@code null} to run all jobs
+     * @return the scheduler trigger button
      */
     private Button buildSchedulerButton(String text, java.util.function.Supplier<String> jobName) {
         Button btn = buildSecondaryButtonCompact(text);
@@ -283,12 +315,18 @@ public class ServerGUI extends Application implements ServerListener {
         return btn;
     }
 
+    /**
+     * Enables or disables all scheduler trigger buttons.
+     *
+     * @param enabled whether the buttons should be enabled
+     */
     private void setSchedulerButtonsEnabled(boolean enabled) {
         for (Button b : schedulerButtons) {
             b.setDisable(!enabled);
         }
     }
 
+    /** Refreshes the reachable-at list from the LAN interfaces and the entered port. */
     private void populateReachable() {
         String port = portField.getText().trim();
         if (port.isEmpty()) port = "5555";
@@ -311,6 +349,7 @@ public class ServerGUI extends Application implements ServerListener {
         }
     }
 
+    /** {@return the host's non-loopback IPv4 LAN addresses (best-effort)} */
     private static List<String> getLanIPv4() {
         List<String> result = new ArrayList<>();
         try {
@@ -327,6 +366,7 @@ public class ServerGUI extends Application implements ServerListener {
         return result;
     }
 
+    /** {@return the connected-clients card with its table} */
     private VBox buildClientsCard() {
         VBox card = buildCard();
         VBox.setVgrow(card, Priority.ALWAYS);
@@ -366,6 +406,7 @@ public class ServerGUI extends Application implements ServerListener {
         return card;
     }
 
+    /** {@return the activity-log card with its scrollable list} */
     private VBox buildLogCard() {
         VBox card = buildCard();
         card.setPrefHeight(180);
@@ -491,6 +532,12 @@ public class ServerGUI extends Application implements ServerListener {
 
     // ─── Log helpers ──────────────────────────────────────────────────────────
 
+    /**
+     * Prepends a timestamped entry to the activity log (capped at 200 lines).
+     *
+     * @param ok      {@code true} for a normal entry, {@code false} for an error
+     * @param message the log message
+     */
     private void appendLog(boolean ok, String message) {
         if (!logBox.getChildren().isEmpty()) {
             javafx.scene.Node first = logBox.getChildren().get(0);
@@ -510,6 +557,13 @@ public class ServerGUI extends Application implements ServerListener {
 
     // ─── Style helpers ────────────────────────────────────────────────────────
 
+    /**
+     * Builds a primary (filled) button with an icon and hover styling.
+     *
+     * @param text the button caption
+     * @param icon the leading glyph
+     * @return the styled button
+     */
     private Button buildPrimaryButton(String text, String icon) {
         Button btn = new Button(icon + "  " + text);
         String base = "-fx-font-size:14; -fx-font-weight:bold; -fx-text-fill:white;" +
@@ -520,6 +574,12 @@ public class ServerGUI extends Application implements ServerListener {
         return btn;
     }
 
+    /**
+     * Builds a secondary (outlined) button with hover styling.
+     *
+     * @param text the button caption
+     * @return the styled button
+     */
     private Button buildSecondaryButton(String text) {
         Button btn = new Button(text);
         String base = "-fx-font-size:14; -fx-font-weight:bold; -fx-text-fill:" + G700 +
@@ -531,7 +591,12 @@ public class ServerGUI extends Application implements ServerListener {
         return btn;
     }
 
-    /** Smaller secondary button — used for the two-per-line scheduler triggers. */
+    /**
+     * Smaller secondary button — used for the two-per-line scheduler triggers.
+     *
+     * @param text the button caption
+     * @return the styled compact button
+     */
     private Button buildSecondaryButtonCompact(String text) {
         Button btn = new Button(text);
         String base = "-fx-font-size:12; -fx-font-weight:bold; -fx-text-fill:" + G700 +
@@ -543,10 +608,12 @@ public class ServerGUI extends Application implements ServerListener {
         return btn;
     }
 
+    /** {@return the inline CSS for a field label} */
     private String fieldLabelStyle() {
         return "-fx-font-size:12; -fx-font-weight:bold; -fx-text-fill:" + G600 + ";";
     }
 
+    /** {@return the inline CSS for a text input} */
     private String inputStyle() {
         return "-fx-font-size:14; -fx-background-color:" + G50 + "; -fx-border-color:" + G200 +
                "; -fx-border-width:1.5; -fx-border-radius:10; -fx-background-radius:10;" +
@@ -559,9 +626,13 @@ public class ServerGUI extends Application implements ServerListener {
      * Represents a connected client entry displayed in the table.
      */
     public static class ClientRow {
+        /** The client's IP address. */
         private final javafx.beans.property.SimpleStringProperty ip;
+        /** The client's host name. */
         private final javafx.beans.property.SimpleStringProperty host;
+        /** The time the client connected. */
         private final javafx.beans.property.SimpleStringProperty connectedAt;
+        /** The client's current connection status. */
         private final javafx.beans.property.SimpleStringProperty status;
         
         /**
@@ -579,42 +650,22 @@ public class ServerGUI extends Application implements ServerListener {
             this.status      = new javafx.beans.property.SimpleStringProperty(status);
         }
         
-        /**
-         * @return client IP address
-         */
+        /** {@return the client IP address} */
         public String getIp()          { return ip.get(); }
-        /**
-         * @return client host name
-         */
+        /** {@return the client host name} */
         public String getHost()        { return host.get(); }
-        /**
-         * @return connection time
-         */
+        /** {@return the connection time} */
         public String getConnectedAt() { return connectedAt.get(); }
-        /**
-         * @return client status
-         */
+        /** {@return the client status} */
         public String getStatus()      { return status.get(); }
 
         // Property getters — required so PropertyValueFactory subscribes to
         // changes. Without these, the table reads the value once and never
         // refreshes when setStatus()/setConnectedAt() fire.
-        /**
-         * @return IP property
-         */
         public javafx.beans.property.StringProperty ipProperty()          { return ip; }
-        /**
-         * @return host property
-         */
         public javafx.beans.property.StringProperty hostProperty()        { return host; }
-        /**
-         * @return connection time property
-         */
         public javafx.beans.property.StringProperty connectedAtProperty() { return connectedAt; }
-        /**
-         * @return status property
-         */
-        public javafx.beans.property.StringProperty statusProperty()      { return status; }        
+        public javafx.beans.property.StringProperty statusProperty()      { return status; }
         /**
          * Updates the client status.
          *

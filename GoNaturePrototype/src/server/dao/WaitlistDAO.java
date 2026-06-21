@@ -2,6 +2,7 @@ package server.dao;
 
 import common.dto.WaitlistEntryDTO;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -30,6 +31,9 @@ import java.util.List;
  * excluded from {@link #findNextEligible}.
  */
 public class WaitlistDAO {
+
+    /** Creates the waiting-list DAO. */
+    public WaitlistDAO() { }
 
     /**
      * Shared SELECT prefix for every read. Joins the parent reservation so
@@ -67,7 +71,7 @@ public class WaitlistDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return -1;
@@ -93,7 +97,7 @@ public class WaitlistDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -119,7 +123,7 @@ public class WaitlistDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -160,7 +164,7 @@ public class WaitlistDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -186,7 +190,7 @@ public class WaitlistDAO {
             stmt.executeUpdate();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
     }
 
@@ -207,7 +211,7 @@ public class WaitlistDAO {
             stmt.executeUpdate();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
     }
 
@@ -237,7 +241,7 @@ public class WaitlistDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;
@@ -285,7 +289,7 @@ public class WaitlistDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;

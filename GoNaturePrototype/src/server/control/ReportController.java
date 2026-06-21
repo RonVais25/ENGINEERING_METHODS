@@ -34,7 +34,12 @@ import static common.dto.RequestType.REPORT_VISITS_BY_TYPE;
  */
 public class ReportController implements DomainController {
 
+    /** Creates the report controller. */
+    public ReportController() { }
+
+    /** Report data access (visits-by-type, cancellations). */
     private final ReportDAO reportDao = new ReportDAO();
+    /** Authentication data access (role checks). */
     private final AuthDAO authDao = new AuthDAO();
     
     /**

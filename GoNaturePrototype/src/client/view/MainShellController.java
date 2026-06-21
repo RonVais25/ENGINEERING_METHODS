@@ -42,46 +42,79 @@ import java.util.function.Predicate;
  */
 public class MainShellController {
 
-    /** One sidebar entry: the screen plus the rule deciding who may see it. */
+    /**
+     * One sidebar entry: the screen plus the rule deciding who may see it.
+     *
+     * @param screen      the screen this entry navigates to
+     * @param visibleWhen predicate over the session deciding if it is shown
+     */
     private record NavItem(Screen screen, Predicate<Session> visibleWhen) {}
 
     // Visibility predicates — drive gating off the live Session, never hardcoded.
+    /** Visible to any logged-in identity. */
     private static final Predicate<Session> EVERYONE     = s -> true;
+    /** Visible to visitors only. */
     private static final Predicate<Session> VISITOR_ONLY = Session::isVisitor;
+    /** Visible to the service-representative role only. */
     private static final Predicate<Session> SERVICE_REP_ONLY =
             s -> s.isStaff() && s.getRole() == Role.SERVICE_REP;
+    /** Visible to the park-manager role only. */
     private static final Predicate<Session> PARK_MANAGER_ONLY =
             s -> s.isStaff() && s.getRole() == Role.PARK_MANAGER;
+    /** Visible to the department-manager role only. */
     private static final Predicate<Session> DEPT_MANAGER_ONLY =
             s -> s.isStaff() && s.getRole() == Role.DEPT_MANAGER;
+    /** Visible to the park-employee role only. */
     private static final Predicate<Session> PARK_EMPLOYEE_ONLY =
             s -> s.isStaff() && s.getRole() == Role.PARK_EMPLOYEE;
 
     // Sidebar (logo + nav + user/login chrome) is pinned by the BorderPane in
     // MainShell.fxml (left), so it stays fixed while only the center content
     // scrolls; these fields are injected into that fixed sidebar.
+    /** Sidebar container the nav buttons are added to. */
     @FXML private VBox      navBox;
+    /** Center content area screens are swapped into. */
     @FXML private StackPane contentArea;
+    /** Topbar title for the active screen. */
     @FXML private Label     topbarTitle;
+    /** Topbar subtitle for the active screen. */
     @FXML private Label     topbarSubtitle;
+    /** Connection-status indicator dot. */
     @FXML private Region    connDot;
+    /** Connected host:port label. */
     @FXML private Label     connHostLbl;
+    /** Connection-status text ("Connected"/"Disconnected"). */
     @FXML private Label     connStatusLbl;
+    /** Avatar initials of the logged-in user. */
     @FXML private Label     userInitialsLbl;
+    /** Display name of the logged-in user. */
     @FXML private Label     userNameLbl;
+    /** Role label of the logged-in user. */
     @FXML private Label     userIdLbl;
+    /** Logout button. */
     @FXML private Button    logoutBtn;
 
+    /** Shared network service for shell-level calls (logout, notifications). */
     private final NetworkService network;
+    /** The current client session (identity, connection, role). */
     private final Session        session;
+    /** Callback run on logout (returns to the login screen). */
     private final Runnable       onLogout;
 
+    /**
+     * Creates the main-shell controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     * @param onLogout callback invoked when the user logs out
+     */
     public MainShellController(NetworkService network, Session session, Runnable onLogout) {
         this.network  = network;
         this.session  = session;
         this.onLogout = onLogout;
     }
 
+    /** FXML lifecycle hook: builds the role-filtered sidebar and user chrome. */
     @FXML
     private void initialize() {
         Navigator navigator = new Navigator(contentArea, network, session, this::onScreenChange);
@@ -118,6 +151,8 @@ public class MainShellController {
      * The full catalogue of shell screens with their visibility rules. Order here
      * is the sidebar order. Future screens slot in with the appropriate predicate;
      * non-existent screens simply aren't listed yet.
+     *
+     * @return the ordered catalogue of shell screens with their visibility rules
      */
     private List<NavItem> navItems() {
         return List.of(
@@ -160,6 +195,7 @@ public class MainShellController {
         );
     }
 
+    /** Logout-button handler: tells the server to release the lock, then logs out. */
     @FXML
     private void onLogout() {
         logoutBtn.setDisable(true);
@@ -169,6 +205,7 @@ public class MainShellController {
         network.logout().thenAccept(res -> finishLogout());
     }
 
+    /** Drops the notification subscription, clears the identity, and returns to login. */
     private void finishLogout() {
         // Drop our notification subscription before the identity is cleared so the
         // server stops pushing to this connection and the next login starts clean.
@@ -220,6 +257,8 @@ public class MainShellController {
      * Handles a pushed notification event (already marshalled onto the FX thread by
      * {@link EventBus}). Shows the simulation popup for the carried
      * {@link NotificationDTO}; ignores events without the expected payload.
+     *
+     * @param ev the pushed notification event
      */
     private void onNotificationEvent(ServerEvent ev) {
         if (ev.getPayload() instanceof NotificationDTO n) {
@@ -285,7 +324,12 @@ public class MainShellController {
         t.start();
     }
 
-    /** First letters of the first two name tokens, e.g. "Dana Department" → "DD". */
+    /**
+     * First letters of the first two name tokens, e.g. "Dana Department" → "DD".
+     *
+     * @param name the display name
+     * @return up to two uppercase initials, or "?" if blank
+     */
     private String initialsOf(String name) {
         if (name == null || name.isBlank()) return "?";
         String[] parts = name.trim().split("\\s+");
@@ -296,16 +340,31 @@ public class MainShellController {
         return sb.length() == 0 ? "?" : sb.toString();
     }
 
+    /**
+     * Updates the topbar title/subtitle when the active screen changes.
+     *
+     * @param s the newly shown screen
+     */
     private void onScreenChange(Screen s) {
         topbarTitle.setText(s.title());
         topbarSubtitle.setText(s.subtitle());
     }
 
+    /**
+     * Reflects a connection-state change in the pill.
+     *
+     * @param ok whether the socket is currently connected
+     */
     private void updateConnStatus(boolean ok) {
         setConnDotOk(ok);
         connStatusLbl.setText(ok ? "Connected" : "Disconnected");
     }
 
+    /**
+     * Sets the connection dot's ok/error styling.
+     *
+     * @param ok whether to show the ok (vs error) state
+     */
     private void setConnDotOk(boolean ok) {
         connDot.getStyleClass().removeAll("err");
         if (!ok) connDot.getStyleClass().add("err");

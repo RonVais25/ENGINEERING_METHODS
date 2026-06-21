@@ -23,6 +23,7 @@ import java.util.List;
  * {@link RequestType#REPORT_CANCELLATIONS}; immutable and {@link Serializable}.
  */
 public class CancellationsReportDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Echo of the inclusive range start, ISO {@code yyyy-MM-dd}. */
@@ -63,37 +64,37 @@ public class CancellationsReportDTO implements Serializable {
         this.avgPerDay = avgPerDay;
     }
 
-    /** @return the inclusive range start, ISO {@code yyyy-MM-dd} */
+    /** {@return the inclusive range start, ISO {@code yyyy-MM-dd}} */
     public String getFromDate() {
         return fromDate;
     }
 
-    /** @return the inclusive range end, ISO {@code yyyy-MM-dd} */
+    /** {@return the inclusive range end, ISO {@code yyyy-MM-dd}} */
     public String getToDate() {
         return toDate;
     }
 
-    /** @return the park filter, or {@code null} for the whole region (all parks) */
+    /** {@return the park filter, or {@code null} for the whole region (all parks)} */
     public Integer getParkId() {
         return parkId;
     }
 
-    /** @return the per-day rows, oldest first (quiet days omitted) */
+    /** {@return the per-day rows, oldest first (quiet days omitted)} */
     public List<CancellationsReportRow> getRows() {
         return rows;
     }
 
-    /** @return total reservations cancelled across the whole range */
+    /** {@return total reservations cancelled across the whole range} */
     public int getTotalCancelled() {
         return totalCancelled;
     }
 
-    /** @return total reservations marked no-show across the whole range */
+    /** {@return total reservations marked no-show across the whole range} */
     public int getTotalNoShow() {
         return totalNoShow;
     }
 
-    /** @return average cancellations+no-shows per calendar day of the inclusive range */
+    /** {@return average cancellations+no-shows per calendar day of the inclusive range} */
     public double getAvgPerDay() {
         return avgPerDay;
     }

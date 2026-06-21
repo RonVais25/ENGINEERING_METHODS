@@ -26,17 +26,30 @@ import javafx.scene.control.TextField;
  */
 public class GuideRegisterController extends BaseController {
 
+    /** Guide national-id input. */
     @FXML private TextField idField;
+    /** Guide full-name input. */
     @FXML private TextField nameField;
+    /** Guide phone input. */
     @FXML private TextField phoneField;
+    /** Guide email input. */
     @FXML private TextField emailField;
+    /** Submits the guide registration. */
     @FXML private Button    registerBtn;
+    /** Result/toast label for registration feedback. */
     @FXML private Label     resultLabel;
 
+    /**
+     * Creates the guide-registration controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public GuideRegisterController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** Register-button handler: validates the form and sends REGISTER_GUIDE. */
     @FXML
     private void onRegister() {
         String idRaw = idField.getText() == null ? "" : idField.getText().trim();

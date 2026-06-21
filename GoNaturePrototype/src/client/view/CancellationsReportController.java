@@ -40,34 +40,58 @@ import java.util.List;
  */
 public class CancellationsReportController extends BaseController {
 
-    /** Series (legend) names, also the fixed bar order within each date group. */
+    /** Legend name for the cancelled-count series (also the bar order). */
     private static final String SERIES_CANCELLED = "Cancelled";
+    /** Legend name for the no-show-count series. */
     private static final String SERIES_NO_SHOW   = "No-show";
 
-    /** Park dropdown entry: carries the id (null for "All parks") but renders the name. */
+    /**
+     * Park dropdown entry: carries the id (null for "All parks") but renders the name.
+     *
+     * @param id   the park id, or {@code null} for "All parks"
+     * @param name the park name shown in the dropdown
+     */
     private record ParkOption(Integer id, String name) {
         @Override public String toString() { return name; }
     }
 
+    /** Range start date picker. */
     @FXML private DatePicker               fromPicker;
+    /** Range end date picker. */
     @FXML private DatePicker               toPicker;
+    /** Park filter dropdown ("All parks" or a specific park). */
     @FXML private ComboBox<ParkOption>     parkCombo;
+    /** Runs the report. */
     @FXML private Button                   generateBtn;
+    /** Result/toast label for validation and errors. */
     @FXML private Label                    resultLabel;
+    /** Header label showing the day count. */
     @FXML private Label                    cardHeaderLabel;
+    /** Grouped bar chart of cancelled/no-show counts per day. */
     @FXML private BarChart<String, Number> chart;
+    /** Category (x) axis of the chart. */
     @FXML private CategoryAxis             xAxis;
+    /** Value (y) axis of the chart. */
     @FXML private NumberAxis               yAxis;
+    /** Empty-range placeholder shown when there are no rows. */
     @FXML private VBox                     placeholderBox;
+    /** Range-totals summary line below the chart. */
     @FXML private Label                    summaryLabel;
 
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
     // the DEPT_MANAGER role), so the session is accepted but unused.
+    /**
+     * Creates the cancellations-report controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public CancellationsReportController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** FXML lifecycle hook: sets default dates, the y-axis, and loads parks. */
     @FXML
     private void initialize() {
         // Sensible default window: the last month up to today; the manager adjusts.
@@ -98,6 +122,7 @@ public class CancellationsReportController extends BaseController {
         });
     }
 
+    /** Generate-button handler: validates inputs and runs REPORT_CANCELLATIONS. */
     @FXML
     private void onGenerate() {
         LocalDate from = fromPicker.getValue();
@@ -135,6 +160,8 @@ public class CancellationsReportController extends BaseController {
      * The x-axis categories are the report's dates (oldest first); each date carries
      * a "Cancelled" and a "No-show" bar. An empty range shows a placeholder instead
      * of a bare chart. Every figure comes straight off the {@link CancellationsReportDTO}.
+     *
+     * @param report the server's report result
      */
     private void render(CancellationsReportDTO report) {
         List<CancellationsReportRow> rows = report.getRows();
@@ -172,7 +199,11 @@ public class CancellationsReportController extends BaseController {
         showPlaceholder(false);
     }
 
-    /** Swaps between the chart (with its summary line) and the empty-range placeholder. */
+    /**
+     * Swaps between the chart (with its summary line) and the empty-range placeholder.
+     *
+     * @param empty {@code true} to show the placeholder, {@code false} for the chart
+     */
     private void showPlaceholder(boolean empty) {
         chart.setVisible(!empty);
         chart.setManaged(!empty);

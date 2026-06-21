@@ -7,7 +7,7 @@ import java.io.Serializable;
  *
  * <p>Created server-side by {@link server.control.VisitController} in response to
  * {@link RequestType#CURRENT_OCCUPANCY} and serialized across the socket inside a
- * {@link ServerResponse}. Unlike {@link ReservationDAO#availableCapacity} (which
+ * {@link ServerResponse}. Unlike {@link server.dao.ReservationDAO#availableCapacity(int, String)} (which
  * reasons about <em>booked</em> party sizes for a future date), the figures here
  * come from <em>physical</em> presence: {@code current} is the sum of the
  * headcounts of all visits that are still open (not yet exited).
@@ -17,6 +17,7 @@ import java.io.Serializable;
  * over its gap-adjusted limit.
  */
 public class OccupancyDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Identifier of the park this snapshot describes. */
@@ -47,27 +48,27 @@ public class OccupancyDTO implements Serializable {
         this.available = available;
     }
 
-    /** @return the identifier of the park */
+    /** {@return the identifier of the park} */
     public int getParkId() {
         return parkId;
     }
 
-    /** @return the number of people currently inside the park */
+    /** {@return the number of people currently inside the park} */
     public int getCurrent() {
         return current;
     }
 
-    /** @return the park's maximum physical capacity */
+    /** {@return the park's maximum physical capacity} */
     public int getMaxCapacity() {
         return maxCapacity;
     }
 
-    /** @return the reserved capacity buffer */
+    /** {@return the reserved capacity buffer} */
     public int getGapSize() {
         return gapSize;
     }
 
-    /** @return the remaining headroom (may be negative if over the gap-adjusted limit) */
+    /** {@return the remaining headroom (may be negative if over the gap-adjusted limit)} */
     public int getAvailable() {
         return available;
     }

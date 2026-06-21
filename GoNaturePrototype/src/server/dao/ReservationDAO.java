@@ -4,6 +4,7 @@ import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
 import common.dto.VisitType;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -26,6 +27,9 @@ import java.util.List;
  */
 public class ReservationDAO {
 
+    /** Creates the reservation DAO. */
+    public ReservationDAO() { }
+
     /**
      * Looks up a single reservation by its primary key.
      *
@@ -46,7 +50,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -75,7 +79,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -102,7 +106,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;
@@ -157,7 +161,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return -1;
@@ -187,7 +191,7 @@ public class ReservationDAO {
             return stmt.executeUpdate() > 0;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;
@@ -228,7 +232,7 @@ public class ReservationDAO {
             return stmt.executeUpdate() > 0;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;
@@ -278,7 +282,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;
@@ -339,7 +343,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;
@@ -363,7 +367,7 @@ public class ReservationDAO {
             return stmt.executeUpdate() > 0;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;
@@ -422,7 +426,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;
@@ -461,7 +465,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return -1;
@@ -486,7 +490,7 @@ public class ReservationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;

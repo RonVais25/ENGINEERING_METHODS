@@ -23,25 +23,52 @@ import java.util.function.Consumer;
  */
 public class Navigator {
 
+    /** Pseudo-class toggled on the active sidebar button. */
     private static final PseudoClass ACTIVE = PseudoClass.getPseudoClass("active");
 
-    /** Describes one navigable screen. */
+    /**
+     * Describes one navigable screen.
+     *
+     * @param id       stable key used to register, look up, and activate the screen
+     * @param icon     glyph shown on the sidebar button
+     * @param label    text shown on the sidebar button
+     * @param fxml     classpath location of the screen's FXML
+     * @param title    title shown in the topbar when this screen is active
+     * @param subtitle subtitle shown in the topbar when this screen is active
+     */
     public record Screen(String id, String icon, String label, String fxml,
                          String title, String subtitle) {}
 
+    /** The pane screens are swapped into. */
     private final StackPane contentArea;
+    /** Callback invoked with the new screen after each navigation. */
     private final Consumer<Screen> onScreenChange;
+    /** Network service injected into controllers that request it. */
     private final NetworkService network;
+    /** Session injected into controllers that request it. */
     private final Session session;
 
+    /** Registered screens by id. */
     private final Map<String, Screen> screens = new LinkedHashMap<>();
+    /** Sidebar buttons by screen id. */
     private final Map<String, Button> navButtons = new LinkedHashMap<>();
+    /** Id of the currently displayed screen, or {@code null} if none yet. */
     private String currentId;
     // Tracked so onHide() can fire on the outgoing controller before we
     // load the next FXML. Not volatile — go() is only called from the FX
     // thread, so single-threaded ownership is sufficient.
+    /** The active screen's controller (for firing its onHide before a swap). */
     private BaseController currentController;
 
+    /**
+     * Creates a navigator bound to the shell's content area.
+     *
+     * @param contentArea    the pane whose children are swapped on navigation
+     * @param network        network service handed to controllers that need it
+     * @param session        the current client session handed to controllers
+     * @param onScreenChange callback invoked with the new {@link Screen} after each
+     *                       navigation (may be {@code null})
+     */
     public Navigator(StackPane contentArea, NetworkService network, Session session,
                      Consumer<Screen> onScreenChange) {
         this.contentArea    = contentArea;
@@ -50,15 +77,35 @@ public class Navigator {
         this.onScreenChange = onScreenChange;
     }
 
+    /**
+     * Registers a screen so it can later be navigated to by its id.
+     *
+     * @param s the screen definition to register
+     */
     public void register(Screen s) { screens.put(s.id(), s); }
 
+    /**
+     * Associates a sidebar button with a screen id and wires its click to
+     * navigate there.
+     *
+     * @param screenId id of the screen the button activates
+     * @param btn      the sidebar button to bind
+     */
     public void bindNavButton(String screenId, Button btn) {
         navButtons.put(screenId, btn);
         btn.setOnAction(e -> go(screenId));
     }
 
+    /** {@return the currently displayed screen, or {@code null} if none yet} */
     public Screen currentScreen() { return screens.get(currentId); }
 
+    /**
+     * Navigates to the screen with the given id: hides the outgoing screen, loads
+     * and shows the new FXML, and marks the matching sidebar button active.
+     *
+     * @param id id of a registered screen
+     * @throws IllegalArgumentException if no screen is registered under {@code id}
+     */
     public void go(String id) {
         Screen screen = screens.get(id);
         if (screen == null) throw new IllegalArgumentException("Unknown screen: " + id);
@@ -103,6 +150,9 @@ public class Navigator {
      * takes (NetworkService, Session, Navigator) if available, otherwise the
      * (NetworkService, Session) or no-arg form. This keeps screen controllers
      * declarative — they just declare the constructor they want.
+     *
+     * @param type the controller class to instantiate
+     * @return the constructed controller instance
      */
     private Object instantiate(Class<?> type) {
         try {
@@ -120,7 +170,14 @@ public class Navigator {
         }
     }
 
-    /** Build a sidebar nav button styled by client.css; icon + label inside. */
+    /**
+     * Builds a sidebar nav button styled by client.css, with the icon and label
+     * laid out side by side.
+     *
+     * @param icon  glyph shown at the start of the button
+     * @param label text shown next to the icon
+     * @return a styled, unbound nav {@link Button}
+     */
     public static Button buildNavButton(String icon, String label) {
         Label iconLbl = new Label(icon);
         iconLbl.getStyleClass().add("nav-icon");
@@ -136,5 +193,6 @@ public class Navigator {
         return btn;
     }
 
+    /** {@return the content pane this navigator swaps screens into} */
     public Node contentNode() { return contentArea; }
 }

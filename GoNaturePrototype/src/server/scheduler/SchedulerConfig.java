@@ -27,9 +27,13 @@ import server.db.DotEnv;
  */
 public final class SchedulerConfig {
 
+    /** Hours before a visit that the confirmation reminder fires. */
     private static final int REMINDER_LEAD_HOURS;
+    /** Minutes a PENDING reservation may sit before auto-expiry. */
     private static final int CONFIRM_TIMEOUT_MINUTES;
+    /** Minutes an offered waiting-list grab stays claimable. */
     private static final int GRAB_WINDOW_MINUTES;
+    /** Seconds between scheduler sweeps. */
     private static final int SCHEDULER_POLL_SECONDS;
 
     static {
@@ -42,25 +46,42 @@ public final class SchedulerConfig {
         SCHEDULER_POLL_SECONDS  = readInt("SCHEDULER_POLL_SECONDS", 30);
     }
 
+    /** Non-instantiable: all configuration is static. */
     private SchedulerConfig() {
     }
 
-    /** How far ahead of a visit the confirmation reminder fires, in hours (session b). */
+    /**
+     * How far ahead of a visit the confirmation reminder fires, in hours (session b).
+     *
+     * @return the reminder lead time, in hours
+     */
     public static int getReminderLeadHours() {
         return REMINDER_LEAD_HOURS;
     }
 
-    /** How long a PENDING reservation may sit before auto-expiry, in minutes (session b). */
+    /**
+     * How long a PENDING reservation may sit before auto-expiry, in minutes (session b).
+     *
+     * @return the confirmation timeout, in minutes
+     */
     public static int getConfirmTimeoutMinutes() {
         return CONFIRM_TIMEOUT_MINUTES;
     }
 
-    /** How long an offered waiting-list grab stays claimable, in minutes. */
+    /**
+     * How long an offered waiting-list grab stays claimable, in minutes.
+     *
+     * @return the grab offer window, in minutes
+     */
     public static int getGrabWindowMinutes() {
         return GRAB_WINDOW_MINUTES;
     }
 
-    /** How often the scheduler re-runs every registered job, in seconds. */
+    /**
+     * How often the scheduler re-runs every registered job, in seconds.
+     *
+     * @return the scheduler poll interval, in seconds
+     */
     public static int getPollSeconds() {
         return SCHEDULER_POLL_SECONDS;
     }

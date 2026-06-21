@@ -11,6 +11,7 @@ import java.io.Serializable;
  * successful visitor login.
  */
 public class VisitorDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** National-ID-style visitor identifier (primary key). */
@@ -41,27 +42,27 @@ public class VisitorDTO implements Serializable {
         this.isSubscriber = isSubscriber;
     }
 
-    /** @return the national-ID-style visitor identifier */
+    /** {@return the national-ID-style visitor identifier} */
     public long getId() {
         return id;
     }
 
-    /** @return the display name of the visitor */
+    /** {@return the display name of the visitor} */
     public String getFullName() {
         return fullName;
     }
 
-    /** @return the contact phone number on file, or {@code null} if none recorded */
+    /** {@return the contact phone number on file, or {@code null} if none recorded} */
     public String getPhone() {
         return phone;
     }
 
-    /** @return the contact email on file, or {@code null} if none recorded */
+    /** {@return the contact email on file, or {@code null} if none recorded} */
     public String getEmail() {
         return email;
     }
 
-    /** @return whether the visitor holds a subscription */
+    /** {@return whether the visitor holds a subscription} */
     public boolean isSubscriber() {
         return isSubscriber;
     }

@@ -74,7 +74,12 @@ import static common.dto.RequestType.UPDATE_RESERVATION;
  */
 public class ReservationController implements DomainController {
 
+    /** Creates the reservation controller. */
+    public ReservationController() { }
+
+    /** Reservation data access (CRUD, capacity, waiting list). */
     private final ReservationDAO dao = new ReservationDAO();
+    /** Authentication data access (role checks). */
     private final AuthDAO authDao = new AuthDAO();
     /** Upserts the booking visitor's contact so the FK holds and notifications have a target. */
     private final MemberDAO memberDao = new MemberDAO();

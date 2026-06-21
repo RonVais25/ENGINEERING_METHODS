@@ -17,11 +17,16 @@ import java.time.format.DateTimeFormatter;
  */
 public final class Widgets {
 
+    /** Non-instantiable: all members are static. */
     private Widgets() {}
 
     /* ---------- Toast ----------------------------------------------------- */
 
-    /** A blank invisible label, marked .toast — call {@link #showToast} to use. */
+    /**
+     * A blank invisible label, marked .toast — call {@link #showToast} to use.
+     *
+     * @return a hidden, unmanaged toast {@link Label}
+     */
     public static Label buildToastLabel() {
         Label l = new Label();
         l.getStyleClass().add("toast");
@@ -31,7 +36,13 @@ public final class Widgets {
         return l;
     }
 
-    /** Show the toast with success/error styling, then auto-hide after 3 s. */
+    /**
+     * Show the toast with success/error styling, then auto-hide after 3 s.
+     *
+     * @param toast the toast label to show
+     * @param ok    {@code true} for success styling, {@code false} for error
+     * @param msg   the message to display
+     */
     public static void showToast(Label toast, boolean ok, String msg) {
         toast.setText((ok ? "✓ " : "✕ ") + msg);
         toast.getStyleClass().removeAll("success", "error");

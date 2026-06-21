@@ -9,16 +9,28 @@ import java.sql.SQLException;
  */
 public class DBConnection {
 
+    /** Creates the database-connection helper. */
+    public DBConnection() { }
+
+    /** JDBC URL of the local MySQL {@code gonature} schema. */
     private static final String URL =
             "jdbc:mysql://127.0.0.1:3306/gonature" +
             "?serverTimezone=Asia/Jerusalem" +
             "&useSSL=false" +
             "&allowPublicKeyRetrieval=true";
 
+    /** MySQL user the server connects as. */
     private static final String USER = "root";
 
+    /** Current database password (from env/property, or set via {@link #setPassword(String)}). */
     private static String password = resolveInitialPassword();
 
+    /**
+     * Resolves the initial password from {@code DB_PASSWORD} (env then system
+     * property), defaulting to empty.
+     *
+     * @return the initial database password, or {@code ""} if none is set
+     */
     private static String resolveInitialPassword() {
         String env = System.getenv("DB_PASSWORD");
         if (env != null) return env;

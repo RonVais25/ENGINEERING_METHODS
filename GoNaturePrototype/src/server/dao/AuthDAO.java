@@ -4,6 +4,7 @@ import common.dto.Role;
 import common.dto.UserDTO;
 import common.dto.VisitorDTO;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,6 +22,9 @@ import java.sql.SQLIntegrityConstraintViolationException;
  * propagated, so callers signal failure through the return value.
  */
 public class AuthDAO {
+
+    /** Creates the authentication DAO. */
+    public AuthDAO() { }
 
     /**
      * Looks up a staff user by username and password.
@@ -59,7 +63,7 @@ public class AuthDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -98,7 +102,7 @@ public class AuthDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -130,7 +134,7 @@ public class AuthDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -166,7 +170,7 @@ public class AuthDAO {
             // Duplicate (actor_id, kind) -> already logged in elsewhere.
             return false;
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
             return false;
         }
     }
@@ -189,7 +193,7 @@ public class AuthDAO {
             stmt.executeUpdate();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
     }
 }

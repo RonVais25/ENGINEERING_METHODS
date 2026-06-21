@@ -17,12 +17,18 @@ import java.io.Serializable;
  * both sides of the wire; clients should treat instances as read-only snapshots.
  */
 public class ServerEvent implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
+    /** Logical entity name affected (e.g. {@code "Order"}), used for client-side routing. */
     private final String entity;
+    /** Primary-key identifier of the affected row. */
     private final long entityId;
+    /** Which lifecycle transition occurred. */
     private final EventOp op;
+    /** Snapshot of the entity after the change, or {@code null} for a delete. */
     private final Serializable payload;
+    /** Server-side wall-clock time (epoch millis) when the event was constructed. */
     private final long timestamp;
 
     /**
@@ -80,30 +86,30 @@ public class ServerEvent implements Serializable {
         return new ServerEvent(entity, id, EventOp.DELETED, null);
     }
 
-    /** @return the logical entity name (e.g. {@code "Order"}) this event refers to */
+    /** {@return the logical entity name (e.g. {@code "Order"}) this event refers to} */
     public String getEntity() {
         return entity;
     }
 
-    /** @return the primary-key identifier of the affected row */
+    /** {@return the primary-key identifier of the affected row} */
     public long getEntityId() {
         return entityId;
     }
 
-    /** @return which lifecycle transition the server has just committed */
+    /** {@return which lifecycle transition the server has just committed} */
     public EventOp getOp() {
         return op;
     }
 
     /**
-     * @return a serializable snapshot of the entity after the change, or
-     *         {@code null} when {@link #getOp()} is {@link EventOp#DELETED}
+     * {@return a serializable snapshot of the entity after the change, or
+     * {@code null} when {@link #getOp()} is {@link EventOp#DELETED}}
      */
     public Serializable getPayload() {
         return payload;
     }
 
-    /** @return server-side wall-clock time (epoch millis) when the event was constructed */
+    /** {@return server-side wall-clock time (epoch millis) when the event was constructed} */
     public long getTimestamp() {
         return timestamp;
     }

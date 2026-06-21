@@ -4,6 +4,7 @@ import common.dto.ChangeStatus;
 import common.dto.ParamField;
 import common.dto.ParameterChangeRequestDTO;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -26,6 +27,9 @@ import java.util.List;
  * propagated, so callers signal failure through the return value.
  */
 public class ParameterChangeDAO {
+
+    /** Creates the parameter-change DAO. */
+    public ParameterChangeDAO() { }
 
     /**
      * Columns selected by {@link #listPending} and {@link #getById}, joining the
@@ -75,7 +79,7 @@ public class ParameterChangeDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return -1;
@@ -100,7 +104,7 @@ public class ParameterChangeDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;
@@ -126,7 +130,7 @@ public class ParameterChangeDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -163,7 +167,7 @@ public class ParameterChangeDAO {
             return stmt.executeUpdate() == 1;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;

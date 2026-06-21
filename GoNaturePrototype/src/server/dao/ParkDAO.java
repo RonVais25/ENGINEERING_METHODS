@@ -3,6 +3,7 @@ package server.dao;
 import common.dto.ParamField;
 import common.dto.ParkDTO;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,6 +22,9 @@ import java.util.List;
  * propagated, so callers signal failure through the return value.
  */
 public class ParkDAO {
+
+    /** Creates the park DAO. */
+    public ParkDAO() { }
 
     /** The columns selected by every park query, in {@link #map} order. */
     private static final String COLUMNS =
@@ -46,7 +50,7 @@ public class ParkDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -72,7 +76,7 @@ public class ParkDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -97,7 +101,7 @@ public class ParkDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;
@@ -125,7 +129,7 @@ public class ParkDAO {
             stmt.executeUpdate();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
     }
 

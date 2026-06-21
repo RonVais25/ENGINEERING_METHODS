@@ -21,6 +21,7 @@ import java.io.Serializable;
  * inside a {@link VisitsReportDTO}; immutable and {@link Serializable}.
  */
 public class VisitsReportRow implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Visitor category: {@code "INDIVIDUALS"} or {@code "GROUPS"}. */
@@ -43,17 +44,17 @@ public class VisitsReportRow implements Serializable {
         this.avgStayMinutes = avgStayMinutes;
     }
 
-    /** @return the visitor category ({@code "INDIVIDUALS"} or {@code "GROUPS"}) */
+    /** {@return the visitor category ({@code "INDIVIDUALS"} or {@code "GROUPS"})} */
     public String getCategory() {
         return category;
     }
 
-    /** @return the number of visits in this category (open and closed) */
+    /** {@return the number of visits in this category (open and closed)} */
     public int getVisitCount() {
         return visitCount;
     }
 
-    /** @return the average stay in minutes over the closed visits (0 if none closed) */
+    /** {@return the average stay in minutes over the closed visits (0 if none closed)} */
     public double getAvgStayMinutes() {
         return avgStayMinutes;
     }

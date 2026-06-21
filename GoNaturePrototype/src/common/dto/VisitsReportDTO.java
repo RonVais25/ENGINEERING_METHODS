@@ -17,6 +17,7 @@ import java.util.List;
  * {@link RequestType#REPORT_VISITS_BY_TYPE}; immutable and {@link Serializable}.
  */
 public class VisitsReportDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Echo of the inclusive range start, ISO {@code yyyy-MM-dd}. */
@@ -43,22 +44,22 @@ public class VisitsReportDTO implements Serializable {
         this.rows = rows;
     }
 
-    /** @return the inclusive range start, ISO {@code yyyy-MM-dd} */
+    /** {@return the inclusive range start, ISO {@code yyyy-MM-dd}} */
     public String getFromDate() {
         return fromDate;
     }
 
-    /** @return the inclusive range end, ISO {@code yyyy-MM-dd} */
+    /** {@return the inclusive range end, ISO {@code yyyy-MM-dd}} */
     public String getToDate() {
         return toDate;
     }
 
-    /** @return the park filter, or {@code null} for the whole region (all parks) */
+    /** {@return the park filter, or {@code null} for the whole region (all parks)} */
     public Integer getParkId() {
         return parkId;
     }
 
-    /** @return the per-category rows (both {@code "INDIVIDUALS"} and {@code "GROUPS"}) */
+    /** {@return the per-category rows (both {@code "INDIVIDUALS"} and {@code "GROUPS"})} */
     public List<VisitsReportRow> getRows() {
         return rows;
     }

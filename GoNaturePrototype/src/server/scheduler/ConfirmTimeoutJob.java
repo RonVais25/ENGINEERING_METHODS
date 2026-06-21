@@ -27,6 +27,11 @@ public class ConfirmTimeoutJob implements SchedulerJob {
     /** One-line summary sink, wired to the server console activity log. */
     private final Consumer<String> log;
 
+    /**
+     * Creates the job with a sink for its one-line run summaries.
+     *
+     * @param log receives the job's summary lines (the server activity log)
+     */
     public ConfirmTimeoutJob(Consumer<String> log) {
         this.log = log;
     }

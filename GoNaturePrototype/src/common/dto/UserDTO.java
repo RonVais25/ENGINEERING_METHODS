@@ -11,6 +11,7 @@ import java.io.Serializable;
  * field — credentials are never sent back to the client.
  */
 public class UserDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Unique user identifier (primary key). */
@@ -41,27 +42,27 @@ public class UserDTO implements Serializable {
         this.parkId = parkId;
     }
 
-    /** @return the unique user identifier */
+    /** {@return the unique user identifier} */
     public int getId() {
         return id;
     }
 
-    /** @return the login username */
+    /** {@return the login username} */
     public String getUsername() {
         return username;
     }
 
-    /** @return the display name of the user */
+    /** {@return the display name of the user} */
     public String getFullName() {
         return fullName;
     }
 
-    /** @return the staff role governing the user's permissions */
+    /** {@return the staff role governing the user's permissions} */
     public Role getRole() {
         return role;
     }
 
-    /** @return the identifier of the user's park, or {@code null} if none */
+    /** {@return the identifier of the user's park, or {@code null} if none} */
     public Integer getParkId() {
         return parkId;
     }

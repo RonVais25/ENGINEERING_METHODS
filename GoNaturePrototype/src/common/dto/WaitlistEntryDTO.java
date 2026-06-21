@@ -24,6 +24,7 @@ import java.io.Serializable;
  * still in the future marks an <em>active</em> grab offer.
  */
 public class WaitlistEntryDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Unique waiting-list entry identifier (primary key). */
@@ -73,47 +74,47 @@ public class WaitlistEntryDTO implements Serializable {
         this.visitorId = visitorId;
     }
 
-    /** @return the unique waiting-list entry identifier */
+    /** {@return the unique waiting-list entry identifier} */
     public int getId() {
         return id;
     }
 
-    /** @return the identifier of the queued WAITING reservation */
+    /** {@return the identifier of the queued WAITING reservation} */
     public int getReservationId() {
         return reservationId;
     }
 
-    /** @return when the visitor joined the queue (string {@code DATETIME}) */
+    /** {@return when the visitor joined the queue (string {@code DATETIME})} */
     public String getQueuedAt() {
         return queuedAt;
     }
 
-    /** @return when a freed slot was offered to this entry, or {@code null} if none is active */
+    /** {@return when a freed slot was offered to this entry, or {@code null} if none is active} */
     public String getGrabOfferedAt() {
         return grabOfferedAt;
     }
 
-    /** @return when the active grab offer lapses, or {@code null} if none is active */
+    /** {@return when the active grab offer lapses, or {@code null} if none is active} */
     public String getGrabExpiresAt() {
         return grabExpiresAt;
     }
 
-    /** @return the park the queued reservation is for (joined from the reservation) */
+    /** {@return the park the queued reservation is for (joined from the reservation)} */
     public int getParkId() {
         return parkId;
     }
 
-    /** @return the visit date the queued reservation is for, ISO {@code yyyy-MM-dd} (joined) */
+    /** {@return the visit date the queued reservation is for, ISO {@code yyyy-MM-dd} (joined)} */
     public String getVisitDate() {
         return visitDate;
     }
 
-    /** @return the party size of the queued reservation (joined) */
+    /** {@return the party size of the queued reservation (joined)} */
     public int getPartySize() {
         return partySize;
     }
 
-    /** @return the identifier of the owning visitor (joined) */
+    /** {@return the identifier of the owning visitor (joined)} */
     public long getVisitorId() {
         return visitorId;
     }

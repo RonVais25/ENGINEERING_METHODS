@@ -31,24 +31,39 @@ public class SubscriberRegisterController extends BaseController {
     /** Upper bound for the family-size spinner; the DB default is 1. */
     private static final int MAX_FAMILY_SIZE = 20;
 
+    /** Subscriber national-id input. */
     @FXML private TextField        idField;
+    /** Subscriber full-name input. */
     @FXML private TextField        nameField;
+    /** Subscriber phone input. */
     @FXML private TextField        phoneField;
+    /** Subscriber email input. */
     @FXML private TextField        emailField;
+    /** Family-size spinner. */
     @FXML private Spinner<Integer> familySpinner;
+    /** Submits the subscriber registration. */
     @FXML private Button           registerBtn;
+    /** Result/toast label for registration feedback. */
     @FXML private Label            resultLabel;
 
+    /**
+     * Creates the subscriber-registration controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public SubscriberRegisterController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** FXML lifecycle hook: configures the family-size spinner. */
     @FXML
     private void initialize() {
         familySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, MAX_FAMILY_SIZE, 1));
     }
 
+    /** Register-button handler: validates the form and sends REGISTER_SUBSCRIBER. */
     @FXML
     private void onRegister() {
         String idRaw = idField.getText() == null ? "" : idField.getText().trim();

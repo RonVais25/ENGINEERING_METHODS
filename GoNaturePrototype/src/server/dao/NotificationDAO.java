@@ -2,6 +2,7 @@ package server.dao;
 
 import common.dto.NotificationDTO;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,6 +28,9 @@ import java.util.List;
  * user, since the {@code user} table has no email/phone column).
  */
 public class NotificationDAO {
+
+    /** Creates the notification DAO. */
+    public NotificationDAO() { }
 
     /**
      * Shared SELECT prefix for every read. Joins the recipient's contact columns
@@ -82,7 +86,7 @@ public class NotificationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return -1;
@@ -104,7 +108,7 @@ public class NotificationDAO {
             return stmt.executeUpdate() > 0;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;
@@ -129,7 +133,7 @@ public class NotificationDAO {
             return stmt.executeUpdate() > 0;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return false;
@@ -158,7 +162,7 @@ public class NotificationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return null;
@@ -208,7 +212,7 @@ public class NotificationDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
         }
 
         return result;

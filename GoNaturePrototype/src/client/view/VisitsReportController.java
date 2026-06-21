@@ -40,32 +40,54 @@ import java.util.List;
  */
 public class VisitsReportController extends BaseController {
 
-    /** X-axis category labels (also the fixed bar order). */
+    /** X-axis category label for individual + family visits (also the bar order). */
     private static final String CAT_INDIVIDUALS = "Individuals";
+    /** X-axis category label for organized group visits. */
     private static final String CAT_GROUPS      = "Organized groups";
 
-    /** Park dropdown entry: carries the id (null for "All parks") but renders the name. */
+    /**
+     * Park dropdown entry: carries the id (null for "All parks") but renders the name.
+     *
+     * @param id   the park id, or {@code null} for "All parks"
+     * @param name the park name shown in the dropdown
+     */
     private record ParkOption(Integer id, String name) {
         @Override public String toString() { return name; }
     }
 
+    /** Range start date picker. */
     @FXML private DatePicker            fromPicker;
+    /** Range end date picker. */
     @FXML private DatePicker            toPicker;
+    /** Park filter dropdown ("All parks" or a specific park). */
     @FXML private ComboBox<ParkOption>  parkCombo;
+    /** Runs the report. */
     @FXML private Button                generateBtn;
+    /** Result/toast label for validation and errors. */
     @FXML private Label                 resultLabel;
+    /** Bar chart of visit counts per category. */
     @FXML private BarChart<String, Number> chart;
+    /** Category (x) axis of the chart. */
     @FXML private CategoryAxis          xAxis;
+    /** Value (y) axis of the chart. */
     @FXML private NumberAxis            yAxis;
+    /** Container for the per-category summary tiles. */
     @FXML private HBox                  summaryBox;
 
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
     // the DEPT_MANAGER role), so the session is accepted but unused.
+    /**
+     * Creates the visits-report controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public VisitsReportController(NetworkService network, Session session) {
         super(network);
     }
 
+    /** FXML lifecycle hook: sets default dates, fixes the chart categories, loads parks. */
     @FXML
     private void initialize() {
         // Sensible default window: the last month up to today; the manager adjusts.
@@ -101,6 +123,7 @@ public class VisitsReportController extends BaseController {
         });
     }
 
+    /** Generate-button handler: validates inputs and runs REPORT_VISITS_BY_TYPE. */
     @FXML
     private void onGenerate() {
         LocalDate from = fromPicker.getValue();
@@ -138,6 +161,9 @@ public class VisitsReportController extends BaseController {
      * Paints the chart and summary tiles from the server's report. Bars carry the
      * visit count per category; the tiles carry the average stay (minutes). Both
      * come straight from the {@link VisitsReportDTO} rows.
+     *
+     * @param report    the server's report result
+     * @param parkLabel the park label for the chart title
      */
     private void render(VisitsReportDTO report, String parkLabel) {
         chart.setTitle(report.getFromDate() + "  →  " + report.getToDate() + "    ·    " + parkLabel);
@@ -154,7 +180,14 @@ public class VisitsReportController extends BaseController {
         chart.getData().add(series);
     }
 
-    /** One per-category summary tile: category, visit count, and average stay. */
+    /**
+     * One per-category summary tile: category, visit count, and average stay.
+     *
+     * @param category       the category label
+     * @param visitCount     the visit count for the category
+     * @param avgStayMinutes the average stay in minutes
+     * @return the summary tile
+     */
     private VBox summaryTile(String category, int visitCount, double avgStayMinutes) {
         Label cat = new Label(category);
         cat.getStyleClass().add("stat-tile-label");

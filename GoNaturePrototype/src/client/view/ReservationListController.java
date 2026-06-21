@@ -55,29 +55,48 @@ import java.util.Optional;
  */
 public class ReservationListController extends BaseController {
 
+    /** Root container of the screen, swapped out while the edit wizard is shown. */
     @FXML private VBox      screenRoot;
+    /** Visitor-id input (prefilled and locked for a logged-in visitor). */
     @FXML private TextField visitorField;
+    /** Loads the reservations for the entered visitor id. */
     @FXML private Button    loadBtn;
+    /** Toast/status label for load and action feedback. */
     @FXML private Label     resultLabel;
+    /** Header label of the results card showing the current visitor. */
     @FXML private Label     cardHeaderLabel;
+    /** Container the reservation rows are rendered into. */
     @FXML private VBox      tableBox;
 
-    // The visitor whose list is currently shown, so action handlers can refresh
-    // the same list after a successful confirm/cancel. -1 means "nothing loaded".
+    /**
+     * The visitor whose list is currently shown, so action handlers can refresh
+     * the same list after a successful confirm/cancel. {@code -1} means "nothing
+     * loaded".
+     */
     private long currentVisitorId = -1;
 
-    // Park id -> name, fetched once on init via LIST_PARKS so rows and the detail
-    // show the park's name rather than a bare numeric id; empty until it resolves
-    // (rows then fall back to "Park #<id>").
+    /**
+     * Park id &rarr; name, fetched once on init via LIST_PARKS so rows and the
+     * detail show the park's name rather than a bare numeric id; empty until it
+     * resolves (rows then fall back to {@code "Park #<id>"}).
+     */
     private Map<Integer, String> parkNames = new HashMap<>();
 
+    /** The current client session (used to detect a logged-in visitor). */
     private final Session session;
 
+    /**
+     * Creates the reservation-list controller.
+     *
+     * @param network the shared network service
+     * @param session the current client session
+     */
     public ReservationListController(NetworkService network, Session session) {
         super(network);
         this.session = session;
     }
 
+    /** FXML lifecycle hook: wires the input, prefills for a visitor, loads park names. */
     @FXML
     private void initialize() {
         visitorField.setOnAction(e -> onLoad());
@@ -101,8 +120,13 @@ public class ReservationListController extends BaseController {
         });
     }
 
-    /** Builds the park id -> name lookup from a LIST_PARKS response (defensive,
-     *  never throws); mirrors the Dashboard's {@code parkNamesFrom}. */
+    /**
+     * Builds the park id &rarr; name lookup from a LIST_PARKS response (defensive,
+     * never throws); mirrors the Dashboard's {@code parkNamesFrom}.
+     *
+     * @param res the LIST_PARKS response
+     * @return a park id &rarr; name map (empty if the response had no parks)
+     */
     private Map<Integer, String> parkNamesFrom(ServerResponse res) {
         Map<Integer, String> names = new HashMap<>();
         if (res.isSuccess() && res.getData() instanceof List<?> raw) {
@@ -113,11 +137,17 @@ public class ReservationListController extends BaseController {
         return names;
     }
 
-    /** The park's name, or a "Park #<id>" fallback when the names aren't loaded. */
+    /**
+     * The park's name, or a {@code "Park #<id>"} fallback when the names aren't loaded.
+     *
+     * @param parkId the park id to resolve
+     * @return the park's name, or a {@code "Park #<id>"} fallback
+     */
     private String parkName(int parkId) {
         return parkNames.getOrDefault(parkId, "Park #" + parkId);
     }
 
+    /** Load-button handler: parses the entered visitor id and loads their list. */
     @FXML
     private void onLoad() {
         // Visitor's id is prefilled (and locked) above; staff type a visitor id here.
@@ -132,6 +162,11 @@ public class ReservationListController extends BaseController {
         loadFor(visitorId);
     }
 
+    /**
+     * Fetches and renders the reservations for a visitor, then subscribes to them.
+     *
+     * @param visitorId the visitor whose reservations to load
+     */
     private void loadFor(long visitorId) {
         currentVisitorId = visitorId;
         loadBtn.setDisable(true);
@@ -150,6 +185,11 @@ public class ReservationListController extends BaseController {
         });
     }
 
+    /**
+     * Renders the header and one row per reservation (or an empty-state row).
+     *
+     * @param rows the reservations to display
+     */
     private void populate(List<ReservationDTO> rows) {
         cardHeaderLabel.setText("RESERVATIONS — VISITOR " + currentVisitorId);
         tableBox.getChildren().setAll(headerRow());
@@ -174,6 +214,8 @@ public class ReservationListController extends BaseController {
      * {@link BaseController#unsubscribeAll()} helper (which also sends the matching
      * UNSUBSCRIBE), so a fresh Load or a push-driven refresh never leaks
      * subscriptions; {@link BaseController#onHide()} drops the rest on navigation.
+     *
+     * @param rows the currently displayed reservations to subscribe to
      */
     private void resubscribe(List<ReservationDTO> rows) {
         unsubscribeAll();
@@ -194,6 +236,7 @@ public class ReservationListController extends BaseController {
         if (currentVisitorId >= 0) loadFor(currentVisitorId);
     }
 
+    /** {@return the table header row of column titles} */
     private HBox headerRow() {
         HBox row = new HBox();
         row.getStyleClass().add("history-header-row");
@@ -215,14 +258,25 @@ public class ReservationListController extends BaseController {
         return row;
     }
 
-    /** A zero-width filler that absorbs the row's slack so fixed columns and the
-     *  action buttons keep their natural widths instead of being squeezed. */
+    /**
+     * A zero-width filler that absorbs the row's slack so fixed columns and the
+     * action buttons keep their natural widths instead of being squeezed.
+     *
+     * @return a horizontally-growing spacer region
+     */
     private Region flexSpacer() {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         return spacer;
     }
 
+    /**
+     * Builds one reservation row: info cells, status tag, and the action buttons.
+     *
+     * @param r           the reservation to render
+     * @param withDivider whether to draw a divider below the row
+     * @return the assembled row
+     */
     private HBox dataRow(ReservationDTO r, boolean withDivider) {
         Label idLbl    = cell("#" + r.getId(),                  "num", 30);
         Label parkLbl  = cell(parkName(r.getParkId()),          null, 92);
@@ -283,9 +337,14 @@ public class ReservationListController extends BaseController {
         return row;
     }
 
-    /** True if the click landed on a Button (or a node inside one), so the row's
-     *  click handler should defer to that button's own action instead of opening
-     *  the detail view. */
+    /**
+     * True if the click landed on a Button (or a node inside one), so the row's
+     * click handler should defer to that button's own action instead of opening
+     * the detail view.
+     *
+     * @param target the event target that was clicked
+     * @return whether the click hit a button or a descendant of one
+     */
     private boolean clickHitButton(Object target) {
         Node n = (target instanceof Node) ? (Node) target : null;
         while (n != null) {
@@ -340,7 +399,14 @@ public class ReservationListController extends BaseController {
         dialog.showAndWait();
     }
 
-    /** Adds one read-only "key: value" line to the detail grid. */
+    /**
+     * Adds one read-only "key: value" line to the detail grid.
+     *
+     * @param grid  the grid to add to
+     * @param row   the grid row index
+     * @param key   the field label
+     * @param value the field value
+     */
     private void addDetail(GridPane grid, int row, String key, String value) {
         Label k = new Label(key);
         k.getStyleClass().add("key");
@@ -350,23 +416,43 @@ public class ReservationListController extends BaseController {
         grid.add(v, 1, row);
     }
 
-    /** Renders a blank/null field as an em dash so empty values read cleanly. */
+    /**
+     * Renders a blank/null field as an em dash so empty values read cleanly.
+     *
+     * @param value the value to display
+     * @return the value, or an em dash if it is null/blank
+     */
     private String orDash(String value) {
         return (value == null || value.isBlank()) ? "—" : value;
     }
 
-    /** Cancel is legal from PENDING, CONFIRMED or WAITING (mirrors the server rule). */
+    /**
+     * Cancel is legal from PENDING, CONFIRMED or WAITING (mirrors the server rule).
+     *
+     * @param s the reservation's current status
+     * @return whether cancel is allowed from that status
+     */
     private boolean canCancel(ReservationStatus s) {
         return s == ReservationStatus.PENDING
                 || s == ReservationStatus.CONFIRMED
                 || s == ReservationStatus.WAITING;
     }
 
-    /** Edit (reschedule) is legal only from PENDING or CONFIRMED (mirrors the server rule). */
+    /**
+     * Edit (reschedule) is legal only from PENDING or CONFIRMED (mirrors the server rule).
+     *
+     * @param s the reservation's current status
+     * @return whether edit is allowed from that status
+     */
     private boolean canEdit(ReservationStatus s) {
         return s == ReservationStatus.PENDING || s == ReservationStatus.CONFIRMED;
     }
 
+    /**
+     * Confirms a reservation after a Yes/No prompt, then refreshes the list.
+     *
+     * @param reservationId the reservation to confirm
+     */
     private void confirm(int reservationId) {
         if (!confirmAction("Confirm reservation #" + reservationId + "?",
                 "Are you sure you want to confirm this reservation?")) {
@@ -378,6 +464,11 @@ public class ReservationListController extends BaseController {
         });
     }
 
+    /**
+     * Cancels a reservation after a Yes/No prompt, then refreshes the list.
+     *
+     * @param reservationId the reservation to cancel
+     */
     private void cancel(int reservationId) {
         if (!confirmAction("Cancel reservation #" + reservationId + "?",
                 "Are you sure you want to cancel this reservation? This cannot be undone.")) {
@@ -422,6 +513,8 @@ public class ReservationListController extends BaseController {
      * <p>User-initiated only. A pushed update never lands here — the push handler
      * ({@link #onReservationEvent}) only re-reads the list — so applying an edit
      * cannot loop back into another update.
+     *
+     * @param r the reservation to edit
      */
     private void edit(ReservationDTO r) {
         new EditFlow(r).start();
@@ -462,6 +555,7 @@ public class ReservationListController extends BaseController {
      *
      * @param active the zero-based index of the current step
      * @param labels the per-step captions (their count drives the number of dots)
+     * @return the assembled step-indicator row
      */
     private HBox buildStepIndicator(int active, String[] labels) {
         HBox row = new HBox();
@@ -504,27 +598,47 @@ public class ReservationListController extends BaseController {
      * lives on the instance so it survives the Back/Next step swaps.
      */
     private final class EditFlow {
+        /** Captions for the three wizard steps. */
         private static final String[] STEPS = {"Edit Details", "Review", "Settlement"};
 
+        /** The reservation being edited (the original, pre-change values). */
         private final ReservationDTO original;
-        private final List<Node> savedView;   // the list cards, restored on exit
-        private final VBox card;              // the wizard card swapped in
+        /** The list cards saved on entry and restored on exit. */
+        private final List<Node> savedView;
+        /** The wizard card swapped in for the list. */
+        private final VBox card;
 
         // Step-1 inputs — created once so their values survive the step swaps.
+        /** Visit-date picker. */
         private final DatePicker     datePicker    = new DatePicker();
+        /** Toggle for whether a specific time is set. */
         private final CheckBox       timeCheck     = new CheckBox("Set a time");
+        /** Hour dropdown (1–12). */
         private final ComboBox<Integer> hourCombo   = new ComboBox<>();
+        /** Minute dropdown (quarter-hour steps). */
         private final ComboBox<String>  minuteCombo = new ComboBox<>();
+        /** AM/PM dropdown. */
         private final ComboBox<String>  ampmCombo   = new ComboBox<>();
+        /** Party-size spinner. */
         private final Spinner<Integer> partySpinner  = new Spinner<>();
+        /** Inline validation/error label. */
         private final Label          errorLbl      = new Label();
 
         // Captured on Review and sent on Confirm; result fills the Settlement step.
+        /** Edited visit date, captured on Review (ISO {@code yyyy-MM-dd}). */
         private String visitDate;
+        /** Edited visit time, captured on Review ({@code HH:mm:ss}, or {@code null}). */
         private String visitTime;
+        /** Edited party size, captured on Review. */
         private int    partySize;
+        /** The server's update result, filled on Confirm to drive the Settlement step. */
         private ReservationUpdateResultDTO result;
 
+        /**
+         * Creates the wizard for one reservation, snapshotting the current view.
+         *
+         * @param r the reservation to edit
+         */
         EditFlow(ReservationDTO r) {
             this.original   = r;
             this.savedView  = new ArrayList<>(screenRoot.getChildren());
@@ -591,6 +705,11 @@ public class ReservationListController extends BaseController {
             showStep(0);
         }
 
+        /**
+         * Renders the wizard step at the given index (title, indicator, body, footer).
+         *
+         * @param idx the zero-based step index
+         */
         private void showStep(int idx) {
             hideError();
             Label title = new Label("EDIT RESERVATION #" + original.getId());
@@ -599,6 +718,12 @@ public class ReservationListController extends BaseController {
                     title, buildStepIndicator(idx, STEPS), bodyFor(idx), errorLbl, footerFor(idx));
         }
 
+        /**
+         * Selects the body node for a wizard step.
+         *
+         * @param idx the zero-based step index
+         * @return the body node for that step (details / review / settlement)
+         */
         private Node bodyFor(int idx) {
             switch (idx) {
                 case 1:  return reviewBody();
@@ -607,6 +732,7 @@ public class ReservationListController extends BaseController {
             }
         }
 
+        /** {@return the step-1 body: date, optional time, and party-size inputs} */
         private Node detailsBody() {
             Label colon = new Label(":");
             colon.getStyleClass().add("time-colon");
@@ -618,6 +744,7 @@ public class ReservationListController extends BaseController {
                     fieldLabel("Party Size"),            partySpinner);
         }
 
+        /** {@return the step-2 body: an old &rarr; new comparison of the edited fields} */
         private Node reviewBody() {
             GridPane g = new GridPane();
             g.setHgap(14);
@@ -628,6 +755,15 @@ public class ReservationListController extends BaseController {
             return new VBox(10, hintLabel("Review your changes, then confirm to apply them."), g);
         }
 
+        /**
+         * Adds one "key: old &rarr; new" row to the review grid.
+         *
+         * @param g      the review grid
+         * @param row    the grid row index
+         * @param key    the field label
+         * @param oldVal the original value
+         * @param newVal the edited value
+         */
         private void reviewRow(GridPane g, int row, String key, String oldVal, String newVal) {
             Label k = new Label(key);     k.getStyleClass().add("key");
             Label o = new Label(oldVal);  o.getStyleClass().add("val");
@@ -639,6 +775,7 @@ public class ReservationListController extends BaseController {
             g.add(n, 3, row);
         }
 
+        /** {@return the step-3 body: the success line plus any settlement message} */
         private Node settlementBody() {
             Label ok = new Label("✓ Reservation #" + original.getId() + " updated.");
             ok.getStyleClass().add("payment-title");
@@ -649,6 +786,12 @@ public class ReservationListController extends BaseController {
             return new VBox(10, ok, detail);
         }
 
+        /**
+         * Builds the footer buttons for a step (Cancel/Review, Back/Confirm, or Done).
+         *
+         * @param idx the zero-based step index
+         * @return the footer button row
+         */
         private Node footerFor(int idx) {
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -674,8 +817,12 @@ public class ReservationListController extends BaseController {
             return footer;
         }
 
-        /** Validates step 1 and captures the edited values; same rules as the old
-         *  dialog (date required, party ≥ 1, time optional → null). */
+        /**
+         * Validates step 1 and captures the edited values; same rules as the old
+         * dialog (date required, party ≥ 1, time optional → null).
+         *
+         * @return whether the inputs were valid (and have been captured)
+         */
         private boolean validateAndCapture() {
             if (datePicker.getValue() == null) {
                 showError("Please choose a visit date");
@@ -700,9 +847,13 @@ public class ReservationListController extends BaseController {
             return true;
         }
 
-        /** Converts the 12-hour dropdowns (Hour 1–12, Minute, AM/PM) into the
-         *  24-hour {@code HH:mm:ss} string the server expects — byte-identical to
-         *  the Book Visit form: 12 AM → 00, 12 PM → 12, any other PM hour + 12. */
+        /**
+         * Converts the 12-hour dropdowns (Hour 1–12, Minute, AM/PM) into the
+         * 24-hour {@code HH:mm:ss} string the server expects — byte-identical to
+         * the Book Visit form: 12 AM → 00, 12 PM → 12, any other PM hour + 12.
+         *
+         * @return the selected time as {@code HH:mm:ss}
+         */
         private String formatVisitTime() {
             int     hour12 = hourCombo.getValue();
             boolean pm     = "PM".equals(ampmCombo.getValue());
@@ -736,12 +887,24 @@ public class ReservationListController extends BaseController {
             screenRoot.getChildren().setAll(savedView);
         }
 
+        /**
+         * Builds a field-label.
+         *
+         * @param text the label text
+         * @return a {@code field-label}-styled label
+         */
         private Label fieldLabel(String text) {
             Label l = new Label(text);
             l.getStyleClass().add("field-label");
             return l;
         }
 
+        /**
+         * Builds a wrapping hint label.
+         *
+         * @param text the hint text
+         * @return a wrapping {@code hint-text}-styled label
+         */
         private Label hintLabel(String text) {
             Label l = new Label(text);
             l.getStyleClass().add("hint-text");
@@ -749,34 +912,60 @@ public class ReservationListController extends BaseController {
             return l;
         }
 
+        /**
+         * Builds a primary-styled button.
+         *
+         * @param text the button text
+         * @return a primary-styled button
+         */
         private Button primary(String text) {
             Button b = new Button(text);
             b.getStyleClass().add("btn-primary");
             return b;
         }
 
+        /**
+         * Builds a secondary-styled button.
+         *
+         * @param text the button text
+         * @return a secondary-styled button
+         */
         private Button secondary(String text) {
             Button b = new Button(text);
             b.getStyleClass().add("btn-secondary");
             return b;
         }
 
+        /**
+         * Shows an inline error message on the wizard.
+         *
+         * @param msg the message to show
+         */
         private void showError(String msg) {
             errorLbl.setText(msg);
             errorLbl.setVisible(true);
             errorLbl.setManaged(true);
         }
 
+        /** Hides the inline error message. */
         private void hideError() {
             errorLbl.setVisible(false);
             errorLbl.setManaged(false);
         }
     }
 
+    /** Reloads the current visitor's list (no-op if nothing is loaded). */
     private void reload() {
         if (currentVisitorId >= 0) loadFor(currentVisitorId);
     }
 
+    /**
+     * Builds a fixed-width column header cell.
+     *
+     * @param text the header text
+     * @param w    the preferred width, or {@code 0} for natural width
+     * @return the header cell label
+     */
     private Label headerCell(String text, double w) {
         Label l = new Label(text);
         l.getStyleClass().add("history-header-cell");
@@ -784,6 +973,14 @@ public class ReservationListController extends BaseController {
         return l;
     }
 
+    /**
+     * Builds a fixed-width data cell.
+     *
+     * @param text     the cell text
+     * @param modifier an extra style-class modifier, or {@code null}
+     * @param w        the preferred width
+     * @return the data cell label
+     */
     private Label cell(String text, String modifier, double w) {
         Label l = new Label(text);
         l.getStyleClass().add("history-cell");

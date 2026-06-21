@@ -5,6 +5,7 @@ import common.dto.CancellationsReportRow;
 import common.dto.VisitsReportDTO;
 import common.dto.VisitsReportRow;
 import server.db.DBConnection;
+import server.util.ServerLog;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -30,6 +31,9 @@ import java.util.List;
  * the statement injection-safe whether or not a park is given.
  */
 public class ReportDAO {
+
+    /** Creates the report DAO. */
+    public ReportDAO() { }
 
     /**
      * Visits-by-type report: per-category visit counts and average stay lengths
@@ -106,7 +110,7 @@ public class ReportDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
             return null;
         }
 
@@ -179,7 +183,7 @@ public class ReportDAO {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ServerLog.daoError(e);
             return null;
         }
 

@@ -25,6 +25,7 @@ import java.io.Serializable;
  * </ul>
  */
 public class VisitDTO implements Serializable {
+    /** Serialization-format version identifier. */
     private static final long serialVersionUID = 1L;
 
     /** Unique visit identifier (primary key). */
@@ -72,47 +73,47 @@ public class VisitDTO implements Serializable {
         this.visitType = visitType;
     }
 
-    /** @return the unique visit identifier */
+    /** {@return the unique visit identifier} */
     public int getId() {
         return id;
     }
 
-    /** @return the identifier of the backing reservation, or {@code null} for a casual walk-in */
+    /** {@return the identifier of the backing reservation, or {@code null} for a casual walk-in} */
     public Integer getReservationId() {
         return reservationId;
     }
 
-    /** @return the identifier of the park entered */
+    /** {@return the identifier of the park entered} */
     public int getParkId() {
         return parkId;
     }
 
-    /** @return the identifier of the visitor, or {@code null} if anonymous */
+    /** {@return the identifier of the visitor, or {@code null} if anonymous} */
     public Long getVisitorId() {
         return visitorId;
     }
 
-    /** @return the entry timestamp as a string */
+    /** {@return the entry timestamp as a string} */
     public String getEnteredAt() {
         return enteredAt;
     }
 
-    /** @return the exit timestamp as a string, or {@code null} while the party is still inside */
+    /** {@return the exit timestamp as a string, or {@code null} while the party is still inside} */
     public String getExitedAt() {
         return exitedAt;
     }
 
-    /** @return the number of people in the party */
+    /** {@return the number of people in the party} */
     public int getHeadcount() {
         return headcount;
     }
 
-    /** @return the price charged in cents (casual visits only), or {@code null} for a reservation visit */
+    /** {@return the price charged in cents (casual visits only), or {@code null} for a reservation visit} */
     public Integer getPriceCents() {
         return priceCents;
     }
 
-    /** @return the nature of the visit (casual visits only), or {@code null} for a reservation visit */
+    /** {@return the nature of the visit (casual visits only), or {@code null} for a reservation visit} */
     public VisitType getVisitType() {
         return visitType;
     }
