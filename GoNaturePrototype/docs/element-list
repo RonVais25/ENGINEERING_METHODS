@@ -1,2 +1,14 @@
+client.app
+client.boundary
+client.net
+client.service
+client.view
 common.dto
+server.app
+server.boundary
+server.control
 server.dao
+server.db
+server.net
+server.scheduler
+server.subscription
