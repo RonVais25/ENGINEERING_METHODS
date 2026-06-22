@@ -169,6 +169,9 @@ public class MainShellController {
             // Notification center — every logged-in actor can review their messages.
             new NavItem(new Screen("notifications", "🔔", "Notifications", "/client/view/NotificationCenterView.fxml",
                         "Notifications", "Messages addressed to you"), EVERYONE),
+            // My Profile — every logged-in actor's own personal details (read-only).
+            new NavItem(new Screen("profile", "👤", "My Profile", "/client/view/MyProfileView.fxml",
+                        "My Profile", "Your personal details"), EVERYONE),
             // Member registration — service reps only.
             new NavItem(new Screen("regsub", "★", "Register Subscriber", "/client/view/SubscriberRegisterView.fxml",
                         "Register Subscriber", "Sign up a new subscriber (members earn a discount)"), SERVICE_REP_ONLY),

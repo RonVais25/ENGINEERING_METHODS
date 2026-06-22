@@ -240,6 +240,12 @@
     -fx-background-color: -g200;
 }
 
+/* Icon-only action buttons (My Reservations rows): compact, larger glyph, tight
+   padding so ✓ / 🚫 / ✎ sit square. The .danger variant (Cancel) is tinted red to
+   read as a stop / no-entry action. Each carries a tooltip set in the controller. */
+.btn-icon        { -fx-font-size: 15; -fx-padding: 8 12 8 12; }
+.btn-icon.danger { -fx-text-fill: -red; }
+
 /* Segmented Staff/Visitor toggle on the user-login screen */
 .seg-group { -fx-background-color: -g100; -fx-background-radius: 10; -fx-padding: 3; -fx-spacing: 3; }
 .seg-btn {
@@ -503,6 +509,14 @@
    apart from the green "Cancelled" bars. The legend symbol shares .chart-bar, so
    this recolours it too. The visits chart has no second series, so it's unaffected. */
 .report-chart .default-color1.chart-bar { -fx-bar-fill: -red; }
+/* The cancellations report is a LINE chart: recolour the two trend lines and their
+   dot symbols (and the legend swatch, which shares .chart-line-symbol) to match the
+   bar palette — green "Cancelled", red "No-show". The visits bar chart carries no
+   line/symbol nodes, so these rules don't touch it. */
+.report-chart .default-color0.chart-series-line { -fx-stroke: -g500; }
+.report-chart .default-color1.chart-series-line { -fx-stroke: -red; }
+.report-chart .default-color0.chart-line-symbol { -fx-background-color: -g500, white; }
+.report-chart .default-color1.chart-line-symbol { -fx-background-color: -red, white; }
 .report-chart .chart-plot-background       { -fx-background-color: transparent; }
 .report-chart .chart-vertical-grid-lines   { -fx-stroke: transparent; }
 .report-chart .chart-horizontal-grid-lines { -fx-stroke: -g100; }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.LineChart?>
 <?import javafx.scene.chart.CategoryAxis?>
 <?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.Button?>
@@ -11,9 +11,10 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
-<!-- Cancellations report (DEPT_MANAGER only): a per-day bar chart of cancelled /
+<!-- Cancellations report (DEPT_MANAGER only): a per-day line chart of cancelled /
      no-show reservations over a date range and (optionally) one park, with a small
-     totals + average-per-day summary line. Mirrors the visits-by-type chart. -->
+     totals + average-per-day summary line. Two trend lines (Cancelled / No-show)
+     with a dot marking each day's count. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.CancellationsReportController"
             fitToWidth="true" fitToHeight="true" styleClass="scroll-pane">
@@ -45,19 +46,19 @@
             <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
         </VBox>
 
-        <!-- Per-day chart + range-summary line. Two grouped series per date:
-             "Cancelled" and "No-show". -->
+        <!-- Per-day chart + range-summary line. Two trend lines per date:
+             "Cancelled" and "No-show", each with a dot at every day's count. -->
         <VBox styleClass="card" spacing="14" VBox.vgrow="ALWAYS">
             <Label fx:id="cardHeaderLabel" text="CANCELLATIONS &amp; NO-SHOWS" styleClass="section-label"/>
-            <BarChart fx:id="chart" animated="false" prefHeight="320"
-                      styleClass="report-chart" VBox.vgrow="ALWAYS">
+            <LineChart fx:id="chart" animated="false" createSymbols="true" prefHeight="320"
+                       styleClass="report-chart" VBox.vgrow="ALWAYS">
                 <xAxis>
                     <CategoryAxis fx:id="xAxis" label="Date" tickLabelRotation="-90"/>
                 </xAxis>
                 <yAxis>
                     <NumberAxis fx:id="yAxis" label="Number of cancellations"/>
                 </yAxis>
-            </BarChart>
+            </LineChart>
             <!-- Shown instead of an empty chart when the range has no activity. -->
             <VBox fx:id="placeholderBox" styleClass="result-empty" visible="false" managed="false">
                 <Label text="No cancellations in this range." styleClass="result-empty-msg"/>

@@ -19,11 +19,11 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
-import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -67,6 +67,12 @@ public class ReservationListController extends BaseController {
     @FXML private Label     cardHeaderLabel;
     /** Container the reservation rows are rendered into. */
     @FXML private VBox      tableBox;
+    /** On-screen reservation detail card (replaces the old modal); hidden until a row is clicked. */
+    @FXML private VBox      detailCard;
+    /** Title label of the detail card. */
+    @FXML private Label     detailTitleLbl;
+    /** Grid the detail key/value rows are rendered into. */
+    @FXML private GridPane  detailGrid;
 
     /**
      * The visitor whose list is currently shown, so action handlers can refresh
@@ -191,6 +197,9 @@ public class ReservationListController extends BaseController {
      * @param rows the reservations to display
      */
     private void populate(List<ReservationDTO> rows) {
+        // The detail card is a snapshot of one row; dismiss it whenever the list is
+        // repainted (manual reload, action, or a pushed change) so it can't go stale.
+        onCloseDetail();
         cardHeaderLabel.setText("RESERVATIONS — VISITOR " + currentVisitorId);
         tableBox.getChildren().setAll(headerRow());
 
@@ -271,6 +280,26 @@ public class ReservationListController extends BaseController {
     }
 
     /**
+     * Builds an icon-only action button with a tooltip spelling out the word it
+     * stands for. The {@code danger} variant (Cancel) is tinted red to read as a
+     * stop / no-entry action. Pinned to its preferred width so a tight row never
+     * shrinks the glyph into an ellipsized stub.
+     *
+     * @param icon    the glyph shown on the button (✓ / 🚫 / ✎)
+     * @param tooltip the word the icon stands for (Confirm / Cancel / Edit)
+     * @param danger  whether to apply the red danger styling
+     * @return the assembled icon button
+     */
+    private Button iconButton(String icon, String tooltip, boolean danger) {
+        Button b = new Button(icon);
+        b.getStyleClass().addAll("btn-secondary", "btn-icon");
+        if (danger) b.getStyleClass().add("danger");
+        b.setTooltip(new Tooltip(tooltip));
+        b.setMinWidth(Region.USE_PREF_SIZE);
+        return b;
+    }
+
+    /**
      * Builds one reservation row: info cells, status tag, and the action buttons.
      *
      * @param r           the reservation to render
@@ -290,29 +319,23 @@ public class ReservationListController extends BaseController {
         statusTag.getStyleClass().addAll("status-tag", r.getStatus().name().toLowerCase());
         statusTag.setPrefWidth(94);
 
-        Button confirmBtn = new Button("Confirm");
-        confirmBtn.getStyleClass().add("btn-secondary");
+        // Icon-only action buttons (✓ confirm · 🚫 cancel · ✎ edit), each with a
+        // tooltip spelling out the word. Enabled only for the statuses where the
+        // action is legal — the server re-validates, so the disabling is a UX hint.
+        Button confirmBtn = iconButton("✓", "Confirm", false);
         confirmBtn.setDisable(r.getStatus() != ReservationStatus.PENDING);
         confirmBtn.setOnAction(e -> confirm(r.getId()));
 
-        Button cancelBtn = new Button("Cancel");
-        cancelBtn.getStyleClass().add("btn-secondary");
+        Button cancelBtn = iconButton("🚫", "Cancel", true);
         cancelBtn.setDisable(!canCancel(r.getStatus()));
         cancelBtn.setOnAction(e -> cancel(r.getId()));
 
         // Edit (reschedule date / time / party) is only legal for an active
         // booking, mirroring the server's PENDING/CONFIRMED guard; disabled
         // otherwise. The server re-validates, so this is a UX hint only.
-        Button editBtn = new Button("Edit");
-        editBtn.getStyleClass().add("btn-secondary");
+        Button editBtn = iconButton("✎", "Edit", false);
         editBtn.setDisable(!canEdit(r.getStatus()));
         editBtn.setOnAction(e -> edit(r));
-
-        // Pin each button to its preferred (label) width so a tight row never
-        // shrinks them into ellipsized stubs ("Ac.." / "Ca.." / "E..").
-        for (Button b : new Button[] { confirmBtn, cancelBtn, editBtn }) {
-            b.setMinWidth(Region.USE_PREF_SIZE);
-        }
 
         HBox actions = new HBox(8, confirmBtn, cancelBtn, editBtn);
         actions.setAlignment(Pos.CENTER_LEFT);
@@ -355,48 +378,44 @@ public class ReservationListController extends BaseController {
     }
 
     /**
-     * Opens a small read-only detail of one reservation: every field the row hints
-     * at, spelled out — date, time, party, type, status, price, payment, guide and
-     * confirmation code. View-only by design: a single Close button and no editable
-     * controls (rescheduling stays on the Edit action). All values come from the
-     * {@link ReservationDTO} already loaded, so opening a detail never calls the
-     * server.
+     * Renders one reservation's full detail into the on-screen card below the list —
+     * replacing the old modal dialog so the detail is smoother and non-blocking. Every
+     * field the row hints at is spelled out: park, date, time, party, type, status,
+     * price, payment, guide and confirmation code. View-only by design — the ✕ Close
+     * button hides the card and rescheduling stays on the Edit action. All values come
+     * from the {@link ReservationDTO} already loaded, so opening a detail never calls
+     * the server.
      *
      * @param r the reservation whose row was clicked
      */
     private void showDetail(ReservationDTO r) {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Reservation #" + r.getId());
-        dialog.setHeaderText("Reservation details (read-only)");
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        detailTitleLbl.setText("RESERVATION #" + r.getId() + " — DETAILS");
 
-        GridPane grid = new GridPane();
-        grid.setHgap(16);
-        grid.setVgap(8);
-
+        detailGrid.getChildren().clear();
         int row = 0;
-        addDetail(grid, row++, "Reservation",       "#" + r.getId());
-        addDetail(grid, row++, "Park",              parkName(r.getParkId()));
-        addDetail(grid, row++, "Visitor",           String.valueOf(r.getVisitorId()));
-        addDetail(grid, row++, "Visit date",        orDash(r.getVisitDate()));
-        addDetail(grid, row++, "Visit time",        orDash(r.getVisitTime()));
-        addDetail(grid, row++, "Party size",        String.valueOf(r.getPartySize()));
-        addDetail(grid, row++, "Visit type",        r.getVisitType().name());
-        addDetail(grid, row++, "Status",            r.getStatus().name());
-        addDetail(grid, row++, "Price",             String.format("₪%.2f", r.getPriceCents() / 100.0));
-        addDetail(grid, row++, "Payment",           r.isPaidInAdvance() ? "Paid in advance" : "Due on arrival");
-        addDetail(grid, row++, "Guide",             r.getGuideId() == null ? "—" : String.valueOf(r.getGuideId()));
-        addDetail(grid, row++, "Confirmation code", r.getConfirmationCode() == null
+        addDetail(detailGrid, row++, "Park",              parkName(r.getParkId()));
+        addDetail(detailGrid, row++, "Visitor",           String.valueOf(r.getVisitorId()));
+        addDetail(detailGrid, row++, "Visit date",        orDash(r.getVisitDate()));
+        addDetail(detailGrid, row++, "Visit time",        orDash(r.getVisitTime()));
+        addDetail(detailGrid, row++, "Party size",        String.valueOf(r.getPartySize()));
+        addDetail(detailGrid, row++, "Visit type",        r.getVisitType().name());
+        addDetail(detailGrid, row++, "Status",            r.getStatus().name());
+        addDetail(detailGrid, row++, "Price",             String.format("₪%.2f", r.getPriceCents() / 100.0));
+        addDetail(detailGrid, row++, "Payment",           r.isPaidInAdvance() ? "Paid in advance" : "Due on arrival");
+        addDetail(detailGrid, row++, "Guide",             r.getGuideId() == null ? "—" : String.valueOf(r.getGuideId()));
+        addDetail(detailGrid, row++, "Confirmation code", r.getConfirmationCode() == null
                 ? "—" : String.valueOf(r.getConfirmationCode()));
-        addDetail(grid, row++, "Created",           orDash(r.getCreatedAt()));
+        addDetail(detailGrid, row++, "Created",           orDash(r.getCreatedAt()));
 
-        dialog.getDialogPane().setContent(grid);
+        detailCard.setVisible(true);
+        detailCard.setManaged(true);
+    }
 
-        // Match the app theme: reuse the scene's stylesheet on the dialog pane.
-        Scene scene = tableBox.getScene();
-        if (scene != null) dialog.getDialogPane().getStylesheets().addAll(scene.getStylesheets());
-
-        dialog.showAndWait();
+    /** Hides the on-screen reservation detail card (the ✕ Close button + on list refresh). */
+    @FXML
+    private void onCloseDetail() {
+        detailCard.setVisible(false);
+        detailCard.setManaged(false);
     }
 
     /**

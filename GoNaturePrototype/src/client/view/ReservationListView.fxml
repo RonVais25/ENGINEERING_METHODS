@@ -3,8 +3,10 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <!-- My Reservations: look up a visitor's reservations and confirm/cancel them.
@@ -35,6 +37,18 @@
                 <Label fx:id="cardHeaderLabel" text="RESERVATIONS" styleClass="section-label"/>
             </HBox>
             <VBox fx:id="tableBox" spacing="0"/>
+        </VBox>
+
+        <!-- On-screen reservation detail: rendered in place (no modal dialog) when a
+             row is clicked. Hidden until then; the controller fills the grid and the
+             ✕ Close button hides it again. -->
+        <VBox fx:id="detailCard" styleClass="card" spacing="12" visible="false" managed="false">
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label fx:id="detailTitleLbl" styleClass="section-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="✕ Close" onAction="#onCloseDetail" styleClass="btn-secondary" minWidth="-Infinity"/>
+            </HBox>
+            <GridPane fx:id="detailGrid" styleClass="result-row" hgap="16" vgap="8"/>
         </VBox>
     </VBox>
 </ScrollPane>
