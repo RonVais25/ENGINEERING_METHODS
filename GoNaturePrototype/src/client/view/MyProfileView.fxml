@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- My Profile (read-only): the logged-in actor's personal details, read straight
+     from the live Session. A visitor sees name / national ID / email / phone /
+     subscriber status; a staff user sees name / username / role / park. No editable
+     controls and (besides a best-effort park-name lookup) no server round-trip. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.MyProfileController"
+            fitToWidth="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" spacing="18">
+
+        <VBox styleClass="card" spacing="18">
+            <Label text="MY PROFILE" styleClass="section-label"/>
+
+            <!-- Identity header: avatar initials + name + role/subscriber sub-line. -->
+            <HBox spacing="14" alignment="CENTER_LEFT">
+                <StackPane styleClass="user-avatar">
+                    <Label fx:id="initialsLbl" styleClass="user-initials"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label fx:id="nameLbl" styleClass="success-title"/>
+                    <Label fx:id="subLbl"  styleClass="stat-card-sub"/>
+                </VBox>
+            </HBox>
+
+            <!-- Personal details, filled by the controller straight from the Session. -->
+            <GridPane fx:id="detailGrid" styleClass="result-row" hgap="18" vgap="12"/>
+        </VBox>
+    </VBox>
+</ScrollPane>

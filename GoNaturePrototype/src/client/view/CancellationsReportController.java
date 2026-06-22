@@ -7,8 +7,8 @@ import common.dto.CancellationsReportRow;
 import common.dto.ParkDTO;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
-import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
@@ -28,12 +28,12 @@ import java.util.List;
  * "All parks" for the whole region — and clicks Generate to run
  * {@code REPORT_CANCELLATIONS}.
  *
- * <p>The centrepiece is a {@link BarChart}: one category per active day along the
- * x-axis, with two grouped bars — "Cancelled" and "No-show" — carrying the day's
- * counts on the y-axis. A small summary line beneath it repeats the range totals
- * and the average per day. Every figure is read straight off the server's
- * {@link CancellationsReportDTO} — nothing is aggregated client-side. The chart
- * mirrors {@link VisitsReportController} for visual consistency.
+ * <p>The centrepiece is a {@link LineChart}: one category per active day along the
+ * x-axis, with two trend lines — "Cancelled" and "No-show" — carrying the day's
+ * counts on the y-axis and a dot ({@code createSymbols}) marking each point. A small
+ * summary line beneath it repeats the range totals and the average per day. Every
+ * figure is read straight off the server's {@link CancellationsReportDTO} — nothing
+ * is aggregated client-side.
  *
  * <p>Extends {@link BaseController} for navigation-lifecycle parity; it holds no
  * push subscriptions.
@@ -67,8 +67,8 @@ public class CancellationsReportController extends BaseController {
     @FXML private Label                    resultLabel;
     /** Header label showing the day count. */
     @FXML private Label                    cardHeaderLabel;
-    /** Grouped bar chart of cancelled/no-show counts per day. */
-    @FXML private BarChart<String, Number> chart;
+    /** Line chart of cancelled/no-show counts per day (a dot at each point). */
+    @FXML private LineChart<String, Number> chart;
     /** Category (x) axis of the chart. */
     @FXML private CategoryAxis             xAxis;
     /** Value (y) axis of the chart. */
@@ -98,6 +98,7 @@ public class CancellationsReportController extends BaseController {
         toPicker.setValue(LocalDate.now());
         fromPicker.setValue(LocalDate.now().minusMonths(1));
         yAxis.setForceZeroInRange(true);
+        chart.setCreateSymbols(true); // a dot at each day's count on both trend lines
         loadParks();
     }
 
@@ -158,8 +159,9 @@ public class CancellationsReportController extends BaseController {
     /**
      * Paints the per-day chart and the range-summary line from the server's report.
      * The x-axis categories are the report's dates (oldest first); each date carries
-     * a "Cancelled" and a "No-show" bar. An empty range shows a placeholder instead
-     * of a bare chart. Every figure comes straight off the {@link CancellationsReportDTO}.
+     * a "Cancelled" and a "No-show" point on the two trend lines. An empty range shows
+     * a placeholder instead of a bare chart. Every figure comes straight off the
+     * {@link CancellationsReportDTO}.
      *
      * @param report the server's report result
      */
