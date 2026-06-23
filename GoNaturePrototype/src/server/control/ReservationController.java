@@ -245,7 +245,8 @@ public class ReservationController implements DomainController {
                         price,                    // computed by PricingService
                         prePaid,                  // paidInAdvance, from the request
                         confirmationCode,
-                        null);                    // createdAt — DB default fills it
+                        null,                     // createdAt — DB default fills it
+                        null);                    // visitorEmail — not persisted on insert
 
                 int newId = dao.insert(toInsert);
                 if (newId < 0) {
@@ -449,7 +450,8 @@ public class ReservationController implements DomainController {
                         price,                    // computed by PricingService (preOrdered)
                         prePaid,
                         confirmationCode,
-                        null);                    // createdAt — DB default fills it
+                        null,                     // createdAt — DB default fills it
+                        null);                    // visitorEmail — not persisted on insert
 
                 int reservationId = dao.insert(toInsert);
                 if (reservationId < 0) {

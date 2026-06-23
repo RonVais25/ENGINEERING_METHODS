@@ -92,7 +92,12 @@ public class ReservationDAO {
      * @return the visitor's reservations (possibly empty); never {@code null}
      */
     public List<ReservationDTO> findByVisitor(long visitorId) {
-        String sql = "SELECT * FROM reservation WHERE visitor_id = ? ORDER BY visit_date DESC, id DESC";
+        // LEFT JOIN the visitor's email so the on-screen detail card can show it.
+        // Only this read (the one that feeds the card) joins it; map() reads the
+        // column defensively so the other reservation reads stay unchanged.
+        String sql = "SELECT r.*, v.email FROM reservation r " +
+                "LEFT JOIN visitor v ON v.id = r.visitor_id " +
+                "WHERE r.visitor_id = ? ORDER BY r.visit_date DESC, r.id DESC";
         List<ReservationDTO> result = new ArrayList<>();
 
         try (Connection conn = DBConnection.getConnection();
@@ -530,7 +535,29 @@ public class ReservationDAO {
                 rs.getInt("price_cents"),
                 rs.getBoolean("paid_in_advance"),
                 confirmationCode,
-                rs.getString("created_at")
+                rs.getString("created_at"),
+                visitorEmailIfPresent(rs)
         );
+    }
+
+    /**
+     * Reads the joined {@code email} column when the query supplied one — only the
+     * reservation read that feeds the detail card ({@link #findByVisitor}) LEFT
+     * JOINs {@code visitor.email} — and {@code null} otherwise. The other reads
+     * select reservation columns only, so reading it defensively keeps the shared
+     * {@link #map} usable for all of them without changing those queries.
+     *
+     * @param rs a result set positioned on a reservation row
+     * @return the visitor's email if the query joined it, else {@code null}
+     * @throws java.sql.SQLException if the result-set metadata cannot be read
+     */
+    private String visitorEmailIfPresent(ResultSet rs) throws java.sql.SQLException {
+        java.sql.ResultSetMetaData meta = rs.getMetaData();
+        for (int i = meta.getColumnCount(); i >= 1; i--) {
+            if ("email".equalsIgnoreCase(meta.getColumnLabel(i))) {
+                return rs.getString(i);
+            }
+        }
+        return null;
     }
 }

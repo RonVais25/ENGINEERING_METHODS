@@ -396,6 +396,7 @@ public class ReservationListController extends BaseController {
         int row = 0;
         addDetail(detailGrid, row++, "Park",              parkName(r.getParkId()));
         addDetail(detailGrid, row++, "Visitor",           String.valueOf(r.getVisitorId()));
+        addDetail(detailGrid, row++, "Email",             orDash(r.getVisitorEmail()));
         addDetail(detailGrid, row++, "Visit date",        orDash(r.getVisitDate()));
         addDetail(detailGrid, row++, "Visit time",        orDash(r.getVisitTime()));
         addDetail(detailGrid, row++, "Party size",        String.valueOf(r.getPartySize()));

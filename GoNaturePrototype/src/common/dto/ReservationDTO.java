@@ -47,6 +47,13 @@ public class ReservationDTO implements Serializable {
     private Integer confirmationCode;
     /** Timestamp the reservation row was created (DB {@code DATETIME} as string). */
     private String createdAt;
+    /**
+     * The owning visitor's email address (joined from {@code visitor.email}), or
+     * {@code null} when none is on file or the query that built this DTO did not
+     * join it. Only the reads that feed the reservation detail card carry it; the
+     * other reservation reads leave it {@code null}.
+     */
+    private String visitorEmail;
 
     /**
      * Creates a fully populated reservation.
@@ -65,11 +72,12 @@ public class ReservationDTO implements Serializable {
      * @param paidInAdvance    whether the reservation was paid in advance
      * @param confirmationCode booking confirmation code, or {@code null}
      * @param createdAt        creation timestamp as a string
+     * @param visitorEmail     the owning visitor's email, or {@code null} if not on file / not joined
      */
     public ReservationDTO(int id, int parkId, long visitorId, String visitDate, String visitTime,
                           int partySize, VisitType visitType, ReservationStatus status, boolean isGroup,
                           Long guideId, int priceCents, boolean paidInAdvance, Integer confirmationCode,
-                          String createdAt) {
+                          String createdAt, String visitorEmail) {
         this.id = id;
         this.parkId = parkId;
         this.visitorId = visitorId;
@@ -84,6 +92,7 @@ public class ReservationDTO implements Serializable {
         this.paidInAdvance = paidInAdvance;
         this.confirmationCode = confirmationCode;
         this.createdAt = createdAt;
+        this.visitorEmail = visitorEmail;
     }
 
     /** {@return the unique reservation identifier} */
@@ -154,5 +163,10 @@ public class ReservationDTO implements Serializable {
     /** {@return the creation timestamp as a string} */
     public String getCreatedAt() {
         return createdAt;
+    }
+
+    /** {@return the owning visitor's email, or {@code null} if not on file / not joined} */
+    public String getVisitorEmail() {
+        return visitorEmail;
     }
 }
