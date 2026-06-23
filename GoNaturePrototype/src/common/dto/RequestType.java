@@ -15,10 +15,12 @@ public enum RequestType {
     // auth
     /** Authenticate a staff user by username and password. */
     LOGIN_STAFF,
-    /** Authenticate a visitor by national id. */
+    /** Authenticate a visitor by national id and password. */
     LOGIN_VISITOR,
     /** Log the current actor out and release the single-login lock. */
     LOGOUT,
+    /** Self-service signup: create a regular (non-subscriber) visitor account. */
+    REGISTER_VISITOR,
     /** Register a visitor as a subscriber (service rep only). */
     REGISTER_SUBSCRIBER,
     /** Register a visitor as a group guide (service rep only). */

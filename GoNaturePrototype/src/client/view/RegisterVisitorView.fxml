@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Self-service signup dialog, opened modally from the login screen. Creates a
+     regular (non-subscriber) visitor account: national ID + contact + a chosen
+     password. Root is a ScrollPane (same pattern as SubscriberRegisterView) so
+     the form scrolls when it doesn't fit the window instead of clipping the
+     buttons. Styled entirely via client.css to match the login card. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.RegisterVisitorController"
+            fitToWidth="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" alignment="TOP_CENTER">
+
+        <VBox styleClass="card" alignment="TOP_CENTER" spacing="10" maxWidth="340">
+
+            <Label text="Create your account" styleClass="login-title"/>
+            <Label text="Register to book and manage your visits" styleClass="hint-text"/>
+
+            <Label text="National ID" styleClass="field-label"/>
+            <TextField fx:id="idField" promptText="e.g. 200000020"
+                       styleClass="input-field" maxWidth="Infinity"/>
+
+            <Label text="Full Name" styleClass="field-label"/>
+            <TextField fx:id="nameField" promptText="Your full name"
+                       styleClass="input-field" maxWidth="Infinity"/>
+
+            <Label text="Email" styleClass="field-label"/>
+            <TextField fx:id="emailField" promptText="name@example.com"
+                       styleClass="input-field" maxWidth="Infinity"/>
+
+            <Label text="Phone" styleClass="field-label"/>
+            <TextField fx:id="phoneField" promptText="050-1234567"
+                       styleClass="input-field" maxWidth="Infinity"/>
+
+            <Label text="Password" styleClass="field-label"/>
+            <PasswordField fx:id="passwordField" promptText="Choose a password"
+                           styleClass="input-field" maxWidth="Infinity"/>
+
+            <Label text="Confirm Password" styleClass="field-label"/>
+            <PasswordField fx:id="confirmField" promptText="Re-enter your password"
+                           styleClass="input-field" maxWidth="Infinity"/>
+
+            <Button fx:id="registerBtn" text="Create Account" onAction="#onRegister"
+                    styleClass="btn-primary" maxWidth="Infinity"/>
+            <Button fx:id="cancelBtn" text="Cancel" onAction="#onCancel"
+                    styleClass="btn-secondary" maxWidth="Infinity"/>
+
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+    </VBox>
+</ScrollPane>

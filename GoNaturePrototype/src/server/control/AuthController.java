@@ -17,6 +17,7 @@ import static common.dto.RequestType.LOGIN_VISITOR;
 import static common.dto.RequestType.LOGOUT;
 import static common.dto.RequestType.REGISTER_GUIDE;
 import static common.dto.RequestType.REGISTER_SUBSCRIBER;
+import static common.dto.RequestType.REGISTER_VISITOR;
 
 /**
  * Owns the authentication / registration domain (login, logout, single-login
@@ -51,7 +52,7 @@ public class AuthController implements DomainController {
      */
     @Override
     public Set<RequestType> handledTypes() {
-        return Set.of(LOGIN_STAFF, LOGIN_VISITOR, LOGOUT, REGISTER_SUBSCRIBER, REGISTER_GUIDE);
+        return Set.of(LOGIN_STAFF, LOGIN_VISITOR, LOGOUT, REGISTER_VISITOR, REGISTER_SUBSCRIBER, REGISTER_GUIDE);
     }
     /**
      * Handles authentication and registration requests.
@@ -85,11 +86,15 @@ public class AuthController implements DomainController {
             }
 
             case LOGIN_VISITOR: {
-                long visitorId = ((Number) request.get("visitorId")).longValue();
+                long   visitorId = ((Number) request.get("visitorId")).longValue();
+                String password  = (String) request.get("password");
 
-                VisitorDTO v = dao.findVisitorById(visitorId);
+                // Validate id + password server-side (never trust the client). A null
+                // DTO covers both an unknown id and a wrong password, so reject both
+                // with one non-revealing message.
+                VisitorDTO v = dao.authenticateVisitor(visitorId, password);
                 if (v == null) {
-                    return new ServerResponse(false, "Visitor ID not found.");
+                    return new ServerResponse(false, "Invalid ID or password.");
                 }
                 // Quick-login on the same connection: release whatever lock this
                 // session already holds before taking the new one (see
@@ -100,6 +105,30 @@ public class AuthController implements DomainController {
                 }
                 session.setLoggedIn(v.getId(), "VISITOR");
                 return new ServerResponse(true, "Welcome " + v.getFullName(), v);
+            }
+
+            case REGISTER_VISITOR: {
+                // Self-service signup: NO role gate — anyone on the login screen can
+                // create a regular (non-subscriber) account. The server is the
+                // authority on the stored password and on duplicate-id rejection.
+                long   visitorId = ((Number) request.get("visitorId")).longValue();
+                String fullName  = (String) request.get("fullName");
+                String email     = (String) request.get("email");
+                String phone     = (String) request.get("phone");
+                String password  = (String) request.get("password");
+
+                if (fullName == null || fullName.isBlank()
+                        || password == null || password.isEmpty()) {
+                    return new ServerResponse(false, "Full name and password are required.");
+                }
+
+                if (!dao.registerVisitor(visitorId, fullName.trim(), email, phone, password)) {
+                    return new ServerResponse(false,
+                            "An account with National ID " + visitorId
+                            + " already exists. Please sign in instead.");
+                }
+                return new ServerResponse(true,
+                        "Account created for " + fullName.trim() + ". You can now sign in.");
             }
 
             case LOGOUT: {

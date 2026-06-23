@@ -53,14 +53,21 @@
             <PasswordField fx:id="passwordField" promptText="Password" styleClass="input-field"/>
         </VBox>
 
-        <!-- Visitor: single national-ID field -->
+        <!-- Visitor: national ID + password -->
         <VBox fx:id="visitorPane" spacing="8" maxWidth="Infinity" visible="false" managed="false">
             <Label text="National ID" styleClass="field-label"/>
             <TextField fx:id="visitorIdField" promptText="e.g. 200000001" styleClass="input-field"/>
+            <Label text="Password" styleClass="field-label"/>
+            <PasswordField fx:id="visitorPasswordField" promptText="Password" styleClass="input-field"/>
         </VBox>
 
         <Button fx:id="submitBtn" text="Sign In" onAction="#onSubmit"
                 styleClass="btn-primary" maxWidth="Infinity"/>
+
+        <!-- New visitors self-register here (creates a regular, non-subscriber
+             account; the service rep still owns the subscriber path). -->
+        <Button fx:id="registerBtn" text="New visitor? Create an account" onAction="#onRegister"
+                styleClass="btn-secondary" maxWidth="Infinity"/>
 
         <Label fx:id="errorLabel" styleClass="login-error" wrapText="true"
                visible="false" managed="false"/>

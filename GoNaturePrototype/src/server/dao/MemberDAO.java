@@ -61,15 +61,24 @@ public class MemberDAO {
      *
      * <p>{@code visitor.id} is an assigned national ID (not auto-increment), so a
      * new visitor is inserted with the id supplied from the form; re-registering
-     * an existing visitor updates their contact details instead of failing on the
-     * primary key. The {@code is_subscriber} flag is only ever raised, never
-     * lowered: when registering a subscriber ({@code isSubscriber == true}) it is
-     * set {@code TRUE}, but registering an existing subscriber as a guide
+     * an existing visitor updates their details instead of failing on the primary
+     * key. The {@code is_subscriber} flag is only ever raised, never lowered: when
+     * registering a subscriber ({@code isSubscriber == true}) it is set
+     * {@code TRUE}, but registering an existing subscriber as a guide
      * ({@code isSubscriber == false}) leaves their subscription flag untouched so
      * the member discount keeps firing.
      *
+     * <p>Password handling: a brand-new visitor is seeded with the shared demo
+     * password {@code 'changeme'} so a newly created subscriber/guide can log in
+     * (visitor login is national ID + password). An existing visitor's
+     * {@code password_hash} is never overwritten here — and, on the subscriber
+     * upgrade path, neither is their {@code full_name} — so a visitor who already
+     * self-registered keeps the login and name they chose; only their contact
+     * details (and the raised subscriber flag) change.
+     *
      * @param id           the visitor's assigned national id (primary key)
-     * @param fullName     the visitor's display name
+     * @param fullName     the visitor's display name (used only when inserting a new
+     *                     visitor or on the guide path; ignored on a subscriber upgrade)
      * @param phone        the visitor's phone number
      * @param email        the visitor's email address
      * @param isSubscriber whether to mark the visitor as a subscriber; {@code false}
@@ -77,27 +86,46 @@ public class MemberDAO {
      */
     public void upsertVisitor(long id, String fullName, String phone, String email, boolean isSubscriber) {
         if (visitorExists(id)) {
-            // Update contact details. Only raise is_subscriber (when registering a
-            // subscriber); the guide path passes false and must not downgrade an
-            // existing subscriber, so that branch leaves the flag alone.
-            String sql = isSubscriber
-                    ? "UPDATE visitor SET full_name = ?, phone = ?, email = ?, is_subscriber = TRUE WHERE id = ?"
-                    : "UPDATE visitor SET full_name = ?, phone = ?, email = ? WHERE id = ?";
+            if (isSubscriber) {
+                // Subscriber upgrade of an existing (self-)registered visitor: refresh
+                // contact and raise the flag, but leave full_name and password_hash
+                // untouched so the visitor's chosen name and login survive the upgrade.
+                String sql = "UPDATE visitor SET phone = ?, email = ?, is_subscriber = TRUE WHERE id = ?";
 
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                try (Connection conn = DBConnection.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-                stmt.setString(1, fullName);
-                stmt.setString(2, phone);
-                stmt.setString(3, email);
-                stmt.setLong(4, id);
-                stmt.executeUpdate();
+                    stmt.setString(1, phone);
+                    stmt.setString(2, email);
+                    stmt.setLong(3, id);
+                    stmt.executeUpdate();
 
-            } catch (Exception e) {
-                ServerLog.daoError(e);
+                } catch (Exception e) {
+                    ServerLog.daoError(e);
+                }
+            } else {
+                // Guide path: refresh contact + name without touching is_subscriber
+                // (must not downgrade an existing subscriber) or password_hash.
+                String sql = "UPDATE visitor SET full_name = ?, phone = ?, email = ? WHERE id = ?";
+
+                try (Connection conn = DBConnection.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                    stmt.setString(1, fullName);
+                    stmt.setString(2, phone);
+                    stmt.setString(3, email);
+                    stmt.setLong(4, id);
+                    stmt.executeUpdate();
+
+                } catch (Exception e) {
+                    ServerLog.daoError(e);
+                }
             }
         } else {
-            String sql = "INSERT INTO visitor (id, full_name, phone, email, is_subscriber) VALUES (?, ?, ?, ?, ?)";
+            // Brand-new visitor: seed the shared demo password 'changeme' so a newly
+            // created subscriber/guide can sign in (visitor login is id + password).
+            String sql = "INSERT INTO visitor (id, full_name, phone, email, is_subscriber, password_hash) " +
+                         "VALUES (?, ?, ?, ?, ?, 'changeme')";
 
             try (Connection conn = DBConnection.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -133,12 +161,14 @@ public class MemberDAO {
      */
     public void upsertContact(long id, String email, String phone) {
         // Update only the two contact columns on an existing row so a subscriber's
-        // full_name / is_subscriber are never clobbered; insert a contact-only row
-        // (name NULL, not a subscriber) when the visitor is brand new.
+        // full_name / is_subscriber / password are never clobbered; insert a
+        // contact-only row (name NULL, not a subscriber) when the visitor is brand
+        // new. The insert seeds the shared demo password 'changeme' because
+        // password_hash is NOT NULL — a booking-created visitor can then log in too.
         boolean exists = visitorExists(id);
         String sql = exists
                 ? "UPDATE visitor SET email = ?, phone = ? WHERE id = ?"
-                : "INSERT INTO visitor (id, email, phone) VALUES (?, ?, ?)";
+                : "INSERT INTO visitor (id, email, phone, password_hash) VALUES (?, ?, ?, 'changeme')";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

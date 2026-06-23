@@ -551,15 +551,44 @@ public class NetworkService {
     }
 
     /**
-     * Authenticates a visitor by national ID. On success the response carries a
-     * {@link common.dto.VisitorDTO} in {@code getData()}.
+     * Authenticates a visitor by national ID and password. On success the response
+     * carries a {@link common.dto.VisitorDTO} in {@code getData()}; on failure the
+     * message explains why ("Invalid ID or password." / "already logged in
+     * elsewhere.").
      *
      * @param visitorId the visitor's national id
+     * @param password  the visitor's password
      * @return a future, completed on the JavaFX thread, with the server's response
      */
-    public CompletableFuture<ServerResponse> loginVisitor(long visitorId) {
+    public CompletableFuture<ServerResponse> loginVisitor(long visitorId, String password) {
         ClientRequest req = new ClientRequest(RequestType.LOGIN_VISITOR);
         req.put("visitorId", visitorId);
+        req.put("password",  password);
+        return send(req);
+    }
+
+    /**
+     * Self-service signup: creates a regular (non-subscriber) visitor account with
+     * the chosen password (no login required — it's reached from the sign-in
+     * screen). On success the visitor can immediately sign in with their national
+     * ID + password; on failure the message explains why (e.g. the id is already
+     * registered).
+     *
+     * @param visitorId the visitor's national id
+     * @param fullName  the visitor's full name
+     * @param email     the visitor's email address
+     * @param phone     the visitor's phone number
+     * @param password  the password the visitor chose
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> registerVisitor(long visitorId, String fullName,
+                                                             String email, String phone, String password) {
+        ClientRequest req = new ClientRequest(RequestType.REGISTER_VISITOR);
+        req.put("visitorId", visitorId);
+        req.put("fullName",  fullName);
+        req.put("email",     email);
+        req.put("phone",     phone);
+        req.put("password",  password);
         return send(req);
     }
 

@@ -109,7 +109,97 @@ public class AuthDAO {
     }
 
     /**
-     * Looks up a visitor by their national ID (login-by-ID).
+     * Authenticates a visitor by national ID and password (visitor login).
+     *
+     * <p>The visitor mirror of {@link #findStaffByCredentials}: the supplied
+     * password is matched against {@code visitor.password_hash} verbatim (plaintext
+     * is accepted only because this is a teaching prototype — see that method's
+     * note). A {@code null} return covers both an unknown id and a wrong password,
+     * so the controller can reject them with a single non-revealing message. The
+     * returned DTO omits the password so credentials are never sent to the client.
+     *
+     * @param id       the visitor's national id
+     * @param password the plaintext password to match against {@code password_hash}
+     * @return the matching {@link VisitorDTO}, or {@code null} if no row matches or the query fails
+     */
+    public VisitorDTO authenticateVisitor(long id, String password) {
+        String sql = "SELECT id, full_name, phone, email, is_subscriber " +
+                     "FROM visitor WHERE id = ? AND password_hash = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, id);
+            stmt.setString(2, password);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new VisitorDTO(
+                            rs.getLong("id"),
+                            rs.getString("full_name"),
+                            rs.getString("phone"),
+                            rs.getString("email"),
+                            rs.getBoolean("is_subscriber")
+                    );
+                }
+            }
+
+        } catch (Exception e) {
+            ServerLog.daoError(e);
+        }
+
+        return null;
+    }
+
+    /**
+     * Self-service signup: inserts a brand-new registered visitor with their chosen
+     * password, as a regular (non-subscriber) account.
+     *
+     * <p>Distinct from the SERVICE_REP subscriber/guide paths in {@link MemberDAO}:
+     * this never raises {@code is_subscriber} (a self-registered user is a plain
+     * visitor) and stores the password the user picked rather than the seeded
+     * default. The insert is attempted directly and a duplicate primary key —
+     * meaning the national id is already registered — is caught and reported as
+     * {@code false}, mirroring {@link #lock}'s insert-and-catch so no
+     * check-then-insert race is opened.
+     *
+     * @param id       the visitor's national id (primary key)
+     * @param fullName the visitor's display name
+     * @param email    the visitor's email address
+     * @param phone    the visitor's phone number
+     * @param password the plaintext password to store in {@code password_hash}
+     * @return {@code true} if a new visitor was created, {@code false} if the id is
+     *         already registered or the insert fails
+     */
+    public boolean registerVisitor(long id, String fullName, String email, String phone, String password) {
+        String sql = "INSERT INTO visitor (id, full_name, phone, email, is_subscriber, password_hash) " +
+                     "VALUES (?, ?, ?, ?, FALSE, ?)";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, id);
+            stmt.setString(2, fullName);
+            stmt.setString(3, phone);
+            stmt.setString(4, email);
+            stmt.setString(5, password);
+            stmt.executeUpdate();
+            return true;
+
+        } catch (SQLIntegrityConstraintViolationException dup) {
+            // Duplicate visitor.id -> the national id is already registered.
+            return false;
+        } catch (Exception e) {
+            ServerLog.daoError(e);
+            return false;
+        }
+    }
+
+    /**
+     * Looks up a visitor by their national ID, without a password check.
+     *
+     * <p>Retained for the booking/pricing/contact lookups that need a visitor's
+     * details (e.g. the member-discount check and notification targets) but are not
+     * a login — visitor sign-in itself goes through {@link #authenticateVisitor}.
      *
      * @param id the visitor identifier to fetch
      * @return the matching {@link VisitorDTO}, or {@code null} if no row matches or the query fails

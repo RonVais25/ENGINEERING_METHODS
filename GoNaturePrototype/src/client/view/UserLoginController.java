@@ -5,6 +5,9 @@ import client.service.NetworkService;
 import common.dto.UserDTO;
 import common.dto.VisitorDTO;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
@@ -13,6 +16,9 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.util.List;
 
@@ -70,6 +76,8 @@ public class UserLoginController {
     @FXML private PasswordField passwordField;
     /** Visitor national-id input. */
     @FXML private TextField     visitorIdField;
+    /** Visitor password input. */
+    @FXML private PasswordField visitorPasswordField;
     /** Sign-in submit button. */
     @FXML private Button        submitBtn;
     /** Error message label. */
@@ -121,6 +129,7 @@ public class UserLoginController {
         usernameField.setOnAction(e -> onSubmit());
         passwordField.setOnAction(e -> onSubmit());
         visitorIdField.setOnAction(e -> onSubmit());
+        visitorPasswordField.setOnAction(e -> onSubmit());
         hostField.setOnAction(e -> onSubmit());
         portField.setOnAction(e -> onSubmit());
 
@@ -175,8 +184,8 @@ public class UserLoginController {
                 new Quick("Galilee Emp", "park_emp",    null),   // PARK_EMPLOYEE · park 1
                 new Quick("Carmel Emp",  "park_emp2",   null),   // PARK_EMPLOYEE · park 2
                 new Quick("Negev Emp",   "park_emp3",   null),   // PARK_EMPLOYEE · park 3
-                new Quick("Subscriber",  null, 200000001L),      // Vera Visitor (subscriber)
-                new Quick("Visitor",     null, 200000002L));     // Victor Visit (plain visitor)
+                new Quick("Subscriber",  null, 200000002L),      // Victor Visitor (subscriber)
+                new Quick("Visitor",     null, 200000001L));     // Vera Visitor (plain visitor)
     }
 
     /** Builds one quick-login button per seeded account into the quick-login row. */
@@ -190,10 +199,10 @@ public class UserLoginController {
     }
 
     /**
-     * Fills in and submits a seeded account in one click. Staff accounts use the
-     * shared {@link #DEV_PASSWORD}; visitor accounts log in by national id. The
-     * fields are populated (and the matching tab selected) so it stays visible
-     * which account was used and remains editable for a retry.
+     * Fills in and submits a seeded account in one click. Both staff and visitor
+     * accounts use the shared {@link #DEV_PASSWORD} (visitor login is now national
+     * id + password). The fields are populated (and the matching tab selected) so
+     * it stays visible which account was used and remains editable for a retry.
      *
      * @param q the seeded account to log in as
      */
@@ -206,6 +215,7 @@ public class UserLoginController {
         } else {
             visitorTab.setSelected(true);
             visitorIdField.setText(String.valueOf(q.visitorId()));
+            visitorPasswordField.setText(DEV_PASSWORD);
             ensureConnectedThen(this::submitVisitor);
         }
     }
@@ -227,6 +237,60 @@ public class UserLoginController {
     @FXML
     private void onSubmit() {
         ensureConnectedThen(staffTab.isSelected() ? this::submitStaff : this::submitVisitor);
+    }
+
+    /**
+     * "Create an account" handler: ensures a live server connection first (the
+     * signup must reach the server), then opens the self-service registration
+     * dialog. Registration is a visitor-only concept, so it also flips the form to
+     * the Visitor tab.
+     */
+    @FXML
+    private void onRegister() {
+        visitorTab.setSelected(true);
+        ensureConnectedThen(this::openRegisterDialog);
+    }
+
+    /**
+     * Opens the modal self-service registration dialog. On a successful signup the
+     * dialog prefills the login form with the new national id (and selects the
+     * Visitor tab) so the visitor can sign in immediately with the password they
+     * just chose. The dialog shares the login window's stylesheet so it matches.
+     */
+    private void openRegisterDialog() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/client/view/RegisterVisitorView.fxml"));
+            Stage dialog = new Stage();
+            loader.setControllerFactory(type -> new RegisterVisitorController(
+                    network,
+                    id -> {                       // onRegistered: return to login prefilled
+                        visitorTab.setSelected(true);
+                        visitorIdField.setText(String.valueOf(id));
+                        visitorPasswordField.clear();
+                        visitorPasswordField.requestFocus();
+                        hideError();
+                    },
+                    dialog::close));              // onClose
+            Parent root = loader.load();
+
+            Scene scene = new Scene(root, 400, 640);
+            Scene loginScene = submitBtn.getScene();
+            if (loginScene != null) {
+                scene.getStylesheets().addAll(loginScene.getStylesheets());
+                Window owner = loginScene.getWindow();
+                if (owner != null) dialog.initOwner(owner);
+            }
+            dialog.setScene(scene);
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            // Resizable + a ScrollPane root, so the form is reachable even on a
+            // short window (the Cancel button is never clipped).
+            dialog.setResizable(true);
+            dialog.setMinHeight(420);
+            dialog.setTitle("GoNature — Create Account");
+            dialog.showAndWait();
+        } catch (Exception ex) {
+            showError("Could not open the registration form");
+        }
     }
 
     /**
@@ -309,6 +373,7 @@ public class UserLoginController {
     /** Validates and sends LOGIN_VISITOR; on success stores the visitor and continues. */
     private void submitVisitor() {
         String raw = visitorIdField.getText() == null ? "" : visitorIdField.getText().trim();
+        String password = visitorPasswordField.getText() == null ? "" : visitorPasswordField.getText();
         long visitorId;
         try {
             visitorId = Long.parseLong(raw);
@@ -316,8 +381,12 @@ public class UserLoginController {
             showError("Enter a valid numeric National ID");
             return;
         }
+        if (password.isEmpty()) {
+            showError("Enter your password");
+            return;
+        }
         setBusy(true);
-        network.loginVisitor(visitorId).thenAccept(res -> {
+        network.loginVisitor(visitorId, password).thenAccept(res -> {
             setBusy(false);
             if (res.isSuccess() && res.getData() instanceof VisitorDTO v) {
                 session.setVisitor(v);
