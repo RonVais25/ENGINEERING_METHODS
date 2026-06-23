@@ -542,33 +542,6 @@ public class ReservationListController extends BaseController {
     }
 
     /**
-     * Builds the (simulated) settlement line for a price change after an edit. No
-     * real gateway is involved — it only tells the operator what to do: prepaid +
-     * price up → collect the difference; prepaid + price down → refund; pay-on-
-     * arrival → quote the new total due at the gate. Returns {@code null} when the
-     * price didn't change (e.g. only the date moved) so the caller can say so.
-     *
-     * @param result the server's update result carrying the old and new price
-     * @return the settlement message, or {@code null} for a zero delta
-     */
-    private String settlementMessage(ReservationUpdateResultDTO result) {
-        int delta = result.getDeltaCents();
-        if (delta == 0) {
-            return null; // nothing to settle (e.g. only the date changed)
-        }
-        ReservationDTO r = result.getReservation();
-        double newTotal = result.getNewPriceCents() / 100.0;
-        double diff     = Math.abs(delta) / 100.0;
-        if (!r.isPaidInAdvance()) {
-            return String.format("New total ₪%.2f, due at the gate.", newTotal);
-        } else if (delta > 0) {
-            return String.format("Price increased to ₪%.2f. Collect ₪%.2f difference. (Simulation)", newTotal, diff);
-        } else {
-            return String.format("Price decreased to ₪%.2f. Refund ₪%.2f. (Simulation)", newTotal, diff);
-        }
-    }
-
-    /**
      * Builds the step indicator for the edit wizard, mirroring the old Update-Order
      * wizard: a row of numbered circles + captions joined by connector lines, with
      * completed steps ticked and the active one highlighted. Styled by the
@@ -778,46 +751,140 @@ public class ReservationListController extends BaseController {
                     fieldLabel("Party Size"),            partySpinner);
         }
 
-        /** {@return the step-2 body: an old &rarr; new comparison of the edited fields} */
+        /**
+         * {@return the step-2 body: a "field — was &rarr; now" summary of every field
+         * the Edit Details step can change (visit date, time, party size), highlighting
+         * the rows that actually differ; shows "No changes to apply." when none do}
+         */
         private Node reviewBody() {
-            GridPane g = new GridPane();
-            g.setHgap(14);
-            g.setVgap(8);
-            reviewRow(g, 0, "Date",  original.getVisitDate(),                 visitDate);
-            reviewRow(g, 1, "Time",  orDash(original.getVisitTime()),         visitTime == null ? "—" : visitTime);
-            reviewRow(g, 2, "Party", String.valueOf(original.getPartySize()), String.valueOf(partySize));
-            return new VBox(10, hintLabel("Review your changes, then confirm to apply them."), g);
+            // Compare each editable field's original value against the captured edit.
+            // Times/dates are compared by value (parsed) so a reformat alone — e.g.
+            // "09:00" vs "09:00:00" — doesn't read as a change.
+            boolean dateChanged  = !sameDate(original.getVisitDate(), visitDate);
+            boolean timeChanged  = !sameTime(original.getVisitTime(), visitTime);
+            boolean partyChanged = original.getPartySize() != partySize;
+
+            VBox rows = new VBox(6);
+            if (dateChanged || timeChanged || partyChanged) {
+                rows.getChildren().addAll(
+                        reviewRow("Visit date", orDash(original.getVisitDate()),         visitDate,            dateChanged),
+                        reviewRow("Visit time", prettyTime(original.getVisitTime()),     prettyTime(visitTime), timeChanged),
+                        reviewRow("Party size", String.valueOf(original.getPartySize()), String.valueOf(partySize), partyChanged));
+            } else {
+                Label none = new Label("No changes to apply.");
+                none.getStyleClass().add("edit-review-none");
+                rows.getChildren().add(none);
+            }
+            return new VBox(10, hintLabel("Review your changes, then confirm to apply them."), rows);
         }
 
         /**
-         * Adds one "key: old &rarr; new" row to the review grid.
+         * Builds one "field — was &rarr; now" review row. Colours are set on the
+         * labels directly (not via a {@code .result-row}/{@code .payment-card}
+         * ancestor) so they never fall back to white-on-white the way bare
+         * {@code .key}/{@code .val} labels do; a changed row is tinted to stand out.
          *
-         * @param g      the review grid
-         * @param row    the grid row index
-         * @param key    the field label
-         * @param oldVal the original value
-         * @param newVal the edited value
+         * @param field   the field's display name
+         * @param oldVal  the original value
+         * @param newVal  the edited value
+         * @param changed whether the two differ (drives the highlight)
+         * @return the assembled review row
          */
-        private void reviewRow(GridPane g, int row, String key, String oldVal, String newVal) {
-            Label k = new Label(key);     k.getStyleClass().add("key");
-            Label o = new Label(oldVal);  o.getStyleClass().add("val");
-            Label arrow = new Label("→");
-            Label n = new Label(newVal);  n.getStyleClass().add("val");
-            g.add(k, 0, row);
-            g.add(o, 1, row);
-            g.add(arrow, 2, row);
-            g.add(n, 3, row);
+        private Node reviewRow(String field, String oldVal, String newVal, boolean changed) {
+            Label f = new Label(field);     f.getStyleClass().add("edit-review-field");
+            Label o = new Label(oldVal);    o.getStyleClass().add("edit-review-old");
+            Label arrow = new Label("→");   arrow.getStyleClass().add("edit-review-arrow");
+            Label n = new Label(newVal);    n.getStyleClass().add("edit-review-new");
+            HBox row = new HBox(10, f, o, arrow, n);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.getStyleClass().add("edit-review-row");
+            if (changed) row.getStyleClass().add("changed");
+            return row;
         }
 
-        /** {@return the step-3 body: the success line plus any settlement message} */
+        /**
+         * {@return the step-3 body: a readable "updated" line plus the settlement —
+         * "No price change.", an "Additional payment:" amount, or a "Refund:" amount,
+         * with the amount made prominent — all derived from the update result}
+         */
         private Node settlementBody() {
             Label ok = new Label("✓ Reservation #" + original.getId() + " updated.");
-            ok.getStyleClass().add("payment-title");
-            String settle = (result == null) ? null : settlementMessage(result);
-            Label detail = new Label(settle == null ? "No price change." : settle);
-            detail.getStyleClass().add("hint-text");
-            detail.setWrapText(true);
-            return new VBox(10, ok, detail);
+            ok.getStyleClass().add("settlement-title");
+
+            int delta = (result == null) ? 0 : result.getDeltaCents();
+            Node outcome;
+            if (delta == 0) {
+                Label none = new Label("No price change.");
+                none.getStyleClass().add("settlement-line");
+                outcome = none;
+            } else {
+                Label label = new Label(delta > 0 ? "Additional payment:" : "Refund:");
+                label.getStyleClass().add("settlement-line");
+                Label amount = new Label(String.format("₪%.2f", Math.abs(delta) / 100.0));
+                amount.getStyleClass().addAll("settlement-amount", delta > 0 ? "pay" : "refund");
+                HBox line = new HBox(8, label, amount);
+                line.setAlignment(Pos.CENTER_LEFT);
+                outcome = line;
+            }
+            return new VBox(12, ok, outcome);
+        }
+
+        /**
+         * Compares two ISO dates by value, tolerating a null/blank or unparseable
+         * value (then falls back to a trimmed string compare).
+         *
+         * @param a the first date string
+         * @param b the second date string
+         * @return whether the two represent the same date
+         */
+        private boolean sameDate(String a, String b) {
+            String na = (a == null) ? "" : a.trim();
+            String nb = (b == null) ? "" : b.trim();
+            try {
+                return LocalDate.parse(na).equals(LocalDate.parse(nb));
+            } catch (Exception e) {
+                return na.equals(nb);
+            }
+        }
+
+        /**
+         * Compares two visit times by value: two empty (no-preference) times are
+         * equal, and parseable times compare on the clock value so "09:00" and
+         * "09:00:00" don't read as a change.
+         *
+         * @param a the first time string (may be null/blank)
+         * @param b the second time string (may be null/blank)
+         * @return whether the two represent the same time
+         */
+        private boolean sameTime(String a, String b) {
+            boolean aEmpty = (a == null || a.isBlank());
+            boolean bEmpty = (b == null || b.isBlank());
+            if (aEmpty || bEmpty) return aEmpty == bEmpty;
+            try {
+                return LocalTime.parse(a).equals(LocalTime.parse(b));
+            } catch (Exception e) {
+                return a.trim().equals(b.trim());
+            }
+        }
+
+        /**
+         * Formats a stored {@code HH:mm[:ss]} time for display as 12-hour "h:mm AM/PM";
+         * a null/blank time (no preference) renders as an em dash.
+         *
+         * @param time the stored time string, or null/blank
+         * @return the friendly time, or an em dash if none
+         */
+        private String prettyTime(String time) {
+            if (time == null || time.isBlank()) return "—";
+            try {
+                // Uppercase AM/PM to match the 12-hour dropdowns on the edit form
+                // (some locales render the marker lowercase).
+                return LocalTime.parse(time)
+                        .format(DateTimeFormatter.ofPattern("h:mm a"))
+                        .toUpperCase(java.util.Locale.ROOT);
+            } catch (Exception e) {
+                return time;
+            }
         }
 
         /**

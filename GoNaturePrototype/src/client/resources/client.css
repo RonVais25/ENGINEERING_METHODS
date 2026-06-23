@@ -533,6 +533,31 @@
 .step-line   { -fx-pref-width: 36; -fx-pref-height: 1.5; -fx-min-height: 1.5; -fx-max-height: 1.5; -fx-background-color: -g200; }
 .step-line.done { -fx-background-color: -g500; }
 
+/* ---------- Edit-reservation wizard: Review & Settlement ------------------
+ * Review (step 2): one "field — was → now" row per editable field. Each label
+ * sets its own colour rather than relying on a .result-row/.payment-card
+ * ancestor — bare .key/.val labels with no such ancestor fall back to white and
+ * vanish on the light card (the same cascade quirk noted on .payment-card above),
+ * which is what left this step looking blank. A changed row is tinted to stand out.
+ * --------------------------------------------------------------------------- */
+.edit-review-row          { -fx-padding: 6 10 6 10; -fx-background-radius: 8; -fx-alignment: center-left; }
+.edit-review-row.changed  { -fx-background-color: -g100; }
+.edit-review-field        { -fx-font-size: 13; -fx-text-fill: -g500; -fx-pref-width: 92; }
+.edit-review-old          { -fx-font-size: 13; -fx-text-fill: -g600; }
+.edit-review-arrow        { -fx-font-size: 13; -fx-text-fill: -g400; }
+.edit-review-new          { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.edit-review-row.changed .edit-review-new { -fx-text-fill: -g700; }
+.edit-review-none         { -fx-font-size: 14; -fx-text-fill: -g600; }
+
+/* Settlement (step 3): a readable "updated" line plus the settlement outcome.
+ * The result text is body-sized (not the tiny .hint-text it used to use) and any
+ * collect/refund amount is enlarged and bold so it can't be missed. */
+.settlement-title  { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: -g700; }
+.settlement-line   { -fx-font-size: 14; -fx-text-fill: -g600; }
+.settlement-amount        { -fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.settlement-amount.refund { -fx-text-fill: -g500; }
+.settlement-amount.pay    { -fx-text-fill: -g800; }
+
 /* ---------- History table ------------------------------------------------- */
 .history-card        { -fx-background-color: white; -fx-background-radius: 14; -fx-border-color: -g200; -fx-border-radius: 14; -fx-border-width: 1; }
 .history-card-header { -fx-padding: 18 24 18 24; -fx-border-color: -g100; -fx-border-width: 0 0 1 0; }
