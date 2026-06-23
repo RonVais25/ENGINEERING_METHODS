@@ -194,24 +194,44 @@ public class PromotionsController extends BaseController {
      * @return the assembled row
      */
     private HBox dataRow(PromotionDTO p, boolean withDivider) {
-        Label nameLbl    = cell(p.getName(),                          180);
-        Label percentLbl = cell(p.getDiscountPercent() + "%",          70);
-        Label windowLbl  = cell(p.getStartDate() + "  →  " + p.getEndDate(), 190);
+        // The name takes the row's slack (so it uses whatever width is going and
+        // only ellipsises when genuinely tight), while the discount, date window and
+        // status keep their full width via a pinned minimum — the key facts stay
+        // readable when the side-by-side layout squeezes this list on a narrow window.
+        Label nameLbl    = cell(p.getName(), 160);
+        nameLbl.setMinWidth(60);
+        nameLbl.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(nameLbl, Priority.ALWAYS);
+        Label percentLbl = fixedCell(p.getDiscountPercent() + "%",            55);
+        Label windowLbl  = fixedCell(p.getStartDate() + "  →  " + p.getEndDate(), 170);
 
         Label statusTag = new Label(p.getStatus().name());
         statusTag.getStyleClass().addAll("status-tag", statusClass(p.getStatus()));
+        statusTag.setMinWidth(Region.USE_PREF_SIZE);
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        HBox row = new HBox(nameLbl, percentLbl, windowLbl, spacer, statusTag);
+        HBox row = new HBox(nameLbl, percentLbl, windowLbl, statusTag);
         row.getStyleClass().add("history-row");
         if (withDivider) row.getStyleClass().add("with-divider");
         return row;
     }
 
     /**
-     * Builds a fixed-width row cell.
+     * Builds a row cell whose preferred width is also its minimum, so it never
+     * shrinks (or ellipsises) when the row is squeezed — used for the cells whose
+     * full text must always read (discount, date window).
+     *
+     * @param text the cell text
+     * @param w    the fixed width
+     * @return the non-shrinking cell label
+     */
+    private Label fixedCell(String text, double w) {
+        Label l = cell(text, w);
+        l.setMinWidth(w);
+        return l;
+    }
+
+    /**
+     * Builds a preferred-width row cell.
      *
      * @param text the cell text
      * @param w    the preferred width

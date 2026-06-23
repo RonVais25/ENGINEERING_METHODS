@@ -215,15 +215,44 @@
 .spinner .decrement-arrow { -fx-background-color: -g500; }
 
 /* Time picker (Book Visit / reschedule, Row 3): three plain dropdowns
-   (Hour : Minute + AM/PM) that share the row's right half evenly. Trim the
-   heavy .input-field horizontal padding so the short values sit comfortably
-   alongside the dropdown arrow without crowding. */
-.time-combo {
-    -fx-padding: 4 6 4 8;
+   (Hour : Minute + AM/PM) that share the row's right half evenly and are styled to
+   match the DatePicker beside them (same -g50 body, green border/radius, tinted
+   arrow button, green arrow).
+
+   IMPORTANT — selector specificity: a non-editable ComboBox is styled by modena's
+   own rules (.combo-box > .list-cell, .combo-box-base > .arrow-button > .arrow,
+   etc.). A bare .time-combo / .time-combo .arrow loses to those (they are more
+   specific), which is why an earlier attempt left the dropdowns looking like the
+   default skin. So each rule below is qualified with .combo-box.time-combo and the
+   child combinator to out-specify modena — the same trick the .date-picker rules
+   above rely on. The dropdown HEIGHT comes from the button cell's vertical padding
+   (the combo body padding is 0), set to match the DatePicker's text field. */
+.combo-box.time-combo {
+    -fx-background-color: -g50;
+    -fx-border-color: -g200;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 0;
+    /* A ListCell caps its own height, so cell padding alone won't grow the box to
+       the 44px the text/date inputs stand at — pin the height explicitly so the
+       dropdowns line up level with the DatePicker and the e-mail/phone fields. */
+    -fx-min-height: 44;
+    -fx-pref-height: 44;
 }
-.time-combo .list-cell {
+.combo-box.time-combo > .list-cell {
     -fx-font-size: 14;
-    -fx-padding: 5 2 5 2;
+    -fx-text-fill: -g800;
+    -fx-background-color: transparent;
+    -fx-padding: 0 6 0 10;
+}
+.combo-box.time-combo .arrow-button {
+    -fx-background-color: -g100;
+    -fx-background-radius: 0 9 9 0;
+    -fx-padding: 0 9 0 9;
+}
+.combo-box.time-combo .arrow-button .arrow {
+    -fx-background-color: -g500;
 }
 .time-colon {
     -fx-font-size: 16;
@@ -231,6 +260,22 @@
     -fx-text-fill: -g500;
     -fx-padding: 0 1 0 1;
 }
+
+/* Disabled time picker ("set time" unticked). The whole .time-row is disabled as
+   one unit (see ReservationCreateController), so present a single clean, intentional
+   muted state — a soft -g100 fill with faded -g300 text and arrow — instead of the
+   default washed-out 40% opacity. Selectors again out-specify modena's
+   .combo-box-base:disabled. Ticking "set time" restores the normal look. */
+.time-row:disabled { -fx-opacity: 1; }
+.combo-box.time-combo:disabled {
+    -fx-opacity: 1;
+    -fx-background-color: -g100;
+    -fx-border-color: -g200;
+}
+.combo-box.time-combo:disabled .list-cell { -fx-text-fill: -g300; }
+.combo-box.time-combo:disabled .arrow-button { -fx-background-color: -g200; }
+.combo-box.time-combo:disabled .arrow-button .arrow { -fx-background-color: -g300; }
+.time-colon:disabled { -fx-opacity: 1; -fx-text-fill: -g200; }
 
 /* ---------- Buttons -------------------------------------------------------- */
 .btn-primary {
@@ -262,6 +307,21 @@
 }
 .btn-secondary:hover {
     -fx-background-color: -g200;
+}
+
+/* Danger variant of the secondary button (e.g. Reject on the Approvals screen):
+   clearly red so it can't be mistaken for the neutral Approve next to it. Composes
+   with .btn-secondary, so it keeps the same size, padding and radius — only the
+   colours turn red (red border + red text on a faint red fill; solid red on hover),
+   reusing the app's -red / -red-bg language. */
+.btn-secondary.danger {
+    -fx-text-fill: -red;
+    -fx-background-color: -red-bg;
+    -fx-border-color: -red;
+}
+.btn-secondary.danger:hover {
+    -fx-text-fill: white;
+    -fx-background-color: -red;
 }
 
 /* Icon-only action buttons (My Reservations rows): compact, larger glyph, tight
@@ -472,6 +532,31 @@
 .step-piece.active .step-label { -fx-text-fill: -g700; -fx-font-weight: bold; }
 .step-line   { -fx-pref-width: 36; -fx-pref-height: 1.5; -fx-min-height: 1.5; -fx-max-height: 1.5; -fx-background-color: -g200; }
 .step-line.done { -fx-background-color: -g500; }
+
+/* ---------- Edit-reservation wizard: Review & Settlement ------------------
+ * Review (step 2): one "field — was → now" row per editable field. Each label
+ * sets its own colour rather than relying on a .result-row/.payment-card
+ * ancestor — bare .key/.val labels with no such ancestor fall back to white and
+ * vanish on the light card (the same cascade quirk noted on .payment-card above),
+ * which is what left this step looking blank. A changed row is tinted to stand out.
+ * --------------------------------------------------------------------------- */
+.edit-review-row          { -fx-padding: 6 10 6 10; -fx-background-radius: 8; -fx-alignment: center-left; }
+.edit-review-row.changed  { -fx-background-color: -g100; }
+.edit-review-field        { -fx-font-size: 13; -fx-text-fill: -g500; -fx-pref-width: 92; }
+.edit-review-old          { -fx-font-size: 13; -fx-text-fill: -g600; }
+.edit-review-arrow        { -fx-font-size: 13; -fx-text-fill: -g400; }
+.edit-review-new          { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.edit-review-row.changed .edit-review-new { -fx-text-fill: -g700; }
+.edit-review-none         { -fx-font-size: 14; -fx-text-fill: -g600; }
+
+/* Settlement (step 3): a readable "updated" line plus the settlement outcome.
+ * The result text is body-sized (not the tiny .hint-text it used to use) and any
+ * collect/refund amount is enlarged and bold so it can't be missed. */
+.settlement-title  { -fx-font-size: 16; -fx-font-weight: bold; -fx-text-fill: -g700; }
+.settlement-line   { -fx-font-size: 14; -fx-text-fill: -g600; }
+.settlement-amount        { -fx-font-size: 20; -fx-font-weight: bold; -fx-text-fill: -g800; }
+.settlement-amount.refund { -fx-text-fill: -g500; }
+.settlement-amount.pay    { -fx-text-fill: -g800; }
 
 /* ---------- History table ------------------------------------------------- */
 .history-card        { -fx-background-color: white; -fx-background-radius: 14; -fx-border-color: -g200; -fx-border-radius: 14; -fx-border-width: 1; }

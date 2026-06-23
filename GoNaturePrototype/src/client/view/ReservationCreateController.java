@@ -13,6 +13,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DateCell;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
@@ -21,6 +22,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -74,6 +76,8 @@ public class ReservationCreateController extends BaseController {
     @FXML private ComboBox<String>     minuteCombo;
     /** AM/PM dropdown. */
     @FXML private ComboBox<String>     ampmCombo;
+    /** Row holding the three time dropdowns; disabled as a unit when "set time" is off. */
+    @FXML private HBox                 timeRow;
     /** Party-size spinner. */
     @FXML private Spinner<Integer>     partySpinner;
     /** Visit-type dropdown (INDIVIDUAL/FAMILY/GROUP). */
@@ -116,6 +120,19 @@ public class ReservationCreateController extends BaseController {
         partySpinner.setValueFactory(
                 new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 2));
 
+        // A visit can only be booked for today or a future date, so disable every day
+        // before today in the picker — a past date simply can't be chosen. The server
+        // re-checks against its own clock, so this is the convenience half of the guard.
+        datePicker.setDayCellFactory(picker -> new DateCell() {
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                if (date != null && date.isBefore(LocalDate.now())) {
+                    setDisable(true);
+                }
+            }
+        });
+
         // 12-hour clock picker as three plain dropdowns: hour 1–12, minute in
         // quarter-hour steps and a clearly readable AM/PM selector. The trio is
         // disabled until "set time" is ticked; left unticked the booking sends no
@@ -128,9 +145,11 @@ public class ReservationCreateController extends BaseController {
         hourCombo.setValue(9);
         minuteCombo.setValue("00");
         ampmCombo.setValue("AM");
-        hourCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
-        minuteCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
-        ampmCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        // Disable the whole time row (the three dropdowns and the colon) as one unit
+        // when "set time" is unticked, so the colon mutes together with the dropdowns
+        // and the CSS can present a single clean disabled state (.time-row:disabled in
+        // client.css). Behaviour is unchanged: unticked still sends null visitTime.
+        timeRow.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
 
         typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
         typeCombo.getSelectionModel().selectFirst();
@@ -250,6 +269,12 @@ public class ReservationCreateController extends BaseController {
 
         if (datePicker.getValue() == null) {
             Widgets.showToast(resultLabel, false, "Please select a visit date");
+            return;
+        }
+        // Belt-and-braces: the picker already disables past days, but re-check before
+        // sending in case a past date was set some other way. The server is the real gate.
+        if (datePicker.getValue().isBefore(LocalDate.now())) {
+            Widgets.showToast(resultLabel, false, "Reservations must be for today or a future date");
             return;
         }
 

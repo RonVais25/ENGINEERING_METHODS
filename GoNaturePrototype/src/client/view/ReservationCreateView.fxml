@@ -52,35 +52,43 @@
                 </VBox>
             </HBox>
 
-            <!-- Row 3: Visit Date + Visit Time (50 / 50). The time control is a 12-hour
-                 picker built from three plain dropdowns (Hour : Minute + AM/PM) gated by
-                 "set time" — left unticked it sends no preferred time (null visitTime),
-                 exactly like the old blank field. The three combos share the row's right
-                 half evenly so AM/PM stays clearly readable. The controller converts the
-                 12-hour selection to the 24-hour HH:mm:ss wire format the server/DB
-                 expect. -->
-            <HBox spacing="16" alignment="TOP_LEFT">
-                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
-                    <Label text="Visit Date" styleClass="field-label"/>
-                    <DatePicker fx:id="datePicker" maxWidth="Infinity"
-                                promptText="dd / mm / yyyy" styleClass="date-picker"/>
-                </VBox>
-                <VBox spacing="6" prefWidth="100" maxWidth="Infinity" HBox.hgrow="ALWAYS">
-                    <HBox spacing="8" alignment="CENTER_LEFT">
-                        <Label text="Visit Time" styleClass="field-label"/>
-                        <CheckBox fx:id="timeEnabledCheck" text="set time" styleClass="check-field"/>
-                    </HBox>
-                    <HBox spacing="6" alignment="CENTER_LEFT" styleClass="time-row">
-                        <ComboBox fx:id="hourCombo"   maxWidth="Infinity" HBox.hgrow="ALWAYS"
-                                  styleClass="input-field time-combo"/>
-                        <Label text=":" styleClass="time-colon"/>
-                        <ComboBox fx:id="minuteCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS"
-                                  styleClass="input-field time-combo"/>
-                        <ComboBox fx:id="ampmCombo"   maxWidth="Infinity" HBox.hgrow="ALWAYS"
-                                  styleClass="input-field time-combo"/>
-                    </HBox>
-                </VBox>
-            </HBox>
+            <!-- Row 3: Visit Date + Visit Time (50 / 50), laid out as a GridPane so the
+                 two label cells share one grid row and the two input cells share the
+                 next — the DatePicker and the time dropdowns line up exactly, even
+                 though the "set time" checkbox makes the right-hand label cell a touch
+                 taller. The time control is a 12-hour picker (Hour : Minute + AM/PM)
+                 gated by "set time": left unticked it sends no preferred time (null
+                 visitTime), exactly like the old blank field; the controller converts
+                 the 12-hour selection to the 24-hour HH:mm:ss wire format the server/DB
+                 expect. The three combos share the right cell evenly (hgrow). -->
+            <GridPane hgap="16" vgap="6">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50"/>
+                    <ColumnConstraints percentWidth="50"/>
+                </columnConstraints>
+
+                <Label text="Visit Date" styleClass="field-label"
+                       GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <HBox spacing="8" alignment="CENTER_LEFT"
+                      GridPane.rowIndex="0" GridPane.columnIndex="1">
+                    <Label text="Visit Time" styleClass="field-label"/>
+                    <CheckBox fx:id="timeEnabledCheck" text="set time" styleClass="check-field"/>
+                </HBox>
+
+                <DatePicker fx:id="datePicker" maxWidth="Infinity" promptText="dd / mm / yyyy"
+                            styleClass="date-picker"
+                            GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <HBox fx:id="timeRow" spacing="6" alignment="CENTER_LEFT" maxWidth="Infinity"
+                      styleClass="time-row" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                    <ComboBox fx:id="hourCombo"   maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                              styleClass="time-combo"/>
+                    <Label text=":" styleClass="time-colon"/>
+                    <ComboBox fx:id="minuteCombo" maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                              styleClass="time-combo"/>
+                    <ComboBox fx:id="ampmCombo"   maxWidth="Infinity" HBox.hgrow="ALWAYS"
+                              styleClass="time-combo"/>
+                </HBox>
+            </GridPane>
 
             <!-- Row 4: Visit Type + Party Size (70 / 30) -->
             <GridPane hgap="16">

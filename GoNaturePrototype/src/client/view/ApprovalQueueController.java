@@ -172,7 +172,9 @@ public class ApprovalQueueController extends BaseController {
         approveBtn.setOnAction(e -> decide(r.getId(), true));
 
         Button rejectBtn = new Button("Reject");
-        rejectBtn.getStyleClass().add("btn-secondary");
+        // Red "danger" styling so Reject is clearly distinct from the neutral
+        // Approve and not hit by mistake; composes with btn-secondary (same size).
+        rejectBtn.getStyleClass().addAll("btn-secondary", "danger");
         rejectBtn.setOnAction(e -> decide(r.getId(), false));
 
         // Pin each button to its preferred (label) width so a tight row never
@@ -269,7 +271,9 @@ public class ApprovalQueueController extends BaseController {
         approveBtn.setOnAction(e -> decidePromotion(p.getId(), true));
 
         Button rejectBtn = new Button("Reject");
-        rejectBtn.getStyleClass().add("btn-secondary");
+        // Red "danger" styling so Reject is clearly distinct from the neutral
+        // Approve and not hit by mistake; composes with btn-secondary (same size).
+        rejectBtn.getStyleClass().addAll("btn-secondary", "danger");
         rejectBtn.setOnAction(e -> decidePromotion(p.getId(), false));
 
         for (Button b : new Button[] { approveBtn, rejectBtn }) {
