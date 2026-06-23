@@ -215,15 +215,44 @@
 .spinner .decrement-arrow { -fx-background-color: -g500; }
 
 /* Time picker (Book Visit / reschedule, Row 3): three plain dropdowns
-   (Hour : Minute + AM/PM) that share the row's right half evenly. Trim the
-   heavy .input-field horizontal padding so the short values sit comfortably
-   alongside the dropdown arrow without crowding. */
-.time-combo {
-    -fx-padding: 4 6 4 8;
+   (Hour : Minute + AM/PM) that share the row's right half evenly and are styled to
+   match the DatePicker beside them (same -g50 body, green border/radius, tinted
+   arrow button, green arrow).
+
+   IMPORTANT — selector specificity: a non-editable ComboBox is styled by modena's
+   own rules (.combo-box > .list-cell, .combo-box-base > .arrow-button > .arrow,
+   etc.). A bare .time-combo / .time-combo .arrow loses to those (they are more
+   specific), which is why an earlier attempt left the dropdowns looking like the
+   default skin. So each rule below is qualified with .combo-box.time-combo and the
+   child combinator to out-specify modena — the same trick the .date-picker rules
+   above rely on. The dropdown HEIGHT comes from the button cell's vertical padding
+   (the combo body padding is 0), set to match the DatePicker's text field. */
+.combo-box.time-combo {
+    -fx-background-color: -g50;
+    -fx-border-color: -g200;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-padding: 0;
+    /* A ListCell caps its own height, so cell padding alone won't grow the box to
+       the 44px the text/date inputs stand at — pin the height explicitly so the
+       dropdowns line up level with the DatePicker and the e-mail/phone fields. */
+    -fx-min-height: 44;
+    -fx-pref-height: 44;
 }
-.time-combo .list-cell {
+.combo-box.time-combo > .list-cell {
     -fx-font-size: 14;
-    -fx-padding: 5 2 5 2;
+    -fx-text-fill: -g800;
+    -fx-background-color: transparent;
+    -fx-padding: 0 6 0 10;
+}
+.combo-box.time-combo .arrow-button {
+    -fx-background-color: -g100;
+    -fx-background-radius: 0 9 9 0;
+    -fx-padding: 0 9 0 9;
+}
+.combo-box.time-combo .arrow-button .arrow {
+    -fx-background-color: -g500;
 }
 .time-colon {
     -fx-font-size: 16;
@@ -231,6 +260,22 @@
     -fx-text-fill: -g500;
     -fx-padding: 0 1 0 1;
 }
+
+/* Disabled time picker ("set time" unticked). The whole .time-row is disabled as
+   one unit (see ReservationCreateController), so present a single clean, intentional
+   muted state — a soft -g100 fill with faded -g300 text and arrow — instead of the
+   default washed-out 40% opacity. Selectors again out-specify modena's
+   .combo-box-base:disabled. Ticking "set time" restores the normal look. */
+.time-row:disabled { -fx-opacity: 1; }
+.combo-box.time-combo:disabled {
+    -fx-opacity: 1;
+    -fx-background-color: -g100;
+    -fx-border-color: -g200;
+}
+.combo-box.time-combo:disabled .list-cell { -fx-text-fill: -g300; }
+.combo-box.time-combo:disabled .arrow-button { -fx-background-color: -g200; }
+.combo-box.time-combo:disabled .arrow-button .arrow { -fx-background-color: -g300; }
+.time-colon:disabled { -fx-opacity: 1; -fx-text-fill: -g200; }
 
 /* ---------- Buttons -------------------------------------------------------- */
 .btn-primary {

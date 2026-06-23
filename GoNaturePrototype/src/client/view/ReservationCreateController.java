@@ -76,6 +76,8 @@ public class ReservationCreateController extends BaseController {
     @FXML private ComboBox<String>     minuteCombo;
     /** AM/PM dropdown. */
     @FXML private ComboBox<String>     ampmCombo;
+    /** Row holding the three time dropdowns; disabled as a unit when "set time" is off. */
+    @FXML private HBox                 timeRow;
     /** Party-size spinner. */
     @FXML private Spinner<Integer>     partySpinner;
     /** Visit-type dropdown (INDIVIDUAL/FAMILY/GROUP). */
@@ -143,9 +145,11 @@ public class ReservationCreateController extends BaseController {
         hourCombo.setValue(9);
         minuteCombo.setValue("00");
         ampmCombo.setValue("AM");
-        hourCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
-        minuteCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
-        ampmCombo.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
+        // Disable the whole time row (the three dropdowns and the colon) as one unit
+        // when "set time" is unticked, so the colon mutes together with the dropdowns
+        // and the CSS can present a single clean disabled state (.time-row:disabled in
+        // client.css). Behaviour is unchanged: unticked still sends null visitTime.
+        timeRow.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
 
         typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
         typeCombo.getSelectionModel().selectFirst();
