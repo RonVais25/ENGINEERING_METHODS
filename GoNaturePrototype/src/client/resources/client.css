@@ -309,6 +309,21 @@
     -fx-background-color: -g200;
 }
 
+/* Danger variant of the secondary button (e.g. Reject on the Approvals screen):
+   clearly red so it can't be mistaken for the neutral Approve next to it. Composes
+   with .btn-secondary, so it keeps the same size, padding and radius — only the
+   colours turn red (red border + red text on a faint red fill; solid red on hover),
+   reusing the app's -red / -red-bg language. */
+.btn-secondary.danger {
+    -fx-text-fill: -red;
+    -fx-background-color: -red-bg;
+    -fx-border-color: -red;
+}
+.btn-secondary.danger:hover {
+    -fx-text-fill: white;
+    -fx-background-color: -red;
+}
+
 /* Icon-only action buttons (My Reservations rows): compact, larger glyph, tight
    padding so ✓ / 🚫 / ✎ sit square. The .danger variant (Cancel) is tinted red to
    read as a stop / no-entry action. Each carries a tooltip set in the controller. */
