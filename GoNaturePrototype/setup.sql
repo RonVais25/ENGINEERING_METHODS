@@ -30,13 +30,16 @@ CREATE TABLE `user` (
     park_id         INT NULL                 -- FK -> park.id, added via ALTER (circular)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- visitor: identified by national ID (assigned)
+-- visitor: identified by national ID (assigned). password_hash mirrors
+-- user.password_hash: visitor login is now national ID + password (a later
+-- session decides hashing; demo stores plain, e.g. the shared 'changeme').
 CREATE TABLE visitor (
     id              BIGINT PRIMARY KEY,
     full_name       VARCHAR(100),
     phone           VARCHAR(20),
     email           VARCHAR(100),
-    is_subscriber   BOOLEAN NOT NULL DEFAULT FALSE
+    is_subscriber   BOOLEAN NOT NULL DEFAULT FALSE,
+    password_hash   VARCHAR(255) NOT NULL    -- visitor login password; stored exactly like user.password_hash
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- park: manager_id FK is deferred (circular with user.park_id)
@@ -234,26 +237,30 @@ UPDATE park SET manager_id = 3 WHERE id = 2;   -- Carmel Park  -> carmel_mgr
 UPDATE park SET manager_id = 6 WHERE id = 3;   -- Negev Park   -> negev_mgr
 
 -- 4) Visitors (national-ID-style BIGINTs). ALL have phone + email so the
---    notification channels always have a delivery target. Subscribers are
---    200000001 / 200000005 / 200000006; guides are 200000003 / 200000011.
-INSERT INTO visitor (id, full_name, phone, email, is_subscriber) VALUES
-(200000001, 'Vera Visitor',   '050-1111111', 'vera@example.com',    TRUE),
-(200000002, 'Victor Visit',   '050-2222222', 'victor@example.com',  FALSE),
-(200000003, 'Gad Guide',      '050-3333333', 'gad@example.com',     FALSE),
-(200000004, 'Greta Group',    '050-4444444', 'greta@example.com',   FALSE),
-(200000005, 'Sam Subscriber', '050-5555555', 'sam@example.com',     TRUE),
-(200000006, 'Sophie Sub',     '050-6666666', 'sophie@example.com',  TRUE),
-(200000007, 'Noa Nature',     '050-7777777', 'noa@example.com',     FALSE),
-(200000008, 'Omer Outdoors',  '050-8888888', 'omer@example.com',    FALSE),
-(200000009, 'Hila Hiker',     '050-9999999', 'hila@example.com',    FALSE),
-(200000010, 'Tom Tourist',    '050-1010100', 'tom@example.com',     FALSE),
-(200000011, 'Gabi Guide',     '050-1111000', 'gabi@example.com',    FALSE),
-(200000012, 'Maya Member',    '050-1212120', 'maya@example.com',    FALSE);
+--    notification channels always have a delivery target, and ALL share the
+--    demo login password 'changeme' (visitor login is now national ID + password,
+--    like staff). Subscribers are 200000002 / 200000005 / 200000006; guides are
+--    200000003 / 200000011. The two clear login examples: Vera Visitor (200000001)
+--    is a plain registered visitor (NOT a subscriber); Victor Visitor (200000002)
+--    is registered AND a subscriber (with a matching subscriber row below).
+INSERT INTO visitor (id, full_name, phone, email, is_subscriber, password_hash) VALUES
+(200000001, 'Vera Visitor',   '050-1111111', 'vera@example.com',    FALSE, 'changeme'),
+(200000002, 'Victor Visitor', '050-2222222', 'victor@example.com',  TRUE,  'changeme'),
+(200000003, 'Gad Guide',      '050-3333333', 'gad@example.com',     FALSE, 'changeme'),
+(200000004, 'Greta Group',    '050-4444444', 'greta@example.com',   FALSE, 'changeme'),
+(200000005, 'Sam Subscriber', '050-5555555', 'sam@example.com',     TRUE,  'changeme'),
+(200000006, 'Sophie Sub',     '050-6666666', 'sophie@example.com',  TRUE,  'changeme'),
+(200000007, 'Noa Nature',     '050-7777777', 'noa@example.com',     FALSE, 'changeme'),
+(200000008, 'Omer Outdoors',  '050-8888888', 'omer@example.com',    FALSE, 'changeme'),
+(200000009, 'Hila Hiker',     '050-9999999', 'hila@example.com',    FALSE, 'changeme'),
+(200000010, 'Tom Tourist',    '050-1010100', 'tom@example.com',     FALSE, 'changeme'),
+(200000011, 'Gabi Guide',     '050-1111000', 'gabi@example.com',    FALSE, 'changeme'),
+(200000012, 'Maya Member',    '050-1212120', 'maya@example.com',    FALSE, 'changeme');
 
 -- 5) Subscribers (3) and guides (2). Dates are relative so "joined N days ago"
 --    stays true over time. Guides are registered by the service rep (user 4).
 INSERT INTO subscriber (visitor_id, family_size, joined_on) VALUES
-(200000001, 3, CURDATE() - INTERVAL 150 DAY),
+(200000002, 3, CURDATE() - INTERVAL 150 DAY),
 (200000005, 4, CURDATE() - INTERVAL  60 DAY),
 (200000006, 2, CURDATE() - INTERVAL  20 DAY);
 
@@ -384,7 +391,7 @@ INSERT INTO promotion
 --     shows unread badges. sent_at is stamped where delivered.
 INSERT INTO notification
     (recipient_visitor_id, recipient_user_id, channel, body, scheduled_for, sent_at, acknowledged_at) VALUES
--- Vera (subscriber 200000001): two unread, one read.
+-- Vera (registered visitor 200000001): two unread, one read.
 (200000001, NULL, 'SIM_EMAIL', 'Your reservation for today is confirmed. See you at the gate!', NULL, NOW() - INTERVAL  1 DAY,  NULL),
 (200000001, NULL, 'SIM_SMS',   'Reminder: your visit is scheduled for today.',                  NULL, NOW() - INTERVAL  2 HOUR, NULL),
 (200000001, NULL, 'POPUP',     'Welcome back to GoNature!',                                     NULL, NOW() - INTERVAL  5 DAY,  NOW() - INTERVAL 5 DAY),
