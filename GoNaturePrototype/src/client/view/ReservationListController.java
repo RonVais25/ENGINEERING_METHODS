@@ -18,6 +18,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DateCell;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.Spinner;
@@ -675,6 +676,19 @@ public class ReservationListController extends BaseController {
                 datePicker.setValue(LocalDate.parse(original.getVisitDate()));
             } catch (Exception ignored) { /* leave empty if unparseable */ }
 
+            // A reschedule, like a new booking, can only target today or a future date,
+            // so disable every day before today in the picker. The server re-checks
+            // against its own clock, so this is the convenience half of the guard.
+            datePicker.setDayCellFactory(picker -> new DateCell() {
+                @Override
+                public void updateItem(LocalDate date, boolean empty) {
+                    super.updateItem(date, empty);
+                    if (date != null && date.isBefore(LocalDate.now())) {
+                        setDisable(true);
+                    }
+                }
+            });
+
             // 12-hour picker as three plain dropdowns, mirroring the Book Visit form:
             // Hour 1–12, Minute in quarter-hour steps and a clearly readable AM/PM
             // selector, all disabled until "Set a time" is ticked.
@@ -845,6 +859,13 @@ public class ReservationListController extends BaseController {
         private boolean validateAndCapture() {
             if (datePicker.getValue() == null) {
                 showError("Please choose a visit date");
+                return false;
+            }
+            // Belt-and-braces: the picker already disables past days, but re-check
+            // before sending in case a past date was set some other way. The server
+            // is the real gate.
+            if (datePicker.getValue().isBefore(LocalDate.now())) {
+                showError("Reservations must be for today or a future date");
                 return false;
             }
             visitDate = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);

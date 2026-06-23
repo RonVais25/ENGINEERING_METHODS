@@ -166,6 +166,14 @@ public class ReservationController implements DomainController {
                 String    email     = (String) request.get("email");
                 String    phone     = (String) request.get("phone");
 
+                // A reservation may only be for today or a future date. Checked here
+                // against the server clock (never a client-supplied "today") so a
+                // crafted request cannot book a date already in the past, before any
+                // capacity/pricing work.
+                if (LocalDate.parse(visitDate).isBefore(LocalDate.now())) {
+                    return new ServerResponse(false, "Reservations must be for today or a future date.");
+                }
+
                 // Email + phone are both required to book: email is the visitor's
                 // notification target, phone the fallback contact. Validated here
                 // (not just on the client) so a crafted request can't book a
@@ -310,6 +318,13 @@ public class ReservationController implements DomainController {
                 String visitDate = (String) request.get("visitDate");
                 String visitTime = (String) request.get("visitTime"); // nullable
                 int    partySize = (int) request.get("partySize");
+
+                // A reschedule, like a new booking, may only target today or a future
+                // date — enforced against the server clock before any capacity/pricing
+                // work so a crafted request cannot move a reservation into the past.
+                if (LocalDate.parse(visitDate).isBefore(LocalDate.now())) {
+                    return new ServerResponse(false, "Reservations must be for today or a future date.");
+                }
 
                 ReservationDTO existing = dao.getById(id);
                 if (existing == null) {
