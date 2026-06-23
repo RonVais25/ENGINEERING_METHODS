@@ -29,5 +29,12 @@
             </HBox>
             <VBox fx:id="tableBox" spacing="0"/>
         </VBox>
+
+        <VBox styleClass="history-card" VBox.vgrow="ALWAYS">
+            <HBox styleClass="history-card-header">
+                <Label fx:id="promoHeaderLabel" text="PENDING PROMOTIONS" styleClass="section-label"/>
+            </HBox>
+            <VBox fx:id="promoBox" spacing="0"/>
+        </VBox>
     </VBox>
 </ScrollPane>

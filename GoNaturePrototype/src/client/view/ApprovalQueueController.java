@@ -3,6 +3,7 @@ package client.view;
 import client.app.Session;
 import client.service.NetworkService;
 import common.dto.ParameterChangeRequestDTO;
+import common.dto.PromotionDTO;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -16,14 +17,18 @@ import java.util.List;
 
 /**
  * Approval-queue screen, visible to a {@code DEPT_MANAGER} only (gated in
- * {@link MainShellController}). On show it loads every PENDING parameter-change
- * request via {@code LIST_PENDING_CHANGES} and lists them in a table: park name,
- * field, old&nbsp;→&nbsp;new, and who requested it.
+ * {@link MainShellController}). On show it loads two pending queues: every
+ * PENDING parameter-change request via {@code LIST_PENDING_CHANGES} (park name,
+ * field, old&nbsp;→&nbsp;new, requester) and every PENDING promotion via
+ * {@code LIST_PENDING_PROMOTIONS} (park, name, proposed %, defining manager), each
+ * in its own table.
  *
- * <p>Each row offers Approve / Reject, which send {@code APPROVE_PARAM_CHANGE} /
- * {@code REJECT_PARAM_CHANGE}; on success the list is reloaded so the decided
- * request drops out of the queue. Refresh is manual (on open, after a decision,
- * or via the Refresh button) — realtime push for this screen is a later session.
+ * <p>Each row offers Approve / Reject — parameter changes send
+ * {@code APPROVE_PARAM_CHANGE} / {@code REJECT_PARAM_CHANGE}, promotions send
+ * {@code APPROVE_PROMOTION} / {@code REJECT_PROMOTION}; on success both queues are
+ * reloaded so the decided item drops out. Refresh is manual (on open, after a
+ * decision, or via the Refresh button) — realtime push for this screen is a later
+ * session.
  *
  * <p>Extends {@link BaseController} for navigation-lifecycle parity; it holds no
  * push subscriptions.
@@ -38,6 +43,10 @@ public class ApprovalQueueController extends BaseController {
     @FXML private Label  cardHeaderLabel;
     /** Container the request rows are rendered into. */
     @FXML private VBox   tableBox;
+    /** Header label showing the pending-promotion count. */
+    @FXML private Label  promoHeaderLabel;
+    /** Container the pending-promotion rows are rendered into. */
+    @FXML private VBox   promoBox;
 
     // The (NetworkService, Session) shape is what the Navigator's controller
     // factory injects; this screen needs only the network (the server enforces
@@ -64,8 +73,14 @@ public class ApprovalQueueController extends BaseController {
         load();
     }
 
-    /** Loads the pending queue from the server and repaints the table. */
+    /** Loads both pending queues (parameter changes and promotions) and repaints. */
     private void load() {
+        loadChanges();
+        loadPromotions();
+    }
+
+    /** Loads the pending parameter-change queue from the server and repaints its table. */
+    private void loadChanges() {
         refreshBtn.setDisable(true);
         network.listPendingChanges().thenAccept(res -> {
             refreshBtn.setDisable(false);
@@ -78,6 +93,23 @@ public class ApprovalQueueController extends BaseController {
                 for (Object o : raw) rows.add((ParameterChangeRequestDTO) o);
             }
             populate(rows);
+        });
+    }
+
+    /** Loads the pending promotions from the server and repaints their table. */
+    private void loadPromotions() {
+        network.listPendingPromotions().thenAccept(res -> {
+            if (!res.isSuccess()) {
+                Widgets.showToast(resultLabel, false, res.getMessage());
+                return;
+            }
+            List<PromotionDTO> rows = new ArrayList<>();
+            if (res.getData() instanceof List<?> raw) {
+                for (Object o : raw) {
+                    if (o instanceof PromotionDTO p) rows.add(p);
+                }
+            }
+            populatePromotions(rows);
         });
     }
 
@@ -168,6 +200,101 @@ public class ApprovalQueueController extends BaseController {
         var future = approve
                 ? network.approveParamChange(requestId)
                 : network.rejectParamChange(requestId);
+        future.thenAccept(res -> {
+            Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
+            if (res.isSuccess()) load();
+        });
+    }
+
+    /* ---------- Pending promotions ---------------------------------------- */
+
+    /**
+     * Renders the promotions header and one row per pending promotion (or an
+     * empty-state row).
+     *
+     * @param rows the pending promotions to display
+     */
+    private void populatePromotions(List<PromotionDTO> rows) {
+        promoHeaderLabel.setText("PENDING PROMOTIONS (" + rows.size() + ")");
+        promoBox.getChildren().setAll(promoHeaderRow());
+
+        if (rows.isEmpty()) {
+            Label none = new Label("No pending promotions. You're all caught up.");
+            none.getStyleClass().addAll("history-cell", "muted");
+            HBox row = new HBox(none);
+            row.getStyleClass().add("history-row");
+            promoBox.getChildren().add(row);
+            return;
+        }
+
+        for (int i = 0; i < rows.size(); i++) {
+            promoBox.getChildren().add(promoDataRow(rows.get(i), i < rows.size() - 1));
+        }
+    }
+
+    /** {@return the promotions table header row of column titles} */
+    private HBox promoHeaderRow() {
+        HBox row = new HBox();
+        row.getStyleClass().add("history-header-row");
+        row.getChildren().addAll(
+                headerCell("PARK",       140),
+                headerCell("PROMOTION",  160),
+                headerCell("DISCOUNT",    90),
+                headerCell("DEFINED BY", 120),
+                headerCell("ACTIONS",      0));
+        return row;
+    }
+
+    /**
+     * Builds one promotion row: park, name, proposed discount, defining manager,
+     * plus Approve/Reject buttons.
+     *
+     * @param p           the pending promotion to render
+     * @param withDivider whether to draw a divider below the row
+     * @return the assembled row
+     */
+    private HBox promoDataRow(PromotionDTO p, boolean withDivider) {
+        Label parkLbl    = cell(p.getParkName(),                 140);
+        Label nameLbl    = cell(p.getName(),                     160);
+        Label percentLbl = cell(p.getDiscountPercent() + "%",     90);
+        // Show the defining manager's full name; fall back to the id only if it's
+        // missing (full_name is a nullable column), mirroring the change rows.
+        String definedBy = (p.getDefinedByName() == null || p.getDefinedByName().isBlank())
+                ? "User #" + p.getDefinedBy()
+                : p.getDefinedByName();
+        Label byLbl      = cell(definedBy,                       120);
+
+        Button approveBtn = new Button("Approve");
+        approveBtn.getStyleClass().add("btn-secondary");
+        approveBtn.setOnAction(e -> decidePromotion(p.getId(), true));
+
+        Button rejectBtn = new Button("Reject");
+        rejectBtn.getStyleClass().add("btn-secondary");
+        rejectBtn.setOnAction(e -> decidePromotion(p.getId(), false));
+
+        for (Button b : new Button[] { approveBtn, rejectBtn }) {
+            b.setMinWidth(Region.USE_PREF_SIZE);
+        }
+
+        HBox actions = new HBox(8, approveBtn, rejectBtn);
+        actions.setAlignment(Pos.CENTER_LEFT);
+
+        HBox row = new HBox(parkLbl, nameLbl, percentLbl, byLbl, actions);
+        row.getStyleClass().add("history-row");
+        if (withDivider) row.getStyleClass().add("with-divider");
+        return row;
+    }
+
+    /**
+     * Approves or rejects a promotion, then reloads the queues on success.
+     *
+     * @param promotionId the promotion to decide
+     * @param approve     {@code true} to approve, {@code false} to reject
+     */
+    private void decidePromotion(int promotionId, boolean approve) {
+        var future = approve
+                ? network.approvePromotion(promotionId)
+                : network.rejectPromotion(promotionId);
         future.thenAccept(res -> {
             Widgets.showToast(resultLabel, res.isSuccess(), res.getMessage());
             if (res.isSuccess()) load();

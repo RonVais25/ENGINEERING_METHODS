@@ -12,6 +12,7 @@ import server.control.AuthController;
 import server.control.DomainController;
 import server.control.NotificationController;
 import server.control.ParkController;
+import server.control.PromotionController;
 import server.control.ReportController;
 import server.control.ReservationController;
 import server.control.VisitController;
@@ -43,6 +44,7 @@ public class RequestRouter {
                 new AuthController(),
                 new ReservationController(),
                 new ParkController(),
+                new PromotionController(),
                 new VisitController(),
                 new ReportController(),
                 new NotificationController());

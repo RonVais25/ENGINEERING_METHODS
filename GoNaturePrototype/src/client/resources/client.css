@@ -106,6 +106,8 @@
 .section-label-muted { -fx-font-size: 11; -fx-font-weight: bold; -fx-text-fill: -g400; }
 .section-heading { -fx-font-size: 14; -fx-font-weight: bold; -fx-text-fill: -g800; }
 .hint-text       { -fx-font-size: 11; -fx-text-fill: -g400; }
+/* Explanatory note inside a card/panel — dark so it reads on the light card. */
+.card-note       { -fx-font-size: 12; -fx-text-fill: -g800; }
 
 /* ---------- Inputs --------------------------------------------------------- */
 .field-label {
@@ -156,12 +158,34 @@
 .date-picker .arrow-button .arrow {
     -fx-background-color: -g500;
 }
-/* TODO: the open DatePicker popup (Book Visit screen, datePicker) renders the
-   month + year header white-on-white, so they're unreadable. The rules above
-   only style the closed control; add .date-picker-popup styling for the header —
-   e.g. give .date-picker-popup .month-year-pane a -g100 background (or set
-   .date-picker-popup .spinner .label -fx-text-fill: -g800) so the month/year
-   read as dark text. Also check the day-of-week / day-cell colours while there. */
+/* Open DatePicker popup: the default header renders the month + year white-on-white
+   and the cells washed out. Force every text element dark so the calendar is
+   readable. The closed-control rules above don't reach the popup (a separate
+   window), so these .date-picker-popup selectors are needed too. */
+.date-picker-popup .month-year-pane {
+    -fx-background-color: -g100;
+}
+.date-picker-popup .spinner .label {
+    -fx-text-fill: -g800;
+    -fx-font-weight: bold;
+}
+.date-picker-popup .spinner .button .left-arrow,
+.date-picker-popup .spinner .button .right-arrow {
+    -fx-background-color: -g600;
+}
+.date-picker-popup .day-name-cell {
+    -fx-text-fill: -g600;
+}
+.date-picker-popup .week-number-cell {
+    -fx-text-fill: -g500;
+}
+.date-picker-popup .day-cell {
+    -fx-text-fill: -g800;
+}
+.date-picker-popup .day-cell.previous-month,
+.date-picker-popup .day-cell.next-month {
+    -fx-text-fill: -g300;
+}
 
 /* Spinner — match the .input-field / .date-picker look */
 .spinner {
@@ -402,6 +426,13 @@
     -fx-padding: 16 18 16 18;
 }
 .payment-title { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g600; }
+/* Key/value rows inside a payment-card (e.g. Park Settings). Anchor the colours on
+   the .payment-card ancestor instead of relying on `.result-row .key/.val`: when a
+   row also carries .with-divider, a JavaFX cascade quirk drops those descendant
+   rules and the labels fall back to white (invisible on the light card). Matching
+   via .payment-card reaches every row reliably, with or without a divider. */
+.payment-card .key { -fx-font-size: 12; -fx-text-fill: -g500; }
+.payment-card .val { -fx-font-size: 13; -fx-font-weight: bold; -fx-text-fill: -g800; }
 
 /* "Pay in advance" checkbox on the booking form. */
 .check-field { -fx-font-size: 13; -fx-text-fill: -g600; }

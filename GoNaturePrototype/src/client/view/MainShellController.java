@@ -185,9 +185,12 @@ public class MainShellController {
             new NavItem(new Screen("parkparams", "⚙", "Park Settings",
                         "/client/view/ParkParamsView.fxml",
                         "Park Settings", "Request changes to your park's parameters"), PARK_MANAGER_ONLY),
+            new NavItem(new Screen("promotions", "%", "Promotions",
+                        "/client/view/PromotionsView.fxml",
+                        "Promotions", "Define a temporary discount for your park"), PARK_MANAGER_ONLY),
             new NavItem(new Screen("approvals", "✓", "Approvals",
                         "/client/view/ApprovalQueueView.fxml",
-                        "Approvals", "Review pending parameter-change requests"), DEPT_MANAGER_ONLY),
+                        "Approvals", "Review pending parameter-change requests & promotions"), DEPT_MANAGER_ONLY),
             // Department-manager reports — visits-by-type (chart) and cancellations (table).
             new NavItem(new Screen("visitsreport", "📊", "Visits Report",
                         "/client/view/VisitsReportView.fxml",

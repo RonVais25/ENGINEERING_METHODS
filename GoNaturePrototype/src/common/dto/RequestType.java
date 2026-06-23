@@ -62,6 +62,18 @@ public enum RequestType {
     /** Check booking availability for a park/date. */
     CHECK_AVAILABILITY,
 
+    // promotions
+    /** Define a temporary park promotion for approval (park manager only). */
+    CREATE_PROMOTION,
+    /** List the park manager's own promotions, all statuses (park manager only). */
+    LIST_PROMOTIONS,
+    /** List all pending promotions across parks (dept. manager only). */
+    LIST_PENDING_PROMOTIONS,
+    /** Approve a pending promotion (dept. manager only). */
+    APPROVE_PROMOTION,
+    /** Reject a pending promotion (dept. manager only). */
+    REJECT_PROMOTION,
+
     // visits
     /** Admit a visitor against a confirmed reservation at the gate. */
     ENTER_VISIT,

@@ -63,6 +63,37 @@ public class PricingService {
      */
     public int calculate(VisitType visitType, boolean isGroup, int partySize,
                          boolean preOrdered, boolean prePaid, boolean isMember) {
+        // Promotion-free path: delegate with promotionPercent = 0, so every price
+        // computed without an active promotion is byte-for-byte identical to before
+        // this overload existed.
+        return calculate(visitType, isGroup, partySize, preOrdered, prePaid, isMember, 0);
+    }
+
+    /**
+     * Promotion-aware variant of {@link #calculate(VisitType, boolean, int, boolean,
+     * boolean, boolean)}. An active, approved park promotion is applied
+     * <em>additively</em> — exactly like the member bonus — by adding its
+     * {@code promotionPercent} (as a fraction) to the tier discount. The booking and
+     * casual-visit call sites resolve {@code promotionPercent} from
+     * {@link server.dao.PromotionDAO#findActiveDiscountPercent} for the visit date;
+     * every other caller uses the zero-promotion {@code calculate(...)} above.
+     *
+     * <p>Passing {@code promotionPercent == 0} reproduces the original computation
+     * exactly (the promotion term is skipped and the result is never negative), so
+     * the no-promotion case is unchanged.
+     *
+     * @param visitType        the visit category (INDIVIDUAL/FAMILY share rates; GROUP via {@code isGroup})
+     * @param isGroup          whether this booking is an organised (guide-led) group
+     * @param partySize        number of people in the party (guide included)
+     * @param preOrdered       whether the visit was booked ahead (vs. a casual walk-in)
+     * @param prePaid          whether the booking is paid in advance (deepens the pre-ordered group discount)
+     * @param isMember         whether the owning visitor holds a subscription
+     * @param promotionPercent active approved park-promotion discount (0..100); {@code 0} for none
+     * @return the total price in cents, never below zero
+     */
+    public int calculate(VisitType visitType, boolean isGroup, int partySize,
+                         boolean preOrdered, boolean prePaid, boolean isMember,
+                         int promotionPercent) {
 
         // Guide-free perk: a pre-ordered group doesn't pay for its guide, so one
         // person drops off the paying count (never below zero). Everyone else
@@ -101,7 +132,20 @@ public class PricingService {
             discount = discount + 0.10;
         }
 
+        // Active park promotion stacks additively too, exactly like the member
+        // bonus. Skipped entirely when there is no promotion (the common case), so
+        // the promotion-free price is untouched.
+        if (promotionPercent > 0) {
+            discount = discount + promotionPercent / 100.0;
+        }
+
         long net = Math.round(payingCount * FULL_PRICE_PER_VISITOR * (1 - discount));
+        // A deep promotion can push the combined discount past 100%; never bill a
+        // negative price. (Without a promotion the discount maxes at 0.47, so net is
+        // always >= 0 here and this clamp is a no-op — preserving exact parity.)
+        if (net < 0) {
+            net = 0;
+        }
         return (int) net;
     }
 }

@@ -1,6 +1,7 @@
 package server.control;
 
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -22,6 +23,7 @@ import common.dto.WaitlistEntryDTO;
 import server.dao.AuthDAO;
 import server.dao.MemberDAO;
 import server.dao.ParkDAO;
+import server.dao.PromotionDAO;
 import server.dao.ReservationDAO;
 import server.dao.WaitlistDAO;
 import server.net.ClientSession;
@@ -91,6 +93,8 @@ public class ReservationController implements DomainController {
     private final WaitlistDAO waitlistDao = new WaitlistDAO();
     /** Stateless park DAO, used here only to resolve a park's name for grab notifications. */
     private final ParkDAO parkDao = new ParkDAO();
+    /** Stateless promotion DAO, used to resolve an active park promotion at booking time. */
+    private final PromotionDAO promotionDao = new PromotionDAO();
 
     /** Format for the {@code grab_expires_at} deadline strings handed to {@link WaitlistDAO}. */
     private static final DateTimeFormatter SQL_DATETIME =
@@ -214,7 +218,10 @@ public class ReservationController implements DomainController {
                 VisitorDTO visitor  = authDao.findVisitorById(visitorId);
                 boolean    isMember = visitor != null && visitor.isSubscriber();
 
-                int price = pricing.calculate(visitType, isGroup, partySize, true, prePaid, isMember);
+                // An approved promotion active on the visit date discounts the booking
+                // additively (0 when none, leaving the price exactly as before).
+                int promotionPercent = promotionDao.findActiveDiscountPercent(parkId, LocalDate.parse(visitDate));
+                int price = pricing.calculate(visitType, isGroup, partySize, true, prePaid, isMember, promotionPercent);
 
                 ReservationDTO toInsert = new ReservationDTO(
                         0,                        // id assigned by the DB
@@ -339,8 +346,12 @@ public class ReservationController implements DomainController {
                 int oldPrice = existing.getPriceCents();
                 VisitorDTO visitor  = authDao.findVisitorById(existing.getVisitorId());
                 boolean    isMember = visitor != null && visitor.isSubscriber();
+                // Re-resolve any active promotion for the (possibly new) visit date so a
+                // reschedule re-prices consistently; 0 when none, preserving the old price.
+                int promotionPercent = promotionDao.findActiveDiscountPercent(
+                        existing.getParkId(), LocalDate.parse(visitDate));
                 int newPrice = pricing.calculate(existing.getVisitType(), existing.isGroup(),
-                        partySize, true, existing.isPaidInAdvance(), isMember);
+                        partySize, true, existing.isPaidInAdvance(), isMember, promotionPercent);
 
                 if (!dao.updateReschedule(id, visitDate, visitTime, partySize, newPrice)) {
                     return new ServerResponse(false, "Update failed.");

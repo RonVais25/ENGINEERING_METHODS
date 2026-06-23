@@ -383,6 +383,76 @@ public class NetworkService {
         return send(req);
     }
 
+    /* ---------- Promotions approval workflow ------------------------------ */
+
+    /**
+     * Defines a park promotion for approval (PARK_MANAGER only). Only the name,
+     * percent and date window travel on the wire — the target park is derived
+     * server-side from the manager's own assignment, never trusted from the client.
+     * The promotion is stored PENDING and affects no price until a department
+     * manager approves it.
+     *
+     * @param name            human-friendly promotion name
+     * @param discountPercent the discount percentage off (0..100)
+     * @param startDate       first active date (inclusive), ISO {@code yyyy-MM-dd}
+     * @param endDate         last active date (inclusive), ISO {@code yyyy-MM-dd}
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> createPromotion(String name, int discountPercent,
+                                                             String startDate, String endDate) {
+        ClientRequest req = new ClientRequest(RequestType.CREATE_PROMOTION);
+        req.put("name",            name);
+        req.put("discountPercent", discountPercent);
+        req.put("startDate",       startDate);
+        req.put("endDate",         endDate);
+        return send(req);
+    }
+
+    /**
+     * Lists the logged-in park manager's own promotions, all statuses (PARK_MANAGER
+     * only — the server derives the park from the session). Response
+     * {@code getData()} is a {@code List<}{@link common.dto.PromotionDTO}{@code >}.
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> listPromotions() {
+        return send(new ClientRequest(RequestType.LIST_PROMOTIONS));
+    }
+
+    /**
+     * Lists all PENDING promotions across parks (DEPT_MANAGER only). Response
+     * {@code getData()} is a {@code List<}{@link common.dto.PromotionDTO}{@code >}.
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> listPendingPromotions() {
+        return send(new ClientRequest(RequestType.LIST_PENDING_PROMOTIONS));
+    }
+
+    /**
+     * Approves a pending promotion (DEPT_MANAGER only); once approved and active by
+     * the visit date it discounts that park's visits. Fails if it is no longer PENDING.
+     *
+     * @param promotionId the promotion to approve
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> approvePromotion(int promotionId) {
+        ClientRequest req = new ClientRequest(RequestType.APPROVE_PROMOTION);
+        req.put("promotionId", promotionId);
+        return send(req);
+    }
+
+    /**
+     * Rejects a pending promotion (DEPT_MANAGER only); no price is ever affected.
+     * Fails if it is no longer PENDING.
+     *
+     * @param promotionId the promotion to reject
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> rejectPromotion(int promotionId) {
+        ClientRequest req = new ClientRequest(RequestType.REJECT_PROMOTION);
+        req.put("promotionId", promotionId);
+        return send(req);
+    }
+
     /* ---------- Gate: entry / exit / casual walk-ins / occupancy ----------- */
 
     /**
