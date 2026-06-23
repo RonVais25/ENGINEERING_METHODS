@@ -25,13 +25,13 @@
             <VBox styleClass="payment-card" spacing="8">
                 <Label fx:id="parkNameLabel" text="Loading…" styleClass="payment-title"/>
                 <Label text="An approved promotion that is active on the visit date gives an extra discount on this park's visits."
-                       styleClass="muted" wrapText="true"/>
+                       styleClass="card-note" wrapText="true"/>
             </VBox>
 
             <Label text="Name" styleClass="field-label"/>
             <TextField fx:id="nameField" promptText="e.g. Summer Special" styleClass="input-field"/>
 
-            <Label text="Discount (%)" styleClass="field-label"/>
+            <Label text="Discount ( % )" styleClass="field-label"/>
             <TextField fx:id="percentField" promptText="e.g. 20" styleClass="input-field"/>
 
             <Label text="Start Date" styleClass="field-label"/>
