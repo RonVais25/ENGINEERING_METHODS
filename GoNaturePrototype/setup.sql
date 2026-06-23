@@ -8,6 +8,7 @@ USE gonature;
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS active_session;
 DROP TABLE IF EXISTS notification;
+DROP TABLE IF EXISTS promotion;
 DROP TABLE IF EXISTS parameter_change_request;
 DROP TABLE IF EXISTS visit;
 DROP TABLE IF EXISTS waiting_list_entry;
@@ -135,6 +136,28 @@ CREATE TABLE parameter_change_request (
     CONSTRAINT fk_pcr_park         FOREIGN KEY (park_id)      REFERENCES park(id),
     CONSTRAINT fk_pcr_requested_by FOREIGN KEY (requested_by) REFERENCES `user`(id),
     CONSTRAINT fk_pcr_decided_by   FOREIGN KEY (decided_by)   REFERENCES `user`(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- promotion: a park manager's temporary discount on their park's visits,
+-- approved by a department manager. Mirrors parameter_change_request's
+-- request/approve/reject shape. An APPROVED promotion whose window contains the
+-- visit date grants an extra additive discount (see PricingService); PENDING /
+-- REJECTED rows never affect a price.
+CREATE TABLE promotion (
+    id               INT PRIMARY KEY AUTO_INCREMENT,
+    park_id          INT NOT NULL,
+    name             VARCHAR(100) NOT NULL,
+    discount_percent INT NOT NULL,                                       -- 0..100
+    start_date       DATE NOT NULL,
+    end_date         DATE NOT NULL,
+    status           ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+    defined_by       INT NOT NULL,
+    approved_by      INT NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decided_at       DATETIME NULL,
+    CONSTRAINT fk_promotion_park        FOREIGN KEY (park_id)     REFERENCES park(id),
+    CONSTRAINT fk_promotion_defined_by  FOREIGN KEY (defined_by)  REFERENCES `user`(id),
+    CONSTRAINT fk_promotion_approved_by FOREIGN KEY (approved_by) REFERENCES `user`(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- notification: simulated/popup message addressed to a visitor or a user.
@@ -345,6 +368,16 @@ INSERT INTO parameter_change_request
 (3, 6, 'GAP_SIZE',              15,  20, 'PENDING',  NULL, NOW() - INTERVAL  1 DAY, NULL),
 (2, 3, 'DEFAULT_STAY_MINUTES', 180, 210, 'APPROVED', 1,    NOW() - INTERVAL 10 DAY, NOW() - INTERVAL 9 DAY),
 (1, 2, 'GAP_SIZE',              10,   5, 'REJECTED', 1,    NOW() - INTERVAL  8 DAY, NOW() - INTERVAL 7 DAY);
+
+-- 9b) promotion: 1 APPROVED + active today (its window contains CURDATE(), so it
+--     grants an extra discount on Galilee Park visits right now) and 1 PENDING
+--     (so the dept-manager approval queue shows a promotion to decide). Park/user
+--     ids reuse the seeded rows: park 1 = Galilee (defined by user 2, galilee_mgr;
+--     approved by user 1, dept_mgr); park 3 = Negev (defined by user 6, negev_mgr).
+INSERT INTO promotion
+    (park_id, name, discount_percent, start_date, end_date, status, defined_by, approved_by, created_at, decided_at) VALUES
+(1, 'Summer Special',  20, CURDATE() - INTERVAL  5 DAY, CURDATE() + INTERVAL 25 DAY, 'APPROVED', 2, 1,    NOW() - INTERVAL 6 DAY, NOW() - INTERVAL 5 DAY),
+(3, 'Autumn Preview',  15, CURDATE() + INTERVAL 10 DAY, CURDATE() + INTERVAL 40 DAY, 'PENDING',  6, NULL, NOW() - INTERVAL 1 DAY, NULL);
 
 -- 10) notification: several rows for subscribers (who log in to the notification
 --     center) and for staff. acknowledged_at NULL = still UNREAD, so the center

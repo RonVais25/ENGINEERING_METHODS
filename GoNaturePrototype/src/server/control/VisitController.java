@@ -1,5 +1,6 @@
 package server.control;
 
+import java.time.LocalDate;
 import java.util.Set;
 
 import common.dto.ClientRequest;
@@ -16,6 +17,7 @@ import common.dto.VisitType;
 import common.dto.VisitorDTO;
 import server.dao.AuthDAO;
 import server.dao.ParkDAO;
+import server.dao.PromotionDAO;
 import server.dao.ReservationDAO;
 import server.dao.VisitDAO;
 import server.net.ClientSession;
@@ -59,7 +61,9 @@ public class VisitController implements DomainController {
     private final AuthDAO authDao = new AuthDAO();
     /** Stateless price calculator, shared across all client threads. */
     private final PricingService pricing = new PricingService();
-    
+    /** Stateless promotion DAO, used to resolve an active park promotion for a walk-in. */
+    private final PromotionDAO promotionDao = new PromotionDAO();
+
     /**
      * Returns the visit-related request types handled by this controller.
      *
@@ -217,9 +221,13 @@ public class VisitController implements DomainController {
                     isMember = visitor != null && visitor.isSubscriber();
                 }
                 boolean isGroup = (visitType == VisitType.GROUP);
+                // A casual walk-in happens today, so resolve any promotion active for
+                // the employee's park on the current date (0 when none, so the casual
+                // price is otherwise unchanged).
+                int promotionPercent = promotionDao.findActiveDiscountPercent(employeePark, LocalDate.now());
                 // Casual walk-in: preOrdered=false, prePaid=false (see guide-rule
                 // note — a casual group's guide is charged under the current rule).
-                int price = pricing.calculate(visitType, isGroup, partySize, false, false, isMember);
+                int price = pricing.calculate(visitType, isGroup, partySize, false, false, isMember, promotionPercent);
 
                 int visitId = visitDao.insertVisit(null, employeePark, visitorId, partySize, visitType, price);
                 if (visitId < 0) {

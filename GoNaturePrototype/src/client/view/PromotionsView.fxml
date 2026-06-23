@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Promotions editor (PARK_MANAGER only). Define a temporary discount for your
+     own park, submitted PENDING for department-manager approval, plus a live list
+     of your promotions with their status. ScrollPane root, mirroring
+     ParkParamsView. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.PromotionsController"
+            fitToWidth="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" alignment="TOP_CENTER" spacing="12">
+
+        <!-- Define a promotion -->
+        <VBox styleClass="card" maxWidth="560" spacing="14">
+            <Label text="CREATE A PROMOTION" styleClass="section-label"/>
+
+            <VBox styleClass="payment-card" spacing="8">
+                <Label fx:id="parkNameLabel" text="Loading…" styleClass="payment-title"/>
+                <Label text="An approved promotion that is active on the visit date gives an extra discount on this park's visits."
+                       styleClass="muted" wrapText="true"/>
+            </VBox>
+
+            <Label text="Name" styleClass="field-label"/>
+            <TextField fx:id="nameField" promptText="e.g. Summer Special" styleClass="input-field"/>
+
+            <Label text="Discount (%)" styleClass="field-label"/>
+            <TextField fx:id="percentField" promptText="e.g. 20" styleClass="input-field"/>
+
+            <Label text="Start Date" styleClass="field-label"/>
+            <DatePicker fx:id="startPicker" maxWidth="Infinity"
+                        promptText="dd / mm / yyyy" styleClass="date-picker"/>
+
+            <Label text="End Date" styleClass="field-label"/>
+            <DatePicker fx:id="endPicker" maxWidth="Infinity"
+                        promptText="dd / mm / yyyy" styleClass="date-picker"/>
+
+            <Button fx:id="submitBtn" text="Submit for Approval" onAction="#onSubmit"
+                    styleClass="btn-primary" maxWidth="Infinity"/>
+
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <!-- The manager's own promotions, all statuses -->
+        <VBox styleClass="history-card" maxWidth="560">
+            <HBox styleClass="history-card-header" alignment="CENTER_LEFT">
+                <Label fx:id="listHeaderLabel" text="MY PROMOTIONS" styleClass="section-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="refreshBtn" text="Refresh" onAction="#onRefresh" styleClass="btn-secondary"/>
+            </HBox>
+            <VBox fx:id="promotionsBox" spacing="0">
+                <HBox styleClass="history-row">
+                    <Label text="Loading your promotions…" styleClass="history-cell muted"/>
+                </HBox>
+            </VBox>
+        </VBox>
+    </VBox>
+</ScrollPane>
