@@ -231,6 +231,74 @@ public class AuthDAO {
     }
 
     /**
+     * Updates a visitor's editable personal details — full name, email and phone —
+     * for the visitor with the given national id.
+     *
+     * <p>Used by the "My Profile" self-edit. The {@code SET} list is deliberately
+     * limited to the three personal columns: {@code password_hash},
+     * {@code is_subscriber} and the {@code id} primary key are never touched, so a
+     * profile edit can neither change a visitor's password/subscription nor move
+     * the row to another id. The caller (see {@code AuthController.UPDATE_PROFILE})
+     * supplies the id from the logged-in session, never from the client request.
+     *
+     * @param id       the visitor's national id (the row to update)
+     * @param fullName the new display name (already validated non-blank by the caller)
+     * @param email    the new contact email
+     * @param phone    the new contact phone, or {@code null} if cleared
+     * @return {@code true} if the update statement ran, {@code false} if it failed
+     */
+    public boolean updateVisitorProfile(long id, String fullName, String email, String phone) {
+        String sql = "UPDATE visitor SET full_name = ?, email = ?, phone = ? WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, fullName);
+            stmt.setString(2, email);
+            stmt.setString(3, phone);
+            stmt.setLong(4, id);
+            stmt.executeUpdate();
+            return true;
+
+        } catch (Exception e) {
+            ServerLog.daoError(e);
+            return false;
+        }
+    }
+
+    /**
+     * Updates a staff user's editable personal detail — their full name — for the
+     * user with the given id.
+     *
+     * <p>The mirror of {@link #updateVisitorProfile} for the "My Profile" self-edit.
+     * The {@code user} table has no contact-email column (see {@code setup.sql}), so
+     * a staff member's only editable field is the display name; the {@code SET} list
+     * is restricted to {@code full_name} and never touches {@code password_hash},
+     * {@code role}, {@code park_id} or the {@code id} primary key. The caller passes
+     * the id from the logged-in session, never from the client request.
+     *
+     * @param id       the user id (the row to update)
+     * @param fullName the new display name (already validated non-blank by the caller)
+     * @return {@code true} if the update statement ran, {@code false} if it failed
+     */
+    public boolean updateStaffProfile(int id, String fullName) {
+        String sql = "UPDATE `user` SET full_name = ? WHERE id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, fullName);
+            stmt.setInt(2, id);
+            stmt.executeUpdate();
+            return true;
+
+        } catch (Exception e) {
+            ServerLog.daoError(e);
+            return false;
+        }
+    }
+
+    /**
      * Acquires the single-login lock for an actor by inserting a row into
      * {@code active_session}.
      *

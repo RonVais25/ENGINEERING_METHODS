@@ -593,6 +593,27 @@ public class NetworkService {
     }
 
     /**
+     * Updates the logged-in actor's own profile (the "My Profile" self-edit). No id
+     * is sent — the server derives the actor from the session and edits only that
+     * row. For a visitor pass name/email/phone; for a staff user pass the name and
+     * {@code null} for email/phone (the user table has no email column). On success
+     * the response carries the refreshed {@link common.dto.VisitorDTO} /
+     * {@link common.dto.UserDTO} so the caller can update the in-memory session.
+     *
+     * @param fullName the new full name (required)
+     * @param email    the new email (visitor only; {@code null} for staff)
+     * @param phone    the new phone (visitor only; {@code null} for staff)
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> updateProfile(String fullName, String email, String phone) {
+        ClientRequest req = new ClientRequest(RequestType.UPDATE_PROFILE);
+        req.put("fullName", fullName);
+        req.put("email",    email);   // null for staff
+        req.put("phone",    phone);   // null for staff
+        return send(req);
+    }
+
+    /**
      * Logs the current actor out, releasing the server-side single-login lock.
      *
      * @return a future, completed on the JavaFX thread, with the server's response
