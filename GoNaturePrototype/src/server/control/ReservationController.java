@@ -715,8 +715,10 @@ public class ReservationController implements DomainController {
      * Sweeps every grab offer whose deadline has passed: the offeree forfeited, so
      * each lapsed entry is removed, its now-orphaned WAITING reservation is
      * CANCELLED (via {@link ReservationDAO#updateStatus}, which also stamps
-     * {@code status_changed_at}), and the grab is advanced to the next eligible
-     * waiting party for that same park/date (via {@link #offerGrabToNext}).
+     * {@code status_changed_at}), the cancellation is broadcast and the forfeiting
+     * visitor notified (so their waiting-list screen drops the lapsed offer at once,
+     * mirroring {@code CANCEL_RESERVATION}), and the grab is advanced to the next
+     * eligible waiting party for that same park/date (via {@link #offerGrabToNext}).
      *
      * <p>Cancelling the forfeited reservation resolves the orphaned-WAITING loose
      * end: a WAITING reservation never consumes capacity, so this does not change
@@ -751,6 +753,18 @@ public class ReservationController implements DomainController {
             // Forfeit-fix: the offeree let the window lapse. Cancel its orphaned
             // WAITING reservation instead of leaving it WAITING with no queue entry.
             dao.updateStatus(entry.getReservationId(), ReservationStatus.CANCELLED);
+            // Broadcast the cancellation + notify the forfeiting visitor, exactly as
+            // CANCEL_RESERVATION / expireUnconfirmedReservations do. Without this the
+            // reclaim lands in the DB but the offeree's "My Waiting List" screen never
+            // hears about it (it subscribes to this reservation id and reloads on a
+            // notification), so the lapsed offer/Accept row lingers — making a manual
+            // "run now" look like it did nothing. With it, the row clears the instant
+            // the offer is reclaimed.
+            ReservationDTO forfeited = dao.getById(entry.getReservationId());
+            publishReservation(ServerEvent.updated("reservation", forfeited.getId(), forfeited));
+            notificationService.send(forfeited.getVisitorId(), null, "SIM_EMAIL",
+                    "Your waiting-list offer for reservation #" + forfeited.getId()
+                    + " expired — the slot was passed to the next person in line.");
             offerGrabToNext(entry.getParkId(), entry.getVisitDate());
         }
         return expired.size();
