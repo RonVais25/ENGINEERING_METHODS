@@ -248,19 +248,31 @@ public class MemberDAO {
      * first. The insert is attempted directly; a duplicate primary key means the
      * visitor is already a guide, which is caught and reported as {@code false}.
      *
+     * <p>The guide's {@code park_id} is their "home park" — informational only; it
+     * is recorded here but never restricts which park the guide may later book
+     * (booking picks the park normally). May be {@code null} if no home park was
+     * chosen, in which case the column is left {@code NULL}.
+     *
      * @param visitorId          the visitor's national id
      * @param registeredByUserId the id of the SERVICE_REP performing the registration
+     * @param parkId             the guide's home park id, or {@code null} for none
      * @return {@code true} if a new guide row was created, {@code false} if the
      *         visitor was already a guide or the insert failed
      */
-    public boolean registerGuide(long visitorId, int registeredByUserId) {
-        String sql = "INSERT INTO guide (visitor_id, registered_by, approved_on) VALUES (?, ?, CURDATE())";
+    public boolean registerGuide(long visitorId, int registeredByUserId, Integer parkId) {
+        String sql = "INSERT INTO guide (visitor_id, registered_by, approved_on, park_id) "
+                   + "VALUES (?, ?, CURDATE(), ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, visitorId);
             stmt.setInt(2, registeredByUserId);
+            if (parkId == null) {
+                stmt.setNull(3, java.sql.Types.INTEGER);
+            } else {
+                stmt.setInt(3, parkId);
+            }
             stmt.executeUpdate();
             return true;
 

@@ -4,6 +4,7 @@ import client.app.Session;
 import client.service.NetworkService;
 import common.dto.ParkDTO;
 import common.dto.ReservationDTO;
+import common.dto.Role;
 import common.dto.VisitType;
 import common.dto.VisitorDTO;
 import javafx.fxml.FXML;
@@ -157,7 +158,20 @@ public class ReservationCreateController extends BaseController {
         // client.css). Behaviour is unchanged: unticked still sends null visitTime.
         timeRow.disableProperty().bind(timeEnabledCheck.selectedProperty().not());
 
-        typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
+        // GROUP visits are organised, guide-led bookings: they may be created only by
+        // a guide (a visitor who is also a registered guide) or a service rep, so the
+        // GROUP option is offered ONLY to those actors — a regular visitor sees just
+        // INDIVIDUAL/FAMILY. The server re-checks authorization, so this is convenience.
+        boolean actorIsGuide = session.isVisitor()
+                && session.getVisitor() != null && session.getVisitor().isGuide();
+        boolean actorIsRep = session.isStaff() && session.getRole() == Role.SERVICE_REP;
+        boolean canBookGroup = actorIsGuide || actorIsRep;
+
+        if (canBookGroup) {
+            typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY, VisitType.GROUP);
+        } else {
+            typeCombo.getItems().setAll(VisitType.INDIVIDUAL, VisitType.FAMILY);
+        }
         typeCombo.getSelectionModel().selectFirst();
 
         // The Guide ID field is only relevant to GROUP visits — reveal it when
@@ -165,10 +179,13 @@ public class ReservationCreateController extends BaseController {
         typeCombo.valueProperty().addListener((obs, oldV, newV) -> showGuideField(newV == VisitType.GROUP));
         showGuideField(typeCombo.getValue() == VisitType.GROUP);
 
-        // A logged-in visitor books for themselves: prefill + lock the id field, and
-        // prefill their on-file contact (left editable so they can update it). Staff
-        // leave the id blank/editable and the contact empty to enter/confirm per booking.
-        if (session.isVisitor()) {
+        // A regular logged-in visitor books for THEMSELVES: prefill + lock the id
+        // field, and prefill their on-file contact (left editable so they can update
+        // it). A guide instead books FOR the visitor they are leading the group for,
+        // so the visitor-id field stays editable and blank for them to enter who the
+        // booking is for (the guide is recorded separately, below). Staff likewise
+        // leave the id blank/editable and the contact empty to enter per booking.
+        if (session.isVisitor() && !actorIsGuide) {
             visitorField.setText(String.valueOf(session.getActorId()));
             visitorField.setEditable(false);
 
@@ -177,6 +194,15 @@ public class ReservationCreateController extends BaseController {
                 if (me.getEmail() != null) emailField.setText(me.getEmail());
                 if (me.getPhone() != null) phoneField.setText(me.getPhone());
             }
+        }
+
+        // A guide leads the group, so default the Guide ID to themselves and lock it
+        // (guide_id = the logged-in guide) while they book the visit in the visitor's
+        // name. A service rep instead selects the guide, so for a rep the field stays
+        // empty and editable.
+        if (actorIsGuide) {
+            guideField.setText(String.valueOf(session.getActorId()));
+            guideField.setEditable(false);
         }
     }
 

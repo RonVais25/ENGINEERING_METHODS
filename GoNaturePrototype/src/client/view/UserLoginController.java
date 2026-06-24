@@ -167,10 +167,11 @@ public class UserLoginController {
 
     /**
      * The seeded accounts from {@code setup.sql}, one quick button each — every
-     * staff role and all three parks, plus a subscriber and a plain visitor. Staff
-     * carry a username (logged in with {@link #DEV_PASSWORD}); the two visitor rows
-     * carry a national id. Managers/employees are labelled by their park so the
-     * park-scoped screens (approvals, occupancy, park params) are easy to reach.
+     * staff role and all three parks, plus a subscriber, a guide and a plain
+     * visitor. Staff carry a username (logged in with {@link #DEV_PASSWORD}); the
+     * visitor rows carry a national id. Managers/employees are labelled by their
+     * park so the park-scoped screens (approvals, occupancy, park params) are easy
+     * to reach; the Guide row (Gabi Guide) reaches the guide-led GROUP booking flow.
      *
      * @return the seeded quick-login accounts
      */
@@ -185,6 +186,7 @@ public class UserLoginController {
                 new Quick("Carmel Emp",  "park_emp2",   null),   // PARK_EMPLOYEE · park 2
                 new Quick("Negev Emp",   "park_emp3",   null),   // PARK_EMPLOYEE · park 3
                 new Quick("Subscriber",  null, 200000002L),      // Victor Visitor (subscriber)
+                new Quick("Guide",       null, 200000011L),      // Gabi Guide (visitor + guide row)
                 new Quick("Visitor",     null, 200000001L));     // Vera Visitor (plain visitor)
     }
 

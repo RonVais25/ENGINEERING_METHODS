@@ -24,6 +24,13 @@ public class VisitorDTO implements Serializable {
     private String email;
     /** Whether this visitor holds a subscription. */
     private boolean isSubscriber;
+    /**
+     * Whether this visitor is also a registered group guide (a row exists for them
+     * in the {@code guide} table). Populated on login by {@link server.dao.AuthDAO};
+     * the client uses it to offer the GROUP booking option and the server uses it
+     * to authorize group bookings — guides remain visitors, not a staff role.
+     */
+    private boolean isGuide;
 
     /**
      * Creates a fully populated visitor.
@@ -33,13 +40,31 @@ public class VisitorDTO implements Serializable {
      * @param phone        contact phone number on file, or {@code null}
      * @param email        contact email on file, or {@code null}
      * @param isSubscriber whether the visitor holds a subscription
+     * @param isGuide      whether the visitor is also a registered group guide
      */
-    public VisitorDTO(long id, String fullName, String phone, String email, boolean isSubscriber) {
+    public VisitorDTO(long id, String fullName, String phone, String email,
+                      boolean isSubscriber, boolean isGuide) {
         this.id = id;
         this.fullName = fullName;
         this.phone = phone;
         this.email = email;
         this.isSubscriber = isSubscriber;
+        this.isGuide = isGuide;
+    }
+
+    /**
+     * Creates a visitor that is not a guide. Convenience for the call sites that
+     * never deal with guide status (e.g. a subscriber-registration confirmation),
+     * equivalent to passing {@code isGuide == false}.
+     *
+     * @param id           national-ID-style visitor identifier
+     * @param fullName     display name of the visitor
+     * @param phone        contact phone number on file, or {@code null}
+     * @param email        contact email on file, or {@code null}
+     * @param isSubscriber whether the visitor holds a subscription
+     */
+    public VisitorDTO(long id, String fullName, String phone, String email, boolean isSubscriber) {
+        this(id, fullName, phone, email, isSubscriber, false);
     }
 
     /** {@return the national-ID-style visitor identifier} */
@@ -65,5 +90,10 @@ public class VisitorDTO implements Serializable {
     /** {@return whether the visitor holds a subscription} */
     public boolean isSubscriber() {
         return isSubscriber;
+    }
+
+    /** {@return whether the visitor is also a registered group guide} */
+    public boolean isGuide() {
+        return isGuide;
     }
 }

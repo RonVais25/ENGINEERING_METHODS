@@ -685,15 +685,17 @@ public class NetworkService {
      * @param fullName  the guide's full name
      * @param phone     the guide's phone number
      * @param email     the guide's email address
+     * @param parkId    the guide's home park id (informational; required)
      * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> registerGuide(long visitorId, String fullName,
-                                                           String phone, String email) {
+                                                           String phone, String email, int parkId) {
         ClientRequest req = new ClientRequest(RequestType.REGISTER_GUIDE);
         req.put("visitorId", visitorId);
         req.put("fullName",  fullName);
         req.put("phone",     phone);
         req.put("email",     email);
+        req.put("parkId",    parkId);
         return send(req);
     }
 

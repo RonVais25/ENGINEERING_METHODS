@@ -125,8 +125,14 @@ public class AuthDAO {
      * @return the matching {@link VisitorDTO}, or {@code null} if no row matches or the query fails
      */
     public VisitorDTO authenticateVisitor(long id, String password) {
-        String sql = "SELECT id, full_name, phone, email, is_subscriber " +
-                     "FROM visitor WHERE id = ? AND password_hash = ?";
+        // LEFT JOIN guide so a single login query also tells us whether this
+        // visitor is a registered guide (g.visitor_id non-null) — exposed as
+        // VisitorDTO.isGuide so the client can offer GROUP booking and the server
+        // can authorize it, without a second round trip.
+        String sql = "SELECT v.id, v.full_name, v.phone, v.email, v.is_subscriber, " +
+                     "       (g.visitor_id IS NOT NULL) AS is_guide " +
+                     "FROM visitor v LEFT JOIN guide g ON g.visitor_id = v.id " +
+                     "WHERE v.id = ? AND v.password_hash = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -140,7 +146,8 @@ public class AuthDAO {
                             rs.getString("full_name"),
                             rs.getString("phone"),
                             rs.getString("email"),
-                            rs.getBoolean("is_subscriber")
+                            rs.getBoolean("is_subscriber"),
+                            rs.getBoolean("is_guide")
                     );
                 }
             }
@@ -207,7 +214,12 @@ public class AuthDAO {
      * @return the matching {@link VisitorDTO}, or {@code null} if no row matches or the query fails
      */
     public VisitorDTO findVisitorById(long id) {
-        String sql = "SELECT id, full_name, phone, email, is_subscriber FROM visitor WHERE id = ?";
+        // Same LEFT JOIN guide as authenticateVisitor so callers that re-read a
+        // visitor (e.g. the profile refresh) also carry the guide flag.
+        String sql = "SELECT v.id, v.full_name, v.phone, v.email, v.is_subscriber, " +
+                     "       (g.visitor_id IS NOT NULL) AS is_guide " +
+                     "FROM visitor v LEFT JOIN guide g ON g.visitor_id = v.id " +
+                     "WHERE v.id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -220,7 +232,8 @@ public class AuthDAO {
                             rs.getString("full_name"),
                             rs.getString("phone"),
                             rs.getString("email"),
-                            rs.getBoolean("is_subscriber")
+                            rs.getBoolean("is_subscriber"),
+                            rs.getBoolean("is_guide")
                     );
                 }
             }

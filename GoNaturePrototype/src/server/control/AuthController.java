@@ -213,12 +213,21 @@ public class AuthController implements DomainController {
                 String fullName  = (String) request.get("fullName");
                 String phone     = (String) request.get("phone");
                 String email     = (String) request.get("email");
+                // Home park the rep assigns the guide (informational; see MemberDAO).
+                // Required for a registration — the rep must pick one (the client also
+                // enforces this, but the server stays the authority).
+                Object rawPark = request.get("parkId");
+                if (rawPark == null) {
+                    return new ServerResponse(false, "Please choose a home park for the guide.");
+                }
+                int parkId = ((Number) rawPark).intValue();
 
                 // Find-or-create the base visitor without touching their subscriber
-                // status, then add the guide row stamped with the logged-in rep's id.
+                // status, then add the guide row stamped with the logged-in rep's id
+                // and the chosen home park.
                 memberDao.upsertVisitor(visitorId, fullName, phone, email, false);
                 int registeredBy = session.getLoggedInActorId().intValue();
-                if (!memberDao.registerGuide(visitorId, registeredBy)) {
+                if (!memberDao.registerGuide(visitorId, registeredBy, parkId)) {
                     return new ServerResponse(false,
                             "Visitor " + visitorId + " is already a registered guide.");
                 }
