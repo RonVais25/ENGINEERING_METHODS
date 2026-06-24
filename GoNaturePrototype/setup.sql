@@ -53,11 +53,14 @@ CREATE TABLE park (
     manager_id           INT NULL            -- FK -> user.id
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- subscriber: a visitor who subscribed (1:1 with visitor)
+-- subscriber: a visitor who subscribed (1:1 with visitor). credit_card holds a
+-- fake/demo card captured at registration (no real processing); stored as typed
+-- (e.g. '4111-1111-1111-1111'), so 25 chars covers a dashed 16-digit number.
 CREATE TABLE subscriber (
     visitor_id      BIGINT PRIMARY KEY,
     family_size     INT NOT NULL DEFAULT 1,
     joined_on       DATE NOT NULL,
+    credit_card     VARCHAR(25) NOT NULL,
     CONSTRAINT fk_subscriber_visitor FOREIGN KEY (visitor_id) REFERENCES visitor(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -261,10 +264,12 @@ INSERT INTO visitor (id, full_name, phone, email, is_subscriber, password_hash) 
 
 -- 5) Subscribers (3) and guides (2). Dates are relative so "joined N days ago"
 --    stays true over time. Guides are registered by the service rep (user 4).
-INSERT INTO subscriber (visitor_id, family_size, joined_on) VALUES
-(200000002, 3, CURDATE() - INTERVAL 150 DAY),
-(200000005, 4, CURDATE() - INTERVAL  60 DAY),
-(200000006, 2, CURDATE() - INTERVAL  20 DAY);
+-- credit_card is a fake/demo number (no real processing); seeded so existing
+-- subscribers satisfy the NOT NULL column and the member screens have a value.
+INSERT INTO subscriber (visitor_id, family_size, joined_on, credit_card) VALUES
+(200000002, 3, CURDATE() - INTERVAL 150 DAY, '4111-1111-1111-1111'),
+(200000005, 4, CURDATE() - INTERVAL  60 DAY, '4222-2222-2222-2222'),
+(200000006, 2, CURDATE() - INTERVAL  20 DAY, '4333-3333-3333-3333');
 
 INSERT INTO guide (visitor_id, registered_by, approved_on) VALUES
 (200000003, 4, CURDATE() - INTERVAL 120 DAY),

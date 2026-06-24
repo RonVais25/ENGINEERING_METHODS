@@ -198,13 +198,20 @@ public class MemberDAO {
      * primary key means the visitor is already a subscriber, which is caught and
      * reported as {@code false} rather than raising an error.
      *
+     * <p>The fake/demo {@code creditCard} is stored on the subscriber row as it is
+     * created, so both paths into this method — a brand-new subscriber and the
+     * upgrade of an existing registered visitor — capture the card. There is no
+     * real payment processing; the value is validated for shape by the caller.
+     *
      * @param visitorId  the visitor's national id
      * @param familySize the subscriber's family size
+     * @param creditCard the subscriber's (fake/demo) credit-card number, as entered
      * @return {@code true} if a new subscriber row was created, {@code false} if
      *         the visitor was already a subscriber or the insert failed
      */
-    public boolean registerSubscriber(long visitorId, int familySize) {
-        String insertSql = "INSERT INTO subscriber (visitor_id, family_size, joined_on) VALUES (?, ?, CURDATE())";
+    public boolean registerSubscriber(long visitorId, int familySize, String creditCard) {
+        String insertSql = "INSERT INTO subscriber (visitor_id, family_size, joined_on, credit_card) "
+                         + "VALUES (?, ?, CURDATE(), ?)";
         String flagSql   = "UPDATE visitor SET is_subscriber = TRUE WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection()) {
@@ -212,6 +219,7 @@ public class MemberDAO {
             try (PreparedStatement insert = conn.prepareStatement(insertSql)) {
                 insert.setLong(1, visitorId);
                 insert.setInt(2, familySize);
+                insert.setString(3, creditCard);
                 insert.executeUpdate();
             } catch (SQLIntegrityConstraintViolationException dup) {
                 // Duplicate subscriber.visitor_id -> already a subscriber.

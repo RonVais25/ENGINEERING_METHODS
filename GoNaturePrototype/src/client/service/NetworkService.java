@@ -659,16 +659,19 @@ public class NetworkService {
      * @param phone      the subscriber's phone number
      * @param email      the subscriber's email address
      * @param familySize the subscriber's family size
+     * @param creditCard the subscriber's (fake/demo) credit-card number
      * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> registerSubscriber(long visitorId, String fullName,
-                                                                String phone, String email, int familySize) {
+                                                                String phone, String email, int familySize,
+                                                                String creditCard) {
         ClientRequest req = new ClientRequest(RequestType.REGISTER_SUBSCRIBER);
         req.put("visitorId",  visitorId);
         req.put("fullName",   fullName);
         req.put("phone",      phone);
         req.put("email",      email);
         req.put("familySize", familySize);
+        req.put("creditCard", creditCard);
         return send(req);
     }
 

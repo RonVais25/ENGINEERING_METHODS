@@ -39,6 +39,8 @@ public class SubscriberRegisterController extends BaseController {
     @FXML private TextField        phoneField;
     /** Subscriber email input. */
     @FXML private TextField        emailField;
+    /** Subscriber (fake/demo) credit-card input. */
+    @FXML private TextField        creditCardField;
     /** Family-size spinner. */
     @FXML private Spinner<Integer> familySpinner;
     /** Submits the subscriber registration. */
@@ -84,6 +86,16 @@ public class SubscriberRegisterController extends BaseController {
         String phone = phoneField.getText() == null ? "" : phoneField.getText().trim();
         String email = emailField.getText() == null ? "" : emailField.getText().trim();
 
+        // Credit card is required on every subscriber. Validate present + basic
+        // shape (13-19 digits, ignoring spaces/dashes) so demo numbers like
+        // 4111-1111-1111-1111 pass; the server re-checks the same shape. No real
+        // payment processing happens.
+        String creditCard = creditCardField.getText() == null ? "" : creditCardField.getText().trim();
+        if (!creditCard.replaceAll("[\\s-]", "").matches("\\d{13,19}")) {
+            Widgets.showToast(resultLabel, false, "Enter a valid credit card number (13-19 digits)");
+            return;
+        }
+
         // Commit any text typed into the editable spinner before reading it.
         try {
             int typed = Integer.parseInt(familySpinner.getEditor().getText().trim());
@@ -94,7 +106,7 @@ public class SubscriberRegisterController extends BaseController {
         registerBtn.setText("Registering…");
         registerBtn.setDisable(true);
 
-        network.registerSubscriber(visitorId, fullName, phone, email, familySize)
+        network.registerSubscriber(visitorId, fullName, phone, email, familySize, creditCard)
                .thenAccept(res -> {
                     registerBtn.setText("★  Register Subscriber");
                     registerBtn.setDisable(false);
@@ -109,6 +121,7 @@ public class SubscriberRegisterController extends BaseController {
         nameField.clear();
         phoneField.clear();
         emailField.clear();
+        creditCardField.clear();
         familySpinner.getValueFactory().setValue(1);
     }
 }
