@@ -743,6 +743,23 @@ public class NetworkService {
     }
 
     /**
+     * Runs the Total-Visitors-by-Type report for the logged-in park manager's
+     * <em>own</em> park (PARK_MANAGER only — the server re-checks the role and derives
+     * the park from the session, so no park id is sent and there is no park filter).
+     * Response {@code getData()} is a {@link common.dto.TotalVisitorsReportDTO}.
+     *
+     * @param from inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to   inclusive range end, ISO {@code yyyy-MM-dd}
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> totalVisitorsReport(String from, String to) {
+        ClientRequest req = new ClientRequest(RequestType.REPORT_TOTAL_VISITORS);
+        req.put("from", from);
+        req.put("to",   to);
+        return send(req);
+    }
+
+    /**
      * Shared builder for the two report requests. A {@code null} park id travels as
      * the {@code "ALL"} sentinel, which the server normalises (together with a
      * missing/blank value) to "whole region".
