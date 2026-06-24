@@ -596,7 +596,7 @@ public class NetworkService {
      * Updates the logged-in actor's own profile (the "My Profile" self-edit). No id
      * is sent — the server derives the actor from the session and edits only that
      * row. For a visitor pass name/email/phone; for a staff user pass the name and
-     * {@code null} for email/phone (the user table has no email column). On success
+     * {@code null} for email/phone (a staff email is display-only, not self-edited). On success
      * the response carries the refreshed {@link common.dto.VisitorDTO} /
      * {@link common.dto.UserDTO} so the caller can update the in-memory session.
      *

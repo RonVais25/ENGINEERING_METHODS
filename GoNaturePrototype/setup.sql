@@ -27,6 +27,7 @@ CREATE TABLE `user` (
     password_hash   VARCHAR(255) NOT NULL,   -- a later session decides hashing; demo may store plain
     role            ENUM('PARK_EMPLOYEE','PARK_MANAGER','DEPT_MANAGER','SERVICE_REP') NOT NULL,
     full_name       VARCHAR(100),
+    email           VARCHAR(100),            -- staff contact email (shown on My Profile)
     park_id         INT NULL                 -- FK -> park.id, added via ALTER (circular)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -218,18 +219,19 @@ INSERT INTO park (name, max_capacity, gap_size, default_stay_minutes, manager_id
 ('Negev Park',   150, 15, 300, NULL);
 
 -- 2) Users -- at least one per role, spread across parks, all share the known
---    demo password 'changeme' so login + quick-login keep working.
+--    demo password 'changeme' so login + quick-login keep working. Every staff
+--    user has a contact email (surfaced on the My Profile screen).
 --    ids: 1=dept_mgr 2=galilee_mgr 3=carmel_mgr 4=service_rep 5=park_emp
 --         6=negev_mgr 7=park_emp2 8=park_emp3.
-INSERT INTO `user` (username, password_hash, role, full_name, park_id) VALUES
-('dept_mgr',    'changeme', 'DEPT_MANAGER',  'Dana Department', NULL),
-('galilee_mgr', 'changeme', 'PARK_MANAGER',  'Gil Galilee',     1),
-('carmel_mgr',  'changeme', 'PARK_MANAGER',  'Carmela Carmel',  2),
-('service_rep', 'changeme', 'SERVICE_REP',   'Sara Service',    NULL),
-('park_emp',    'changeme', 'PARK_EMPLOYEE', 'Eli Employee',    1),
-('negev_mgr',   'changeme', 'PARK_MANAGER',  'Nadav Negev',     3),
-('park_emp2',   'changeme', 'PARK_EMPLOYEE', 'Tova Teller',     2),
-('park_emp3',   'changeme', 'PARK_EMPLOYEE', 'Roni Ranger',     3);
+INSERT INTO `user` (username, password_hash, role, full_name, email, park_id) VALUES
+('dept_mgr',    'changeme', 'DEPT_MANAGER',  'Dana Department', 'dept_mgr@gonature.example.com',    NULL),
+('galilee_mgr', 'changeme', 'PARK_MANAGER',  'Gil Galilee',     'galilee_mgr@gonature.example.com', 1),
+('carmel_mgr',  'changeme', 'PARK_MANAGER',  'Carmela Carmel',  'carmel_mgr@gonature.example.com',  2),
+('service_rep', 'changeme', 'SERVICE_REP',   'Sara Service',    'service_rep@gonature.example.com', NULL),
+('park_emp',    'changeme', 'PARK_EMPLOYEE', 'Eli Employee',    'park_emp@gonature.example.com',    1),
+('negev_mgr',   'changeme', 'PARK_MANAGER',  'Nadav Negev',     'negev_mgr@gonature.example.com',   3),
+('park_emp2',   'changeme', 'PARK_EMPLOYEE', 'Tova Teller',     'park_emp2@gonature.example.com',   2),
+('park_emp3',   'changeme', 'PARK_EMPLOYEE', 'Roni Ranger',     'park_emp3@gonature.example.com',   3);
 
 -- 3) Now that users exist, point each park at its park manager.
 UPDATE park SET manager_id = 2 WHERE id = 1;   -- Galilee Park -> galilee_mgr

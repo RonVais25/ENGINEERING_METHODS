@@ -20,8 +20,8 @@ import java.util.Locale;
  * "My Profile": shows the logged-in actor's personal details, read straight from
  * the live {@link Session}, and lets the actor edit their OWN editable fields. A
  * visitor sees (and can edit) name, email and phone — national ID and subscriber
- * status stay read-only; a staff user sees name, username, role and park, and can
- * edit only their name (the {@code user} table has no email column).
+ * status stay read-only; a staff user sees name, worker id, username, email, role
+ * and park, and can edit only their name (worker id and email are display-only).
  *
  * <p>Editing is an in-place toggle: each editable row holds both a read-only value
  * label and a text field in the same grid cell, and {@code Edit} flips which one
@@ -120,18 +120,20 @@ public class MyProfileController {
     }
 
     /**
-     * Renders a staff user's details. Only the name is editable; username, role and
-     * park stay read-only. The park id is resolved to its name via a best-effort
-     * {@code LIST_PARKS} (falling back to {@code "Park #<id>"}, or {@code "—"} when
-     * the user has no park).
+     * Renders a staff user's details. Only the name is editable; worker id (the
+     * user id), username, email, role and park stay read-only. The park id is
+     * resolved to its name via a best-effort {@code LIST_PARKS} (falling back to
+     * {@code "Park #<id>"}, or {@code "—"} when the user has no park).
      *
      * @param u the logged-in staff user
      */
     private void renderStaff(UserDTO u) {
         int row = 0;
         nameField = addEditableRow(row++, "Name", u.getFullName());
-        addRow(row++, "Username", orDash(u.getUsername()));
-        addRow(row++, "Role",     prettyRole(u.getRole() == null ? "" : u.getRole().name()));
+        addRow(row++, "Worker ID", String.valueOf(u.getId()));
+        addRow(row++, "Username",  orDash(u.getUsername()));
+        addRow(row++, "Email",     orDash(u.getEmail()));
+        addRow(row++, "Role",      prettyRole(u.getRole() == null ? "" : u.getRole().name()));
         Label parkVal = addRow(row++, "Park", u.getParkId() == null ? "—" : "Park #" + u.getParkId());
 
         // Best-effort: replace the bare "Park #<id>" with the park's name once

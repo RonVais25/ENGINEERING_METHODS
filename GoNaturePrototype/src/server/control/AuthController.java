@@ -203,9 +203,9 @@ public class AuthController implements DomainController {
                 // Self-edit of personal details. Identity is taken ENTIRELY from the
                 // logged-in session — any id in the request is ignored — so an actor
                 // can only ever edit their OWN row. A visitor edits name/email/phone;
-                // a staff user edits only their name (the user table has no email
-                // column). Never touched: national id / username, role, park,
-                // is_subscriber, password.
+                // a staff user edits only their name (their email is display-only on
+                // the profile screen). Never touched: national id / username, staff
+                // email, role, park, is_subscriber, password.
                 Long   actorId = session.getLoggedInActorId();
                 String kind    = session.getLoggedInKind();
                 if (actorId == null) {

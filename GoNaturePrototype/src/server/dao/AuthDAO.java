@@ -40,7 +40,7 @@ public class AuthDAO {
      * @return the matching {@link UserDTO}, or {@code null} if no row matches or the query fails
      */
     public UserDTO findStaffByCredentials(String username, String password) {
-        String sql = "SELECT id, username, full_name, role, park_id " +
+        String sql = "SELECT id, username, full_name, email, role, park_id " +
                      "FROM `user` WHERE username = ? AND password_hash = ?";
 
         try (Connection conn = DBConnection.getConnection();
@@ -56,6 +56,7 @@ public class AuthDAO {
                             rs.getInt("id"),
                             rs.getString("username"),
                             rs.getString("full_name"),
+                            rs.getString("email"),
                             Role.valueOf(rs.getString("role")),
                             parkId
                     );
@@ -81,7 +82,7 @@ public class AuthDAO {
      * @return the matching {@link UserDTO}, or {@code null} if no row matches or the query fails
      */
     public UserDTO findUserById(long id) {
-        String sql = "SELECT id, username, full_name, role, park_id FROM `user` WHERE id = ?";
+        String sql = "SELECT id, username, full_name, email, role, park_id FROM `user` WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -95,6 +96,7 @@ public class AuthDAO {
                             rs.getInt("id"),
                             rs.getString("username"),
                             rs.getString("full_name"),
+                            rs.getString("email"),
                             Role.valueOf(rs.getString("role")),
                             parkId
                     );
@@ -271,11 +273,12 @@ public class AuthDAO {
      * user with the given id.
      *
      * <p>The mirror of {@link #updateVisitorProfile} for the "My Profile" self-edit.
-     * The {@code user} table has no contact-email column (see {@code setup.sql}), so
-     * a staff member's only editable field is the display name; the {@code SET} list
-     * is restricted to {@code full_name} and never touches {@code password_hash},
-     * {@code role}, {@code park_id} or the {@code id} primary key. The caller passes
-     * the id from the logged-in session, never from the client request.
+     * A staff member's only editable field is the display name (their {@code email}
+     * is display-only on the profile screen, not self-editable), so the {@code SET}
+     * list is restricted to {@code full_name} and never touches {@code email},
+     * {@code password_hash}, {@code role}, {@code park_id} or the {@code id} primary
+     * key. The caller passes the id from the logged-in session, never from the
+     * client request.
      *
      * @param id       the user id (the row to update)
      * @param fullName the new display name (already validated non-blank by the caller)

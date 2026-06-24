@@ -21,9 +21,8 @@ import java.io.Serializable;
  * is non-null. {@link #getSimulatedTarget()} carries the recipient's contact
  * (email or phone) so the simulation popup can render
  * <em>"Simulation — would send via {@code <channel>} to {@code <target>}:
- * {@code <body>}"</em> without a second lookup on the client. Because the
- * {@code user} table has no email/phone column, a staff recipient's target
- * falls back to their {@code username}.
+ * {@code <body>}"</em> without a second lookup on the client. For a staff
+ * recipient the target is their {@code username}.
  *
  * <p>{@link #getAcknowledgedAt()} backs the notification center's unread
  * highlight: a notification is unread while it is {@code null}. It maps to the
