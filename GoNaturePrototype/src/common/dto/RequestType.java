@@ -25,6 +25,8 @@ public enum RequestType {
     REGISTER_SUBSCRIBER,
     /** Register a visitor as a group guide (service rep only). */
     REGISTER_GUIDE,
+    /** Edit the logged-in actor's own personal details (name / email / phone). */
+    UPDATE_PROFILE,
 
     // reservations
     /** Create a new reservation. */

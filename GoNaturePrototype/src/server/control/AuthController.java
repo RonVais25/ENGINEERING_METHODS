@@ -18,6 +18,7 @@ import static common.dto.RequestType.LOGOUT;
 import static common.dto.RequestType.REGISTER_GUIDE;
 import static common.dto.RequestType.REGISTER_SUBSCRIBER;
 import static common.dto.RequestType.REGISTER_VISITOR;
+import static common.dto.RequestType.UPDATE_PROFILE;
 
 /**
  * Owns the authentication / registration domain (login, logout, single-login
@@ -41,6 +42,13 @@ public class AuthController implements DomainController {
     /** Creates the authentication controller. */
     public AuthController() { }
 
+    /**
+     * Basic email shape check ({@code something@something.something}) — the same
+     * shape the self-service signup uses. It is a sanity gate, not strict RFC
+     * validation; the email column itself stays the authority on what is stored.
+     */
+    private static final String EMAIL_PATTERN = "[^@\\s]+@[^@\\s]+\\.[^@\\s]+";
+
     /** Authentication data access (login, single-login lock). */
     private final AuthDAO dao = new AuthDAO();
     /** Member/visitor data access (subscriber and guide registration). */
@@ -52,7 +60,8 @@ public class AuthController implements DomainController {
      */
     @Override
     public Set<RequestType> handledTypes() {
-        return Set.of(LOGIN_STAFF, LOGIN_VISITOR, LOGOUT, REGISTER_VISITOR, REGISTER_SUBSCRIBER, REGISTER_GUIDE);
+        return Set.of(LOGIN_STAFF, LOGIN_VISITOR, LOGOUT, REGISTER_VISITOR, REGISTER_SUBSCRIBER,
+                      REGISTER_GUIDE, UPDATE_PROFILE);
     }
     /**
      * Handles authentication and registration requests.
@@ -188,6 +197,49 @@ public class AuthController implements DomainController {
 
                 return new ServerResponse(true,
                         "Guide registered: " + fullName + " (#" + visitorId + ").");
+            }
+
+            case UPDATE_PROFILE: {
+                // Self-edit of personal details. Identity is taken ENTIRELY from the
+                // logged-in session — any id in the request is ignored — so an actor
+                // can only ever edit their OWN row. A visitor edits name/email/phone;
+                // a staff user edits only their name (the user table has no email
+                // column). Never touched: national id / username, role, park,
+                // is_subscriber, password.
+                Long   actorId = session.getLoggedInActorId();
+                String kind    = session.getLoggedInKind();
+                if (actorId == null) {
+                    return new ServerResponse(false, "You must be logged in to edit your profile.");
+                }
+
+                String fullName = (String) request.get("fullName");
+                if (fullName == null || fullName.isBlank()) {
+                    return new ServerResponse(false, "Full name is required.");
+                }
+                fullName = fullName.trim();
+
+                if ("VISITOR".equals(kind)) {
+                    String email = (String) request.get("email");
+                    String phone = (String) request.get("phone");
+                    if (email == null || !email.trim().matches(EMAIL_PATTERN)) {
+                        return new ServerResponse(false, "Enter a valid email address.");
+                    }
+                    if (!dao.updateVisitorProfile(actorId, fullName, email.trim(),
+                                                  phone == null ? null : phone.trim())) {
+                        return new ServerResponse(false, "Could not update your profile. Please try again.");
+                    }
+                    // Return the freshly-read row so the client refreshes from the
+                    // server's truth (and keeps is_subscriber, which it never edits).
+                    VisitorDTO refreshed = dao.findVisitorById(actorId);
+                    return new ServerResponse(true, "Your profile has been updated.", refreshed);
+                }
+
+                // Staff (USER): name only.
+                if (!dao.updateStaffProfile(actorId.intValue(), fullName)) {
+                    return new ServerResponse(false, "Could not update your profile. Please try again.");
+                }
+                UserDTO refreshed = dao.findUserById(actorId);
+                return new ServerResponse(true, "Your profile has been updated.", refreshed);
             }
 
             default:
