@@ -7,6 +7,7 @@ import common.dto.ClientRequest;
 import common.dto.RequestType;
 import common.dto.Role;
 import common.dto.ServerResponse;
+import common.dto.UsageReportDTO;
 import common.dto.UserDTO;
 import common.dto.VisitsReportDTO;
 import server.dao.AuthDAO;
@@ -14,23 +15,27 @@ import server.dao.ReportDAO;
 import server.net.ClientSession;
 
 import static common.dto.RequestType.REPORT_CANCELLATIONS;
+import static common.dto.RequestType.REPORT_USAGE;
 import static common.dto.RequestType.REPORT_VISITS_BY_TYPE;
 
 /**
  * Owns the reporting domain: the Visits-by-Type and Cancellations reports the
- * department manager runs across the region. Stateless and shared across all
- * client threads — only the read-only DAO collaborators are held as state.
+ * department manager runs across the region, plus the Usage report a park manager
+ * runs for their own park. Stateless and shared across all client threads — only
+ * the read-only DAO collaborators are held as state.
  *
- * <p><strong>Trust boundary.</strong> Both reports are department-manager only.
- * The role is enforced here on the server (not merely gated in the UI) by
- * recovering the logged-in actor's {@link Role} from the {@link ClientSession} via
+ * <p><strong>Trust boundary.</strong> Each report admits exactly its owning role,
+ * enforced here on the server (not merely gated in the UI) by recovering the
+ * logged-in actor's {@link Role} from the {@link ClientSession} via
  * {@link AuthDAO#findUserById}, exactly as {@link ParkController} guards its
- * department-manager operations.
+ * role-restricted operations. The two region-wide reports are department-manager
+ * only; the per-park Usage report is park-manager only, and its target park is
+ * always the manager's own {@code park_id} — never a client-supplied id.
  *
- * <p>Both ops read the same filter from the request: a required date range
- * ({@code from}, {@code to}, ISO {@code yyyy-MM-dd}) and an optional park
- * ({@code parkId}). A missing park id — or the sentinel string {@code "ALL"} — is
- * treated as the whole region.
+ * <p>All ops read a required date range from the request ({@code from},
+ * {@code to}, ISO {@code yyyy-MM-dd}). The department reports also read an optional
+ * park ({@code parkId}); a missing park id — or the sentinel string {@code "ALL"} —
+ * is treated as the whole region. The Usage report takes no park id from the wire.
  */
 public class ReportController implements DomainController {
 
@@ -49,7 +54,7 @@ public class ReportController implements DomainController {
      */
     @Override
     public Set<RequestType> handledTypes() {
-        return Set.of(REPORT_VISITS_BY_TYPE, REPORT_CANCELLATIONS);
+        return Set.of(REPORT_VISITS_BY_TYPE, REPORT_CANCELLATIONS, REPORT_USAGE);
     }
     
     /**
@@ -62,11 +67,15 @@ public class ReportController implements DomainController {
     @Override
     public ServerResponse handle(ClientRequest request, ClientSession session) {
 
-        // Both reports are department-manager only; enforce server-side.
+        // Each report admits exactly its owning role, enforced server-side: the
+        // two region-wide reports are department-manager only, the per-park Usage
+        // report is park-manager only.
         UserDTO me = currentStaff(session);
-        if (me == null || me.getRole() != Role.DEPT_MANAGER) {
-            return new ServerResponse(false,
-                    "Only a department manager can run reports.");
+        Role required = (request.getType() == REPORT_USAGE) ? Role.PARK_MANAGER : Role.DEPT_MANAGER;
+        if (me == null || me.getRole() != required) {
+            return new ServerResponse(false, required == Role.PARK_MANAGER
+                    ? "Only a park manager can run the usage report."
+                    : "Only a department manager can run reports.");
         }
 
         String from = (String) request.get("from");
@@ -92,6 +101,19 @@ public class ReportController implements DomainController {
                     return new ServerResponse(false, "Could not build the cancellations report.");
                 }
                 return new ServerResponse(true, "Cancellations report ready.", report);
+            }
+
+            case REPORT_USAGE: {
+                // Trust boundary: the report is always for the manager's OWN park,
+                // taken from their user row — never a client-supplied park id.
+                if (me.getParkId() == null) {
+                    return new ServerResponse(false, "You are not assigned to a park.");
+                }
+                UsageReportDTO report = reportDao.usage(from, to, me.getParkId());
+                if (report == null) {
+                    return new ServerResponse(false, "Could not build the usage report.");
+                }
+                return new ServerResponse(true, "Usage report ready.", report);
             }
 
             default:

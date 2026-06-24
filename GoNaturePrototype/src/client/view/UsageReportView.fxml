@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Usage report (PARK_MANAGER only): a per-day line chart of the manager's own
+     park's peak occupancy over a date range, plotted against a flat dashed capacity
+     line so under-full days are clearly visible. No park picker — it is always the
+     manager's own park, derived server-side from the session. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.UsageReportController"
+            fitToWidth="true" fitToHeight="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" spacing="12">
+
+        <!-- Filter row: date range + Generate (no park picker — own park only). -->
+        <VBox styleClass="card" spacing="12">
+            <Label text="PARK USAGE" styleClass="section-label"/>
+            <HBox spacing="14" alignment="BOTTOM_LEFT">
+                <VBox spacing="6">
+                    <Label text="From" styleClass="field-label"/>
+                    <DatePicker fx:id="fromPicker" promptText="dd / mm / yyyy" styleClass="date-picker" prefHeight="42"/>
+                </VBox>
+                <VBox spacing="6">
+                    <Label text="To" styleClass="field-label"/>
+                    <DatePicker fx:id="toPicker" promptText="dd / mm / yyyy" styleClass="date-picker" prefHeight="42"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <!-- minWidth=-Infinity (USE_PREF_SIZE): never let the action button shrink
+                     below its label into "Ge.." when the filter row gets tight. -->
+                <Button fx:id="generateBtn" text="Generate" onAction="#onGenerate"
+                        styleClass="btn-primary" minWidth="-Infinity"/>
+            </HBox>
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <!-- Per-day occupancy chart with a flat capacity reference line + summary. The
+             green "Peak occupancy" line carries each day's high-water mark; the red
+             dashed "Capacity" line is the full mark — a dot below it is a not-full day. -->
+        <VBox styleClass="card" spacing="14" VBox.vgrow="ALWAYS">
+            <Label fx:id="cardHeaderLabel" text="DAILY PEAK OCCUPANCY vs CAPACITY" styleClass="section-label"/>
+            <LineChart fx:id="chart" animated="false" createSymbols="true" prefHeight="320"
+                       styleClass="report-chart" VBox.vgrow="ALWAYS">
+                <xAxis>
+                    <CategoryAxis fx:id="xAxis" label="Date" tickLabelRotation="-90"/>
+                </xAxis>
+                <yAxis>
+                    <NumberAxis fx:id="yAxis" label="People in park (peak)"/>
+                </yAxis>
+            </LineChart>
+            <Label fx:id="summaryLabel" styleClass="stat-tile-sub"/>
+        </VBox>
+    </VBox>
+</ScrollPane>

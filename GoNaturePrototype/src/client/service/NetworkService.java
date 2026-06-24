@@ -694,7 +694,7 @@ public class NetworkService {
         return send(req);
     }
 
-    /* ---------- Reports (DEPT_MANAGER) ------------------------------------ */
+    /* ---------- Reports --------------------------------------------------- */
 
     /**
      * Runs the Visits-by-Type report (DEPT_MANAGER only — the server re-checks the
@@ -720,6 +720,23 @@ public class NetworkService {
      */
     public CompletableFuture<ServerResponse> cancellationsReport(String from, String to, Integer parkId) {
         return reportRequest(RequestType.REPORT_CANCELLATIONS, from, to, parkId);
+    }
+
+    /**
+     * Runs the Usage report for the logged-in park manager's <em>own</em> park
+     * (PARK_MANAGER only — the server re-checks the role and derives the park from
+     * the session, so no park id is sent and there is no park filter). Response
+     * {@code getData()} is a {@link common.dto.UsageReportDTO}.
+     *
+     * @param from inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to   inclusive range end, ISO {@code yyyy-MM-dd}
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> usageReport(String from, String to) {
+        ClientRequest req = new ClientRequest(RequestType.REPORT_USAGE);
+        req.put("from", from);
+        req.put("to",   to);
+        return send(req);
     }
 
     /**

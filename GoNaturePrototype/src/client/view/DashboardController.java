@@ -290,8 +290,9 @@ public class DashboardController {
     /** Renders the park-manager dashboard: their park's configured capacity card. */
     private void renderParkManager() {
         quickLinks.getChildren().setAll(
-                quickButton("Park parameters", "parkparams", true),
-                quickButton("Promotions",      "promotions", false));
+                quickButton("Park parameters", "parkparams",  true),
+                quickButton("Promotions",      "promotions",  false),
+                quickButton("Usage report",    "usagereport", false));
         statsRow.getChildren().setAll(loadingCard("PARK CAPACITY"));
         hideAlert();
 

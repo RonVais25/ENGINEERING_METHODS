@@ -188,6 +188,11 @@ public class MainShellController {
             new NavItem(new Screen("promotions", "%", "Promotions",
                         "/client/view/PromotionsView.fxml",
                         "Promotions", "Define a temporary discount for your park"), PARK_MANAGER_ONLY),
+            // Usage report — a park manager's view of their own park's occupancy vs
+            // capacity over a date range (prepared for the department manager).
+            new NavItem(new Screen("usagereport", "📈", "Usage Report",
+                        "/client/view/UsageReportView.fxml",
+                        "Usage Report", "Your park's occupancy vs capacity over a date range"), PARK_MANAGER_ONLY),
             new NavItem(new Screen("approvals", "✓", "Approvals",
                         "/client/view/ApprovalQueueView.fxml",
                         "Approvals", "Review pending parameter-change requests & promotions"), DEPT_MANAGER_ONLY),
