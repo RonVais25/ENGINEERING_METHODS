@@ -2,6 +2,8 @@ package server.dao;
 
 import common.dto.CancellationsReportDTO;
 import common.dto.CancellationsReportRow;
+import common.dto.UsageReportDTO;
+import common.dto.UsageReportRow;
 import common.dto.VisitsReportDTO;
 import common.dto.VisitsReportRow;
 import server.db.DBConnection;
@@ -13,7 +15,9 @@ import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Read-only data access object backing the department manager's reports.
@@ -191,6 +195,115 @@ public class ReportDAO {
         double avgPerDay = (totalCancelled + totalNoShow) / (double) days;
         return new CancellationsReportDTO(from, to, parkId, rows,
                 totalCancelled, totalNoShow, avgPerDay);
+    }
+
+    /**
+     * Usage report: a single park's per-day <em>peak concurrent occupancy</em>
+     * over a date range, paired with the park's {@code max_capacity} so the client
+     * can plot each day against the "full" line and reveal under-full days.
+     *
+     * <p>Unlike the two department-manager reports this one is always for one
+     * specific park (the {@code parkId} is required, never {@code null}) — the park
+     * manager's own park, resolved by the controller from their session. The park's
+     * {@code name} and {@code max_capacity} are read first; an unknown park id
+     * yields a {@code null} return.
+     *
+     * <p><strong>The metric.</strong> "Peak concurrent occupancy" for a day is the
+     * high-water mark of people physically inside the park at any instant that day —
+     * the largest sum of headcounts of visits overlapping a single moment. Because
+     * occupancy only ever <em>rises</em> at an entry, that maximum is always reached
+     * at the moment some visit enters; so for every visit that entered on the day we
+     * compute the occupancy at its entry instant — the sum of headcounts of all
+     * visits already inside then ({@code entered_at <= that instant} and either still
+     * open or {@code exited_at > that instant}) — and take the day's largest. A visit
+     * still inside from a previous day is counted, which is what concurrency means.
+     * This is computed in SQL: the inner correlated sum gives the occupancy at each
+     * entry instant, and {@code MAX(...) GROUP BY day} reduces it to one peak per day.
+     *
+     * <p>The query only returns days that had at least one entry. The caller-facing
+     * series, however, must be continuous, so every calendar day of the inclusive
+     * range is then walked and any day the query did not report is zero-filled — a
+     * day with no visits shows a peak of 0, and a range with no visits at all is a
+     * flat zero series (not an error).
+     *
+     * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
+     * @param parkId the park to report on (required — the manager's own park)
+     * @return the populated {@link UsageReportDTO}, or {@code null} if the park is
+     *         unknown or the query fails
+     */
+    public UsageReportDTO usage(String from, String to, int parkId) {
+        String parkSql = "SELECT name, max_capacity FROM park WHERE id = ?";
+
+        // For each entry on an in-range day, the inner correlated subquery sums the
+        // headcounts of all visits overlapping that entry instant (the occupancy at
+        // that moment); the outer MAX reduces those to the day's peak.
+        String peakSql =
+                "SELECT occ.day AS d, MAX(occ.concurrent) AS peak " +
+                "FROM ( " +
+                "    SELECT DATE(v1.entered_at) AS day, " +
+                "           (SELECT COALESCE(SUM(v2.headcount), 0) " +
+                "              FROM visit v2 " +
+                "             WHERE v2.park_id = v1.park_id " +
+                "               AND v2.entered_at <= v1.entered_at " +
+                "               AND (v2.exited_at IS NULL OR v2.exited_at > v1.entered_at) " +
+                "           ) AS concurrent " +
+                "      FROM visit v1 " +
+                "     WHERE v1.park_id = ? " +
+                "       AND DATE(v1.entered_at) BETWEEN ? AND ? " +
+                ") AS occ " +
+                "GROUP BY occ.day";
+
+        String parkName = null;
+        int maxCapacity = 0;
+        // Peaks keyed by ISO day string ("yyyy-MM-dd"), only for days with visits.
+        Map<String, Integer> peaks = new HashMap<>();
+
+        try (Connection conn = DBConnection.getConnection()) {
+
+            try (PreparedStatement stmt = conn.prepareStatement(parkSql)) {
+                stmt.setInt(1, parkId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) {
+                        return null; // unknown park id
+                    }
+                    parkName = rs.getString("name");
+                    maxCapacity = rs.getInt("max_capacity");
+                }
+            }
+
+            try (PreparedStatement stmt = conn.prepareStatement(peakSql)) {
+                stmt.setInt(1, parkId);
+                stmt.setString(2, from);
+                stmt.setString(3, to);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        peaks.put(rs.getString("d"), rs.getInt("peak"));
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            ServerLog.daoError(e);
+            return null;
+        }
+
+        // Zero-fill: one row per calendar day of the inclusive range, oldest first,
+        // reading the day's peak from the query (0 when the day had no visits).
+        List<UsageReportRow> rows = new ArrayList<>();
+        try {
+            LocalDate start = LocalDate.parse(from);
+            LocalDate end = LocalDate.parse(to);
+            for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+                String key = d.toString(); // ISO yyyy-MM-dd, matching the SQL DATE() keys
+                rows.add(new UsageReportRow(key, peaks.getOrDefault(key, 0)));
+            }
+        } catch (Exception e) {
+            ServerLog.daoError(e);
+            return null;
+        }
+
+        return new UsageReportDTO(from, to, parkId, parkName, maxCapacity, rows);
     }
 
     /**

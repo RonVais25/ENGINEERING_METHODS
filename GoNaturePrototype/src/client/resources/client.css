@@ -655,6 +655,14 @@
 .report-chart .axis-label  { -fx-text-fill: -g600; -fx-font-size: 11; -fx-font-weight: bold; }
 .report-chart .chart-title { -fx-text-fill: -g600; -fx-font-size: 12; -fx-font-weight: bold; }
 
+/* Usage report (park-manager): a LINE chart sharing .report-chart, so the first
+   series ("Peak occupancy") is the green color0 line and the second ("Capacity")
+   is the red color1 line. This rule additionally DASHES the capacity line so it
+   reads as a ceiling/limit rather than another trend; days whose green dot sits
+   below it were not full. Scoped to .usage-chart, so the cancellations line chart
+   (which has no such class) is unaffected. */
+.usage-chart .default-color1.chart-series-line { -fx-stroke-dash-array: 6 6; }
+
 /* Summary stat tiles shared by both reports (avg stay / totals / average per day). */
 .stat-tile {
     -fx-background-color: -g50; -fx-background-radius: 12;
