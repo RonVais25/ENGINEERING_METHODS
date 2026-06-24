@@ -49,6 +49,12 @@ public class ReservationCreateController extends BaseController {
     private static final int MAX_GROUP_SIZE = 15;
 
     /**
+     * Maximum party size for an INDIVIDUAL or FAMILY visit (inclusive); larger
+     * parties must book an organised group visit instead. Mirrors the server's cap.
+     */
+    private static final int MAX_INDIVIDUAL_FAMILY_SIZE = 10;
+
+    /**
      * Park dropdown entry: carries the id but renders the name.
      *
      * @param id   the park id sent with the booking
@@ -318,6 +324,13 @@ public class ReservationCreateController extends BaseController {
                 Widgets.showToast(resultLabel, false, "Enter a valid numeric Guide ID for group bookings");
                 return;
             }
+        } else if (partySize > MAX_INDIVIDUAL_FAMILY_SIZE) {
+            // INDIVIDUAL/FAMILY visits are capped; point larger parties to a group
+            // visit. The server re-validates, so this is the convenience inline guard.
+            Widgets.showToast(resultLabel, false,
+                    "Individual/family visits are limited to " + MAX_INDIVIDUAL_FAMILY_SIZE
+                    + " visitors. Please book an organized group visit for a larger party.");
+            return;
         }
 
         String visitDate = datePicker.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE);

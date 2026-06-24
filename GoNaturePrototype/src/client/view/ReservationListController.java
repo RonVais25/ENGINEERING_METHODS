@@ -56,6 +56,13 @@ import java.util.Optional;
  */
 public class ReservationListController extends BaseController {
 
+    /**
+     * Maximum party size for an INDIVIDUAL or FAMILY visit (inclusive) on a
+     * reschedule; larger parties must book an organised group visit instead.
+     * Mirrors the server's cap (GROUP keeps its own, larger cap).
+     */
+    private static final int MAX_INDIVIDUAL_FAMILY_SIZE = 10;
+
     /** Root container of the screen, swapped out while the edit wizard is shown. */
     @FXML private VBox      screenRoot;
     /** Visitor-id input (prefilled and locked for a logged-in visitor). */
@@ -946,6 +953,14 @@ public class ReservationListController extends BaseController {
             partySize = partySpinner.getValue();
             if (partySize < 1) {
                 showError("Party size must be at least 1");
+                return false;
+            }
+            // INDIVIDUAL/FAMILY visits stay capped on reschedule; a larger party must
+            // book an organised group visit instead. GROUP keeps its own server cap.
+            // The visit type can't change here, so it's read from the original booking.
+            if (!original.isGroup() && partySize > MAX_INDIVIDUAL_FAMILY_SIZE) {
+                showError("Individual/family visits are limited to " + MAX_INDIVIDUAL_FAMILY_SIZE
+                        + " visitors. Please book an organized group visit for a larger party.");
                 return false;
             }
 

@@ -99,6 +99,13 @@ public class ReservationController implements DomainController {
     /** Format for the {@code grab_expires_at} deadline strings handed to {@link WaitlistDAO}. */
     private static final DateTimeFormatter SQL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * Maximum party size for an INDIVIDUAL or FAMILY visit (inclusive). Larger
+     * parties must book an organised GROUP visit instead. GROUP has its own,
+     * separate cap and is exempt from this one. Mirrored on the client.
+     */
+    private static final int MAX_INDIVIDUAL_FAMILY_SIZE = 10;
     
     /**
      * Returns the reservation-related request types
@@ -205,6 +212,14 @@ public class ReservationController implements DomainController {
                     if (!dao.guideExists(guideId)) {
                         return new ServerResponse(false, "No registered guide with id " + guideId + ".");
                     }
+                } else if (partySize > MAX_INDIVIDUAL_FAMILY_SIZE) {
+                    // INDIVIDUAL/FAMILY visits are capped; larger parties must book an
+                    // organised group visit instead. Enforced here (authoritative) before
+                    // any capacity/pricing work so a crafted request cannot overbook a
+                    // private visit past the cap.
+                    return new ServerResponse(false,
+                            "Individual/family visits are limited to " + MAX_INDIVIDUAL_FAMILY_SIZE
+                            + " visitors. Please book an organized group visit for a larger party.");
                 }
 
                 // Capacity gate. The waiting-list offer on overflow is a Phase 4
@@ -338,6 +353,14 @@ public class ReservationController implements DomainController {
                 }
                 if (existing.isGroup() && partySize > 15) {
                     return new ServerResponse(false, "Group size cannot exceed 15.");
+                }
+                // INDIVIDUAL/FAMILY visits stay capped on reschedule too — a larger party
+                // must book an organised group visit instead. Authoritative, before any
+                // capacity/pricing work; GROUP keeps its own (15) cap above.
+                if (!existing.isGroup() && partySize > MAX_INDIVIDUAL_FAMILY_SIZE) {
+                    return new ServerResponse(false,
+                            "Individual/family visits are limited to " + MAX_INDIVIDUAL_FAMILY_SIZE
+                            + " visitors. Please book an organized group visit for a larger party.");
                 }
 
                 // Capacity re-check for the (possibly new) date. availableCapacity
