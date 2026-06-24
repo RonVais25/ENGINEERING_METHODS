@@ -95,6 +95,8 @@ public enum RequestType {
     REPORT_CANCELLATIONS,
     /** Run the Usage report for the manager's own park (park manager only). */
     REPORT_USAGE,
+    /** Run the Total-Visitors-by-Type report for the manager's own park (park manager only). */
+    REPORT_TOTAL_VISITORS,
 
     // notifications
     /** List the logged-in actor's notifications, newest first. */

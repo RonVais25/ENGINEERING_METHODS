@@ -7,6 +7,7 @@ import common.dto.ClientRequest;
 import common.dto.RequestType;
 import common.dto.Role;
 import common.dto.ServerResponse;
+import common.dto.TotalVisitorsReportDTO;
 import common.dto.UsageReportDTO;
 import common.dto.UserDTO;
 import common.dto.VisitsReportDTO;
@@ -15,22 +16,24 @@ import server.dao.ReportDAO;
 import server.net.ClientSession;
 
 import static common.dto.RequestType.REPORT_CANCELLATIONS;
+import static common.dto.RequestType.REPORT_TOTAL_VISITORS;
 import static common.dto.RequestType.REPORT_USAGE;
 import static common.dto.RequestType.REPORT_VISITS_BY_TYPE;
 
 /**
  * Owns the reporting domain: the Visits-by-Type and Cancellations reports the
- * department manager runs across the region, plus the Usage report a park manager
- * runs for their own park. Stateless and shared across all client threads — only
- * the read-only DAO collaborators are held as state.
+ * department manager runs across the region, plus the Usage and Total-Visitors
+ * reports a park manager runs for their own park. Stateless and shared across all
+ * client threads — only the read-only DAO collaborators are held as state.
  *
  * <p><strong>Trust boundary.</strong> Each report admits exactly its owning role,
  * enforced here on the server (not merely gated in the UI) by recovering the
  * logged-in actor's {@link Role} from the {@link ClientSession} via
  * {@link AuthDAO#findUserById}, exactly as {@link ParkController} guards its
  * role-restricted operations. The two region-wide reports are department-manager
- * only; the per-park Usage report is park-manager only, and its target park is
- * always the manager's own {@code park_id} — never a client-supplied id.
+ * only; the per-park Usage and Total-Visitors reports are park-manager only, and
+ * their target park is always the manager's own {@code park_id} — never a
+ * client-supplied id.
  *
  * <p>All ops read a required date range from the request ({@code from},
  * {@code to}, ISO {@code yyyy-MM-dd}). The department reports also read an optional
@@ -54,7 +57,7 @@ public class ReportController implements DomainController {
      */
     @Override
     public Set<RequestType> handledTypes() {
-        return Set.of(REPORT_VISITS_BY_TYPE, REPORT_CANCELLATIONS, REPORT_USAGE);
+        return Set.of(REPORT_VISITS_BY_TYPE, REPORT_CANCELLATIONS, REPORT_USAGE, REPORT_TOTAL_VISITORS);
     }
     
     /**
@@ -69,12 +72,14 @@ public class ReportController implements DomainController {
 
         // Each report admits exactly its owning role, enforced server-side: the
         // two region-wide reports are department-manager only, the per-park Usage
-        // report is park-manager only.
+        // and Total-Visitors reports are park-manager only.
         UserDTO me = currentStaff(session);
-        Role required = (request.getType() == REPORT_USAGE) ? Role.PARK_MANAGER : Role.DEPT_MANAGER;
+        boolean parkManagerReport = request.getType() == REPORT_USAGE
+                || request.getType() == REPORT_TOTAL_VISITORS;
+        Role required = parkManagerReport ? Role.PARK_MANAGER : Role.DEPT_MANAGER;
         if (me == null || me.getRole() != required) {
-            return new ServerResponse(false, required == Role.PARK_MANAGER
-                    ? "Only a park manager can run the usage report."
+            return new ServerResponse(false, parkManagerReport
+                    ? "Only a park manager can run this report."
                     : "Only a department manager can run reports.");
         }
 
@@ -114,6 +119,19 @@ public class ReportController implements DomainController {
                     return new ServerResponse(false, "Could not build the usage report.");
                 }
                 return new ServerResponse(true, "Usage report ready.", report);
+            }
+
+            case REPORT_TOTAL_VISITORS: {
+                // Trust boundary: the report is always for the manager's OWN park,
+                // taken from their user row — never a client-supplied park id.
+                if (me.getParkId() == null) {
+                    return new ServerResponse(false, "You are not assigned to a park.");
+                }
+                TotalVisitorsReportDTO report = reportDao.totalVisitorsByType(from, to, me.getParkId());
+                if (report == null) {
+                    return new ServerResponse(false, "Could not build the total-visitors report.");
+                }
+                return new ServerResponse(true, "Total-visitors report ready.", report);
             }
 
             default:

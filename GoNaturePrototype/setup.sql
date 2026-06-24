@@ -27,6 +27,7 @@ CREATE TABLE `user` (
     password_hash   VARCHAR(255) NOT NULL,   -- a later session decides hashing; demo may store plain
     role            ENUM('PARK_EMPLOYEE','PARK_MANAGER','DEPT_MANAGER','SERVICE_REP') NOT NULL,
     full_name       VARCHAR(100),
+    email           VARCHAR(100),            -- staff contact email (shown on My Profile)
     park_id         INT NULL                 -- FK -> park.id, added via ALTER (circular)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -52,21 +53,29 @@ CREATE TABLE park (
     manager_id           INT NULL            -- FK -> user.id
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- subscriber: a visitor who subscribed (1:1 with visitor)
+-- subscriber: a visitor who subscribed (1:1 with visitor). credit_card holds a
+-- fake/demo card captured at registration (no real processing); stored as typed
+-- (e.g. '4111-1111-1111-1111'), so 25 chars covers a dashed 16-digit number.
 CREATE TABLE subscriber (
     visitor_id      BIGINT PRIMARY KEY,
     family_size     INT NOT NULL DEFAULT 1,
     joined_on       DATE NOT NULL,
+    credit_card     VARCHAR(25) NOT NULL,
     CONSTRAINT fk_subscriber_visitor FOREIGN KEY (visitor_id) REFERENCES visitor(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- guide: a visitor approved as a group guide
+-- guide: a visitor approved as a group guide. park_id is the guide's "home park"
+-- (informational only — it is shown but does NOT restrict which park a guide may
+-- book; booking still picks the park normally). Nullable so a guide can exist
+-- without one; FK -> park.id.
 CREATE TABLE guide (
     visitor_id      BIGINT PRIMARY KEY,
     registered_by   INT,
     approved_on     DATE,
+    park_id         INT NULL,
     CONSTRAINT fk_guide_visitor FOREIGN KEY (visitor_id)    REFERENCES visitor(id),
-    CONSTRAINT fk_guide_user    FOREIGN KEY (registered_by) REFERENCES `user`(id)
+    CONSTRAINT fk_guide_user    FOREIGN KEY (registered_by) REFERENCES `user`(id),
+    CONSTRAINT fk_guide_park    FOREIGN KEY (park_id)       REFERENCES park(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- reservation: a booking against a park
@@ -218,18 +227,19 @@ INSERT INTO park (name, max_capacity, gap_size, default_stay_minutes, manager_id
 ('Negev Park',   150, 15, 300, NULL);
 
 -- 2) Users -- at least one per role, spread across parks, all share the known
---    demo password 'changeme' so login + quick-login keep working.
+--    demo password 'changeme' so login + quick-login keep working. Every staff
+--    user has a contact email (surfaced on the My Profile screen).
 --    ids: 1=dept_mgr 2=galilee_mgr 3=carmel_mgr 4=service_rep 5=park_emp
 --         6=negev_mgr 7=park_emp2 8=park_emp3.
-INSERT INTO `user` (username, password_hash, role, full_name, park_id) VALUES
-('dept_mgr',    'changeme', 'DEPT_MANAGER',  'Dana Department', NULL),
-('galilee_mgr', 'changeme', 'PARK_MANAGER',  'Gil Galilee',     1),
-('carmel_mgr',  'changeme', 'PARK_MANAGER',  'Carmela Carmel',  2),
-('service_rep', 'changeme', 'SERVICE_REP',   'Sara Service',    NULL),
-('park_emp',    'changeme', 'PARK_EMPLOYEE', 'Eli Employee',    1),
-('negev_mgr',   'changeme', 'PARK_MANAGER',  'Nadav Negev',     3),
-('park_emp2',   'changeme', 'PARK_EMPLOYEE', 'Tova Teller',     2),
-('park_emp3',   'changeme', 'PARK_EMPLOYEE', 'Roni Ranger',     3);
+INSERT INTO `user` (username, password_hash, role, full_name, email, park_id) VALUES
+('dept_mgr',    'changeme', 'DEPT_MANAGER',  'Dana Department', 'dept_mgr@gonature.example.com',    NULL),
+('galilee_mgr', 'changeme', 'PARK_MANAGER',  'Gil Galilee',     'galilee_mgr@gonature.example.com', 1),
+('carmel_mgr',  'changeme', 'PARK_MANAGER',  'Carmela Carmel',  'carmel_mgr@gonature.example.com',  2),
+('service_rep', 'changeme', 'SERVICE_REP',   'Sara Service',    'service_rep@gonature.example.com', NULL),
+('park_emp',    'changeme', 'PARK_EMPLOYEE', 'Eli Employee',    'park_emp@gonature.example.com',    1),
+('negev_mgr',   'changeme', 'PARK_MANAGER',  'Nadav Negev',     'negev_mgr@gonature.example.com',   3),
+('park_emp2',   'changeme', 'PARK_EMPLOYEE', 'Tova Teller',     'park_emp2@gonature.example.com',   2),
+('park_emp3',   'changeme', 'PARK_EMPLOYEE', 'Roni Ranger',     'park_emp3@gonature.example.com',   3);
 
 -- 3) Now that users exist, point each park at its park manager.
 UPDATE park SET manager_id = 2 WHERE id = 1;   -- Galilee Park -> galilee_mgr
@@ -259,14 +269,18 @@ INSERT INTO visitor (id, full_name, phone, email, is_subscriber, password_hash) 
 
 -- 5) Subscribers (3) and guides (2). Dates are relative so "joined N days ago"
 --    stays true over time. Guides are registered by the service rep (user 4).
-INSERT INTO subscriber (visitor_id, family_size, joined_on) VALUES
-(200000002, 3, CURDATE() - INTERVAL 150 DAY),
-(200000005, 4, CURDATE() - INTERVAL  60 DAY),
-(200000006, 2, CURDATE() - INTERVAL  20 DAY);
+-- credit_card is a fake/demo number (no real processing); seeded so existing
+-- subscribers satisfy the NOT NULL column and the member screens have a value.
+INSERT INTO subscriber (visitor_id, family_size, joined_on, credit_card) VALUES
+(200000002, 3, CURDATE() - INTERVAL 150 DAY, '4111-1111-1111-1111'),
+(200000005, 4, CURDATE() - INTERVAL  60 DAY, '4222-2222-2222-2222'),
+(200000006, 2, CURDATE() - INTERVAL  20 DAY, '4333-3333-3333-3333');
 
-INSERT INTO guide (visitor_id, registered_by, approved_on) VALUES
-(200000003, 4, CURDATE() - INTERVAL 120 DAY),
-(200000011, 4, CURDATE() - INTERVAL  45 DAY);
+-- park_id is the guide's home park (informational): Gad guides out of Carmel (2),
+-- Gabi (the clear guide login example) out of Galilee (1).
+INSERT INTO guide (visitor_id, registered_by, approved_on, park_id) VALUES
+(200000003, 4, CURDATE() - INTERVAL 120 DAY, 2),
+(200000011, 4, CURDATE() - INTERVAL  45 DAY, 1);
 
 -- 6) Reservations (29) -- every status x every visit_type across all 3 parks,
 --    visit_date spread over past / today / next 2 weeks, mixed paid_in_advance.

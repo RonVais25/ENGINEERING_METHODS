@@ -198,13 +198,20 @@ public class MemberDAO {
      * primary key means the visitor is already a subscriber, which is caught and
      * reported as {@code false} rather than raising an error.
      *
+     * <p>The fake/demo {@code creditCard} is stored on the subscriber row as it is
+     * created, so both paths into this method — a brand-new subscriber and the
+     * upgrade of an existing registered visitor — capture the card. There is no
+     * real payment processing; the value is validated for shape by the caller.
+     *
      * @param visitorId  the visitor's national id
      * @param familySize the subscriber's family size
+     * @param creditCard the subscriber's (fake/demo) credit-card number, as entered
      * @return {@code true} if a new subscriber row was created, {@code false} if
      *         the visitor was already a subscriber or the insert failed
      */
-    public boolean registerSubscriber(long visitorId, int familySize) {
-        String insertSql = "INSERT INTO subscriber (visitor_id, family_size, joined_on) VALUES (?, ?, CURDATE())";
+    public boolean registerSubscriber(long visitorId, int familySize, String creditCard) {
+        String insertSql = "INSERT INTO subscriber (visitor_id, family_size, joined_on, credit_card) "
+                         + "VALUES (?, ?, CURDATE(), ?)";
         String flagSql   = "UPDATE visitor SET is_subscriber = TRUE WHERE id = ?";
 
         try (Connection conn = DBConnection.getConnection()) {
@@ -212,6 +219,7 @@ public class MemberDAO {
             try (PreparedStatement insert = conn.prepareStatement(insertSql)) {
                 insert.setLong(1, visitorId);
                 insert.setInt(2, familySize);
+                insert.setString(3, creditCard);
                 insert.executeUpdate();
             } catch (SQLIntegrityConstraintViolationException dup) {
                 // Duplicate subscriber.visitor_id -> already a subscriber.
@@ -240,19 +248,31 @@ public class MemberDAO {
      * first. The insert is attempted directly; a duplicate primary key means the
      * visitor is already a guide, which is caught and reported as {@code false}.
      *
+     * <p>The guide's {@code park_id} is their "home park" — informational only; it
+     * is recorded here but never restricts which park the guide may later book
+     * (booking picks the park normally). May be {@code null} if no home park was
+     * chosen, in which case the column is left {@code NULL}.
+     *
      * @param visitorId          the visitor's national id
      * @param registeredByUserId the id of the SERVICE_REP performing the registration
+     * @param parkId             the guide's home park id, or {@code null} for none
      * @return {@code true} if a new guide row was created, {@code false} if the
      *         visitor was already a guide or the insert failed
      */
-    public boolean registerGuide(long visitorId, int registeredByUserId) {
-        String sql = "INSERT INTO guide (visitor_id, registered_by, approved_on) VALUES (?, ?, CURDATE())";
+    public boolean registerGuide(long visitorId, int registeredByUserId, Integer parkId) {
+        String sql = "INSERT INTO guide (visitor_id, registered_by, approved_on, park_id) "
+                   + "VALUES (?, ?, CURDATE(), ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setLong(1, visitorId);
             stmt.setInt(2, registeredByUserId);
+            if (parkId == null) {
+                stmt.setNull(3, java.sql.Types.INTEGER);
+            } else {
+                stmt.setInt(3, parkId);
+            }
             stmt.executeUpdate();
             return true;
 

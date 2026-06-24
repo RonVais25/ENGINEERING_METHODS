@@ -2,6 +2,8 @@ package server.dao;
 
 import common.dto.CancellationsReportDTO;
 import common.dto.CancellationsReportRow;
+import common.dto.TotalVisitorsReportDTO;
+import common.dto.TotalVisitorsReportRow;
 import common.dto.UsageReportDTO;
 import common.dto.UsageReportRow;
 import common.dto.VisitsReportDTO;
@@ -304,6 +306,99 @@ public class ReportDAO {
         }
 
         return new UsageReportDTO(from, to, parkId, parkName, maxCapacity, rows);
+    }
+
+    /**
+     * Total-visitors-by-type report: a single park's total visitor headcount over a
+     * date range, split into the two reporting categories — individuals
+     * ({@code INDIVIDUAL + FAMILY}) versus organized groups ({@code GROUP}).
+     *
+     * <p>Like {@link #usage} this is always for one specific park (the {@code parkId}
+     * is required, never {@code null}) — the park manager's own park, resolved by the
+     * controller from their session. The park's {@code name} is read first; an unknown
+     * park id yields a {@code null} return.
+     *
+     * <p><strong>The metric is a headcount, not a visit count.</strong> The spec asks
+     * for the <em>number of visitors</em>, so each category's figure is
+     * {@code SUM(v.headcount)} — the total party size across the matching visits — not
+     * {@code COUNT(*)} of the visits. One group visit of 30 people therefore counts as
+     * 30 visitors, not 1. {@code COALESCE(SUM(...), 0)} keeps an empty category at 0
+     * rather than SQL {@code NULL}.
+     *
+     * <p>As in {@link #visitsByType}, the source is {@code visit v LEFT JOIN
+     * reservation r} so a visit's category comes from its reservation when it has one
+     * and from the visit's own {@code visit_type} when it is a casual walk-in
+     * ({@code reservation_id IS NULL}) — that is the {@code COALESCE} on {@code visit_type}.
+     * Visits are filtered by {@code DATE(entered_at)} falling within {@code [from, to]}
+     * inclusive. Results are grouped into the two reporting categories; a category with
+     * no visitors in the window is zero-filled so the DTO always returns both, in a
+     * stable order — an empty range is a pair of zeros, not an error.
+     *
+     * @param from   inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to     inclusive range end, ISO {@code yyyy-MM-dd}
+     * @param parkId the park to report on (required — the manager's own park)
+     * @return the populated {@link TotalVisitorsReportDTO}, or {@code null} if the park
+     *         is unknown or the query fails
+     */
+    public TotalVisitorsReportDTO totalVisitorsByType(String from, String to, int parkId) {
+        String parkSql = "SELECT name FROM park WHERE id = ?";
+
+        // Headcount (number of visitors), not COUNT(*) (number of visits): SUM the
+        // party size of every matching visit, collapsed into the two categories.
+        String visitorsSql =
+                "SELECT CASE WHEN COALESCE(r.visit_type, v.visit_type) = 'GROUP' " +
+                "            THEN 'GROUPS' ELSE 'INDIVIDUALS' END AS category, " +
+                "       COALESCE(SUM(v.headcount), 0) AS visitor_count " +
+                "FROM visit v " +
+                "LEFT JOIN reservation r ON v.reservation_id = r.id " +
+                "WHERE v.park_id = ? " +
+                "  AND DATE(v.entered_at) BETWEEN ? AND ? " +
+                "GROUP BY category";
+
+        String parkName = null;
+        // Zero-filled defaults; overwritten by whatever the query returns. Using a
+        // fixed two-slot result guarantees both categories appear, in a stable order.
+        int individualsCount = 0;
+        int groupsCount = 0;
+
+        try (Connection conn = DBConnection.getConnection()) {
+
+            try (PreparedStatement stmt = conn.prepareStatement(parkSql)) {
+                stmt.setInt(1, parkId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) {
+                        return null; // unknown park id
+                    }
+                    parkName = rs.getString("name");
+                }
+            }
+
+            try (PreparedStatement stmt = conn.prepareStatement(visitorsSql)) {
+                stmt.setInt(1, parkId);
+                stmt.setString(2, from);
+                stmt.setString(3, to);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String category = rs.getString("category");
+                        int count = rs.getInt("visitor_count");
+                        if ("GROUPS".equals(category)) {
+                            groupsCount = count;
+                        } else {
+                            individualsCount = count;
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            ServerLog.daoError(e);
+            return null;
+        }
+
+        List<TotalVisitorsReportRow> rows = new ArrayList<>();
+        rows.add(new TotalVisitorsReportRow("INDIVIDUALS", individualsCount));
+        rows.add(new TotalVisitorsReportRow("GROUPS", groupsCount));
+        return new TotalVisitorsReportDTO(from, to, parkId, parkName, rows);
     }
 
     /**

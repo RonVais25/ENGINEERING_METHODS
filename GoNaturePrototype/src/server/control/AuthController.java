@@ -49,6 +49,23 @@ public class AuthController implements DomainController {
      */
     private static final String EMAIL_PATTERN = "[^@\\s]+@[^@\\s]+\\.[^@\\s]+";
 
+    /**
+     * Basic credit-card shape gate for subscriber registration: after stripping
+     * spaces and dashes, the value must be 13-19 digits. This is a demo sanity
+     * check, not a real validator (no Luhn, no processing); demo numbers like
+     * {@code 4111-1111-1111-1111} pass. The same shape is enforced on the client,
+     * but the server stays the authority since the client is never trusted.
+     *
+     * @param card the raw card text from the request (may be {@code null})
+     * @return {@code true} if the card is present and digit-shaped
+     */
+    private static boolean isValidCreditCard(String card) {
+        if (card == null) {
+            return false;
+        }
+        return card.replaceAll("[\\s-]", "").matches("\\d{13,19}");
+    }
+
     /** Authentication data access (login, single-login lock). */
     private final AuthDAO dao = new AuthDAO();
     /** Member/visitor data access (subscriber and guide registration). */
@@ -160,12 +177,23 @@ public class AuthController implements DomainController {
                 String phone      = (String) request.get("phone");
                 String email      = (String) request.get("email");
                 int    familySize = ((Number) request.get("familySize")).intValue();
+                String creditCard = (String) request.get("creditCard");
+
+                // A (fake/demo) card is required on every subscriber: validate it is
+                // present and digit-shaped server-side — the client is never trusted —
+                // before the subscriber row that stores it is created. No real payment
+                // processing happens; demo numbers like 4111-1111-1111-1111 are fine.
+                if (!isValidCreditCard(creditCard)) {
+                    return new ServerResponse(false,
+                            "A valid credit card number (13-19 digits) is required.");
+                }
 
                 // Find-or-create the base visitor (marking them a subscriber), then
-                // add the subscriber row. registerSubscriber returns false if they
-                // were already a subscriber.
+                // add the subscriber row — which stores the card whether this is a
+                // brand-new subscriber or the upgrade of an existing visitor.
+                // registerSubscriber returns false if they were already a subscriber.
                 memberDao.upsertVisitor(visitorId, fullName, phone, email, true);
-                if (!memberDao.registerSubscriber(visitorId, familySize)) {
+                if (!memberDao.registerSubscriber(visitorId, familySize, creditCard.trim())) {
                     return new ServerResponse(false,
                             "Visitor " + visitorId + " is already a subscriber.");
                 }
@@ -185,12 +213,21 @@ public class AuthController implements DomainController {
                 String fullName  = (String) request.get("fullName");
                 String phone     = (String) request.get("phone");
                 String email     = (String) request.get("email");
+                // Home park the rep assigns the guide (informational; see MemberDAO).
+                // Required for a registration — the rep must pick one (the client also
+                // enforces this, but the server stays the authority).
+                Object rawPark = request.get("parkId");
+                if (rawPark == null) {
+                    return new ServerResponse(false, "Please choose a home park for the guide.");
+                }
+                int parkId = ((Number) rawPark).intValue();
 
                 // Find-or-create the base visitor without touching their subscriber
-                // status, then add the guide row stamped with the logged-in rep's id.
+                // status, then add the guide row stamped with the logged-in rep's id
+                // and the chosen home park.
                 memberDao.upsertVisitor(visitorId, fullName, phone, email, false);
                 int registeredBy = session.getLoggedInActorId().intValue();
-                if (!memberDao.registerGuide(visitorId, registeredBy)) {
+                if (!memberDao.registerGuide(visitorId, registeredBy, parkId)) {
                     return new ServerResponse(false,
                             "Visitor " + visitorId + " is already a registered guide.");
                 }
@@ -203,9 +240,9 @@ public class AuthController implements DomainController {
                 // Self-edit of personal details. Identity is taken ENTIRELY from the
                 // logged-in session — any id in the request is ignored — so an actor
                 // can only ever edit their OWN row. A visitor edits name/email/phone;
-                // a staff user edits only their name (the user table has no email
-                // column). Never touched: national id / username, role, park,
-                // is_subscriber, password.
+                // a staff user edits only their name (their email is display-only on
+                // the profile screen). Never touched: national id / username, staff
+                // email, role, park, is_subscriber, password.
                 Long   actorId = session.getLoggedInActorId();
                 String kind    = session.getLoggedInKind();
                 if (actorId == null) {

@@ -25,7 +25,7 @@ import java.util.List;
  * both {@code visitor} and {@code user} so {@link #map} can resolve the
  * recipient's contact into {@link NotificationDTO#getSimulatedTarget()} (email or
  * phone for a visitor, depending on the channel; {@code username} for a staff
- * user, since the {@code user} table has no email/phone column).
+ * user — the simulated notification target uses the staff username).
  */
 public class NotificationDAO {
 

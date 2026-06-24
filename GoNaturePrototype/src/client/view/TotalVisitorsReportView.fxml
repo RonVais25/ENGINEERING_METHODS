@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<!-- Total-Visitors-by-Type report (PARK_MANAGER only): a bar chart of the number of
+     visitors (summed headcount, not visit count) for Individuals vs Organized groups
+     over a date range, with per-category and grand-total summary tiles. No park
+     picker — it is always the manager's own park, derived server-side from the session. -->
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="client.view.TotalVisitorsReportController"
+            fitToWidth="true" fitToHeight="true" styleClass="scroll-pane">
+
+    <VBox styleClass="screen-padded" spacing="12">
+
+        <!-- Filter row: date range + Generate (no park picker — own park only). -->
+        <VBox styleClass="card" spacing="12">
+            <Label text="TOTAL VISITORS BY TYPE" styleClass="section-label"/>
+            <HBox spacing="14" alignment="BOTTOM_LEFT">
+                <VBox spacing="6">
+                    <Label text="From" styleClass="field-label"/>
+                    <DatePicker fx:id="fromPicker" promptText="dd / mm / yyyy" styleClass="date-picker" prefHeight="42"/>
+                </VBox>
+                <VBox spacing="6">
+                    <Label text="To" styleClass="field-label"/>
+                    <DatePicker fx:id="toPicker" promptText="dd / mm / yyyy" styleClass="date-picker" prefHeight="42"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <!-- minWidth=-Infinity (USE_PREF_SIZE): never let the action button shrink
+                     below its label into "Ge.." when the filter row gets tight. -->
+                <Button fx:id="generateBtn" text="Generate" onAction="#onGenerate"
+                        styleClass="btn-primary" minWidth="-Infinity"/>
+            </HBox>
+            <Label fx:id="resultLabel" styleClass="toast" visible="false" managed="false" wrapText="true"/>
+        </VBox>
+
+        <!-- Chart + per-category and grand-total summary tiles. -->
+        <VBox styleClass="card" spacing="14" VBox.vgrow="ALWAYS">
+            <Label text="VISITORS — INDIVIDUALS vs ORGANIZED GROUPS" styleClass="section-label"/>
+            <BarChart fx:id="chart" legendVisible="false" animated="false"
+                      prefHeight="320" styleClass="report-chart" VBox.vgrow="ALWAYS">
+                <xAxis>
+                    <CategoryAxis fx:id="xAxis" label="Visitor category"/>
+                </xAxis>
+                <yAxis>
+                    <NumberAxis fx:id="yAxis" label="Number of visitors"/>
+                </yAxis>
+            </BarChart>
+            <HBox fx:id="summaryBox" spacing="12"/>
+        </VBox>
+    </VBox>
+</ScrollPane>

@@ -14,9 +14,11 @@ import common.dto.ReservationDTO;
 import common.dto.ReservationStatus;
 import common.dto.ReservationUpdateResultDTO;
 import common.dto.RequestType;
+import common.dto.Role;
 import common.dto.ServerEvent;
 import common.dto.ServerResponse;
 import common.dto.SubscriptionKey;
+import common.dto.UserDTO;
 import common.dto.VisitType;
 import common.dto.VisitorDTO;
 import common.dto.WaitlistEntryDTO;
@@ -99,6 +101,13 @@ public class ReservationController implements DomainController {
     /** Format for the {@code grab_expires_at} deadline strings handed to {@link WaitlistDAO}. */
     private static final DateTimeFormatter SQL_DATETIME =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * Maximum party size for an INDIVIDUAL or FAMILY visit (inclusive). Larger
+     * parties must book an organised GROUP visit instead. GROUP has its own,
+     * separate cap and is exempt from this one. Mirrored on the client.
+     */
+    private static final int MAX_INDIVIDUAL_FAMILY_SIZE = 10;
     
     /**
      * Returns the reservation-related request types
@@ -191,20 +200,28 @@ public class ReservationController implements DomainController {
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
 
-                // Group visits are guide-led and capped at 15 people. The guide
-                // must be a registered guide (row in the guide table).
+                // Group visits are guide-led and capped at 15 people. Only a guide (a
+                // visitor with a guide-table row) or a service rep may book one — a
+                // regular visitor is rejected here (the client also hides the option,
+                // but the server is the authority). The guide leading the group must
+                // itself be a registered guide.
                 if (isGroup) {
+                    GroupGuide gg = resolveGroupGuide(request, session);
+                    if (gg.error() != null) {
+                        return new ServerResponse(false, gg.error());
+                    }
+                    guideId = gg.guideId();
                     if (partySize > 15) {
                         return new ServerResponse(false, "Group size cannot exceed 15.");
                     }
-                    Object rawGuide = request.get("guideId");
-                    if (rawGuide == null) {
-                        return new ServerResponse(false, "A guide is required for group bookings.");
-                    }
-                    guideId = ((Number) rawGuide).longValue();
-                    if (!dao.guideExists(guideId)) {
-                        return new ServerResponse(false, "No registered guide with id " + guideId + ".");
-                    }
+                } else if (partySize > MAX_INDIVIDUAL_FAMILY_SIZE) {
+                    // INDIVIDUAL/FAMILY visits are capped; larger parties must book an
+                    // organised group visit instead. Enforced here (authoritative) before
+                    // any capacity/pricing work so a crafted request cannot overbook a
+                    // private visit past the cap.
+                    return new ServerResponse(false,
+                            "Individual/family visits are limited to " + MAX_INDIVIDUAL_FAMILY_SIZE
+                            + " visitors. Please book an organized group visit for a larger party.");
                 }
 
                 // Capacity gate. The waiting-list offer on overflow is a Phase 4
@@ -336,8 +353,22 @@ public class ReservationController implements DomainController {
                 if (st != ReservationStatus.PENDING && st != ReservationStatus.CONFIRMED) {
                     return new ServerResponse(false, "Cannot modify a reservation that is " + st + ".");
                 }
+                // A GROUP reservation may only be modified by a guide or a service rep
+                // (the same actors who may book one); a regular visitor is rejected.
+                if (existing.isGroup() && actorGuideId(session) == null && !isServiceRep(session)) {
+                    return new ServerResponse(false,
+                            "Group visits must be booked by a guide or a service representative.");
+                }
                 if (existing.isGroup() && partySize > 15) {
                     return new ServerResponse(false, "Group size cannot exceed 15.");
+                }
+                // INDIVIDUAL/FAMILY visits stay capped on reschedule too — a larger party
+                // must book an organised group visit instead. Authoritative, before any
+                // capacity/pricing work; GROUP keeps its own (15) cap above.
+                if (!existing.isGroup() && partySize > MAX_INDIVIDUAL_FAMILY_SIZE) {
+                    return new ServerResponse(false,
+                            "Individual/family visits are limited to " + MAX_INDIVIDUAL_FAMILY_SIZE
+                            + " visitors. Please book an organized group visit for a larger party.");
                 }
 
                 // Capacity re-check for the (possibly new) date. availableCapacity
@@ -404,20 +435,18 @@ public class ReservationController implements DomainController {
                 boolean isGroup = (visitType == VisitType.GROUP);
                 Long    guideId = null;
 
-                // Same group rules as a booking (guide-led, capped at 15). These are
-                // domain invariants independent of capacity, so a waitlisted group
-                // still needs its guide for when the slot is eventually grabbed.
+                // Same group rules as a booking (guide-led, capped at 15, and bookable
+                // only by a guide or a service rep). These are domain invariants
+                // independent of capacity, so a waitlisted group still needs its guide
+                // for when the slot is eventually grabbed.
                 if (isGroup) {
+                    GroupGuide gg = resolveGroupGuide(request, session);
+                    if (gg.error() != null) {
+                        return new ServerResponse(false, gg.error());
+                    }
+                    guideId = gg.guideId();
                     if (partySize > 15) {
                         return new ServerResponse(false, "Group size cannot exceed 15.");
-                    }
-                    Object rawGuide = request.get("guideId");
-                    if (rawGuide == null) {
-                        return new ServerResponse(false, "A guide is required for group bookings.");
-                    }
-                    guideId = ((Number) rawGuide).longValue();
-                    if (!dao.guideExists(guideId)) {
-                        return new ServerResponse(false, "No registered guide with id " + guideId + ".");
                     }
                 }
 
@@ -588,7 +617,98 @@ public class ReservationController implements DomainController {
         }
         return digits >= 10;
     }
-    
+
+    /**
+     * Outcome of authorizing the actor for a GROUP booking and resolving the guide
+     * that leads it: either a valid {@code guideId} (with {@code error == null}) or a
+     * rejection {@code error} message (with {@code guideId == null}).
+     *
+     * @param guideId the resolved registered-guide id, or {@code null} on failure
+     * @param error   the rejection message, or {@code null} on success
+     */
+    private record GroupGuide(Long guideId, String error) {
+        /**
+         * @param id the resolved guide id
+         * @return a success result carrying {@code id}
+         */
+        static GroupGuide ok(long id) { return new GroupGuide(id, null); }
+        /**
+         * @param message the rejection message
+         * @return a failure result carrying {@code message}
+         */
+        static GroupGuide fail(String message) { return new GroupGuide(null, message); }
+    }
+
+    /**
+     * Authorizes a GROUP booking and resolves its guide. A GROUP may be booked only
+     * by a guide (a visitor with a {@code guide}-table row) or a SERVICE_REP — a
+     * regular visitor is rejected (the client also hides the option, but the server
+     * is the authority). The guide that leads the group is taken from the request's
+     * {@code guideId} when supplied (a rep selects the guide); a guide booking for
+     * their own group may omit it, in which case it defaults to the guide
+     * themselves. The resolved guide must itself be a registered guide.
+     *
+     * @param request the booking/waitlist request (read for an optional {@code guideId})
+     * @param session the caller's session (its actor decides authorization + the default guide)
+     * @return a {@link GroupGuide} carrying the resolved guide id, or a rejection message
+     */
+    private GroupGuide resolveGroupGuide(ClientRequest request, ClientSession session) {
+        Long    guideActor = actorGuideId(session);   // the actor's own id if they are a guide
+        boolean actorIsRep = isServiceRep(session);
+        if (guideActor == null && !actorIsRep) {
+            return GroupGuide.fail(
+                    "Group visits must be booked by a guide or a service representative.");
+        }
+
+        long guideId;
+        Object rawGuide = request.get("guideId");
+        if (rawGuide != null) {
+            guideId = ((Number) rawGuide).longValue();
+        } else if (guideActor != null) {
+            guideId = guideActor;   // a guide leads their own group
+        } else {
+            return GroupGuide.fail("A guide is required for group bookings.");
+        }
+        if (!dao.guideExists(guideId)) {
+            return GroupGuide.fail("No registered guide with id " + guideId + ".");
+        }
+        return GroupGuide.ok(guideId);
+    }
+
+    /**
+     * Resolves the connection's actor to their own guide id when the logged-in
+     * actor is a guide — a visitor (login kind {@code "VISITOR"}) who has a row in
+     * the {@code guide} table.
+     *
+     * @param session the caller's session
+     * @return the actor's national id if they are a registered guide, else {@code null}
+     */
+    private Long actorGuideId(ClientSession session) {
+        Long actorId = session.getLoggedInActorId();
+        if (actorId != null && "VISITOR".equals(session.getLoggedInKind())
+                && dao.guideExists(actorId)) {
+            return actorId;
+        }
+        return null;
+    }
+
+    /**
+     * Resolves the connection's logged-in actor to a {@code SERVICE_REP}. The
+     * {@link ClientSession} records only the actor id and lock kind, so a staff
+     * actor's role is re-read from the {@code user} row; a visitor is never a rep.
+     *
+     * @param session the caller's session
+     * @return {@code true} if a SERVICE_REP staff user is logged in on this connection
+     */
+    private boolean isServiceRep(ClientSession session) {
+        Long actorId = session.getLoggedInActorId();
+        if (actorId == null || !"USER".equals(session.getLoggedInKind())) {
+            return false;
+        }
+        UserDTO u = authDao.findUserById(actorId);
+        return u != null && u.getRole() == Role.SERVICE_REP;
+    }
+
     /**
      * The reservation state machine: whether a reservation may move from its
      * {@code current} status to {@code target}. Single source of truth for the
@@ -692,8 +812,10 @@ public class ReservationController implements DomainController {
      * Sweeps every grab offer whose deadline has passed: the offeree forfeited, so
      * each lapsed entry is removed, its now-orphaned WAITING reservation is
      * CANCELLED (via {@link ReservationDAO#updateStatus}, which also stamps
-     * {@code status_changed_at}), and the grab is advanced to the next eligible
-     * waiting party for that same park/date (via {@link #offerGrabToNext}).
+     * {@code status_changed_at}), the cancellation is broadcast and the forfeiting
+     * visitor notified (so their waiting-list screen drops the lapsed offer at once,
+     * mirroring {@code CANCEL_RESERVATION}), and the grab is advanced to the next
+     * eligible waiting party for that same park/date (via {@link #offerGrabToNext}).
      *
      * <p>Cancelling the forfeited reservation resolves the orphaned-WAITING loose
      * end: a WAITING reservation never consumes capacity, so this does not change
@@ -728,6 +850,18 @@ public class ReservationController implements DomainController {
             // Forfeit-fix: the offeree let the window lapse. Cancel its orphaned
             // WAITING reservation instead of leaving it WAITING with no queue entry.
             dao.updateStatus(entry.getReservationId(), ReservationStatus.CANCELLED);
+            // Broadcast the cancellation + notify the forfeiting visitor, exactly as
+            // CANCEL_RESERVATION / expireUnconfirmedReservations do. Without this the
+            // reclaim lands in the DB but the offeree's "My Waiting List" screen never
+            // hears about it (it subscribes to this reservation id and reloads on a
+            // notification), so the lapsed offer/Accept row lingers — making a manual
+            // "run now" look like it did nothing. With it, the row clears the instant
+            // the offer is reclaimed.
+            ReservationDTO forfeited = dao.getById(entry.getReservationId());
+            publishReservation(ServerEvent.updated("reservation", forfeited.getId(), forfeited));
+            notificationService.send(forfeited.getVisitorId(), null, "SIM_EMAIL",
+                    "Your waiting-list offer for reservation #" + forfeited.getId()
+                    + " expired — the slot was passed to the next person in line.");
             offerGrabToNext(entry.getParkId(), entry.getVisitDate());
         }
         return expired.size();

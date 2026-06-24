@@ -193,6 +193,11 @@ public class MainShellController {
             new NavItem(new Screen("usagereport", "📈", "Usage Report",
                         "/client/view/UsageReportView.fxml",
                         "Usage Report", "Your park's occupancy vs capacity over a date range"), PARK_MANAGER_ONLY),
+            // Total-visitors report — a park manager's view of their own park's
+            // visitor headcount split by type (individuals vs organized groups).
+            new NavItem(new Screen("totalvisitors", "📊", "Visitors Report",
+                        "/client/view/TotalVisitorsReportView.fxml",
+                        "Visitors Report", "Total visitors by type — individuals vs organized groups"), PARK_MANAGER_ONLY),
             new NavItem(new Screen("approvals", "✓", "Approvals",
                         "/client/view/ApprovalQueueView.fxml",
                         "Approvals", "Review pending parameter-change requests & promotions"), DEPT_MANAGER_ONLY),

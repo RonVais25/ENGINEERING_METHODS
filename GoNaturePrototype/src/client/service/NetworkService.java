@@ -596,7 +596,7 @@ public class NetworkService {
      * Updates the logged-in actor's own profile (the "My Profile" self-edit). No id
      * is sent — the server derives the actor from the session and edits only that
      * row. For a visitor pass name/email/phone; for a staff user pass the name and
-     * {@code null} for email/phone (the user table has no email column). On success
+     * {@code null} for email/phone (a staff email is display-only, not self-edited). On success
      * the response carries the refreshed {@link common.dto.VisitorDTO} /
      * {@link common.dto.UserDTO} so the caller can update the in-memory session.
      *
@@ -659,16 +659,19 @@ public class NetworkService {
      * @param phone      the subscriber's phone number
      * @param email      the subscriber's email address
      * @param familySize the subscriber's family size
+     * @param creditCard the subscriber's (fake/demo) credit-card number
      * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> registerSubscriber(long visitorId, String fullName,
-                                                                String phone, String email, int familySize) {
+                                                                String phone, String email, int familySize,
+                                                                String creditCard) {
         ClientRequest req = new ClientRequest(RequestType.REGISTER_SUBSCRIBER);
         req.put("visitorId",  visitorId);
         req.put("fullName",   fullName);
         req.put("phone",      phone);
         req.put("email",      email);
         req.put("familySize", familySize);
+        req.put("creditCard", creditCard);
         return send(req);
     }
 
@@ -682,15 +685,17 @@ public class NetworkService {
      * @param fullName  the guide's full name
      * @param phone     the guide's phone number
      * @param email     the guide's email address
+     * @param parkId    the guide's home park id (informational; required)
      * @return a future, completed on the JavaFX thread, with the server's response
      */
     public CompletableFuture<ServerResponse> registerGuide(long visitorId, String fullName,
-                                                           String phone, String email) {
+                                                           String phone, String email, int parkId) {
         ClientRequest req = new ClientRequest(RequestType.REGISTER_GUIDE);
         req.put("visitorId", visitorId);
         req.put("fullName",  fullName);
         req.put("phone",     phone);
         req.put("email",     email);
+        req.put("parkId",    parkId);
         return send(req);
     }
 
@@ -734,6 +739,23 @@ public class NetworkService {
      */
     public CompletableFuture<ServerResponse> usageReport(String from, String to) {
         ClientRequest req = new ClientRequest(RequestType.REPORT_USAGE);
+        req.put("from", from);
+        req.put("to",   to);
+        return send(req);
+    }
+
+    /**
+     * Runs the Total-Visitors-by-Type report for the logged-in park manager's
+     * <em>own</em> park (PARK_MANAGER only — the server re-checks the role and derives
+     * the park from the session, so no park id is sent and there is no park filter).
+     * Response {@code getData()} is a {@link common.dto.TotalVisitorsReportDTO}.
+     *
+     * @param from inclusive range start, ISO {@code yyyy-MM-dd}
+     * @param to   inclusive range end, ISO {@code yyyy-MM-dd}
+     * @return a future, completed on the JavaFX thread, with the server's response
+     */
+    public CompletableFuture<ServerResponse> totalVisitorsReport(String from, String to) {
+        ClientRequest req = new ClientRequest(RequestType.REPORT_TOTAL_VISITORS);
         req.put("from", from);
         req.put("to",   to);
         return send(req);

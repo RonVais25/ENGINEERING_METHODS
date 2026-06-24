@@ -20,6 +20,8 @@ public class UserDTO implements Serializable {
     private String username;
     /** Display name of the user. */
     private String fullName;
+    /** Contact email of the user, or {@code null} if none on file. */
+    private String email;
     /** Staff role governing the user's permissions. */
     private Role role;
     /** Identifier of the park the user belongs to, or {@code null} if none. */
@@ -31,13 +33,15 @@ public class UserDTO implements Serializable {
      * @param id       unique user identifier
      * @param username login username
      * @param fullName display name of the user
+     * @param email    contact email of the user, or {@code null} if none on file
      * @param role     staff role governing permissions
      * @param parkId   identifier of the user's park, or {@code null} if none
      */
-    public UserDTO(int id, String username, String fullName, Role role, Integer parkId) {
+    public UserDTO(int id, String username, String fullName, String email, Role role, Integer parkId) {
         this.id = id;
         this.username = username;
         this.fullName = fullName;
+        this.email = email;
         this.role = role;
         this.parkId = parkId;
     }
@@ -55,6 +59,11 @@ public class UserDTO implements Serializable {
     /** {@return the display name of the user} */
     public String getFullName() {
         return fullName;
+    }
+
+    /** {@return the contact email of the user, or {@code null} if none on file} */
+    public String getEmail() {
+        return email;
     }
 
     /** {@return the staff role governing the user's permissions} */

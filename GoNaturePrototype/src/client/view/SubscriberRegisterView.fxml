@@ -34,6 +34,10 @@
             <TextField fx:id="emailField" promptText="name@example.com"
                        styleClass="input-field"/>
 
+            <Label text="Credit Card" styleClass="field-label"/>
+            <TextField fx:id="creditCardField" promptText="4111-1111-1111-1111"
+                       styleClass="input-field"/>
+
             <Label text="Family Size" styleClass="field-label"/>
             <Spinner fx:id="familySpinner" editable="true" maxWidth="Infinity" styleClass="spinner"/>
 

@@ -9,10 +9,10 @@
 
 <!-- My Profile: the logged-in actor's personal details, read straight from the
      live Session. A visitor sees name / national ID / email / phone / subscriber
-     status; a staff user sees name / username / role / park. "Edit" turns the
-     editable rows (a visitor's name/email/phone, a staff user's name) into text
-     fields with Save/Cancel; the non-editable rows always stay read-only. Save
-     sends UPDATE_PROFILE — the server edits only the logged-in actor's own row. -->
+     status; a staff user sees name / worker id / username / email / role / park.
+     "Edit" turns the editable rows (a visitor's name/email/phone, a staff user's
+     name) into text fields with Save/Cancel; the non-editable rows always stay
+     read-only. Save sends UPDATE_PROFILE — the server edits only the actor's own row. -->
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="client.view.MyProfileController"
             fitToWidth="true" styleClass="scroll-pane">
